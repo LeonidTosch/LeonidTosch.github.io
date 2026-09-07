@@ -411,9 +411,9 @@
         const soundEngine = new SoundEngine();
 
         // ============================================================================
-        // 2. PROCEDURAL TEXTURE GENERATION
+        // 2. ENHANCED PROCEDURAL TEXTURE & MAP GENERATION
         // ============================================================================
-        function createProceduralNoiseTexture(colorBase, colorDetail) {
+        function createProceduralNoiseTexture(colorBase, colorDetail, detailDensity = 8000) {
             const canvas = document.createElement('canvas');
             canvas.width = 512;
             canvas.height = 512;
@@ -422,8 +422,8 @@
             ctx.fillStyle = colorBase;
             ctx.fillRect(0, 0, 512, 512);
 
-            // Add camo / metal scratch noise details
-            for (let i = 0; i < 8000; i++) {
+            // Detailed texture noise pass
+            for (let i = 0; i < detailDensity; i++) {
                 const x = Math.random() * 512;
                 const y = Math.random() * 512;
                 const size = Math.random() * 3 + 1;
@@ -438,10 +438,82 @@
             return texture;
         }
 
-        const tankCamoTextureNATO = createProceduralNoiseTexture('#374332', '#1c2419'); // Dark Green Camo
-        const tankCamoTextureWarsaw = createProceduralNoiseTexture('#4a533f', '#786e59'); // Desert/Green Camo
-        const groundTextureCanvas = createProceduralNoiseTexture('#2d3627', '#1a2216');
+        // Camouflage generator with panel seam lines and rivet wear patterns
+        function createAdvancedTankCamo(camoType) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 1024;
+            canvas.height = 1024;
+            const ctx = canvas.getContext('2d');
+
+            // Base camouflage coat
+            const baseColor = camoType === 'nato' ? '#323f2b' : '#4d553e';
+            ctx.fillStyle = baseColor;
+            ctx.fillRect(0, 0, 1024, 1024);
+
+            // Camo splotches pass
+            const spotColors = camoType === 'nato' ? ['#1e251b', '#574835', '#171c14'] : ['#2c3224', '#70644d', '#22281d'];
+            for (let i = 0; i < 45; i++) {
+                ctx.fillStyle = spotColors[i % spotColors.length];
+                ctx.beginPath();
+                const cx = Math.random() * 1024;
+                const cy = Math.random() * 1024;
+                const rx = Math.random() * 140 + 40;
+                const ry = Math.random() * 140 + 40;
+                ctx.ellipse(cx, cy, rx, ry, Math.random() * Math.PI, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Armor Panel Lines & Wear Seams
+            ctx.strokeStyle = 'rgba(10, 12, 10, 0.55)';
+            ctx.lineWidth = 3;
+            for (let p = 0; p < 1024; p += 128) {
+                ctx.beginPath(); ctx.moveTo(p, 0); ctx.lineTo(p, 1024); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(0, p); ctx.lineTo(1024, p); ctx.stroke();
+            }
+
+            // Grime & Edge Scratches
+            for (let i = 0; i < 12000; i++) {
+                ctx.fillStyle = Math.random() > 0.5 ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.06)';
+                ctx.fillRect(Math.random() * 1024, Math.random() * 1024, Math.random() * 4 + 1, Math.random() * 4 + 1);
+            }
+
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.wrapS = THREE.RepeatWrapping;
+            texture.wrapT = THREE.RepeatWrapping;
+            return texture;
+        }
+
+        // Terrain Bump Map for realistic surface light scattering
+        function createTerrainBumpMap() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512;
+            canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+
+            ctx.fillStyle = '#808080'; // Neutral bump
+            ctx.fillRect(0, 0, 512, 512);
+
+            for (let i = 0; i < 20000; i++) {
+                const val = Math.floor(Math.random() * 255);
+                ctx.fillStyle = `rgb(${val},${val},${val})`;
+                ctx.fillRect(Math.random() * 512, Math.random() * 512, Math.random() * 3 + 1, Math.random() * 3 + 1);
+            }
+
+            const bumpTex = new THREE.CanvasTexture(canvas);
+            bumpTex.wrapS = THREE.RepeatWrapping;
+            bumpTex.wrapT = THREE.RepeatWrapping;
+            bumpTex.repeat.set(40, 40);
+            return bumpTex;
+        }
+
+        const tankCamoTextureNATO = createAdvancedTankCamo('nato');
+        const tankCamoTextureWarsaw = createAdvancedTankCamo('warsaw');
+        const groundTextureCanvas = createProceduralNoiseTexture('#2d3824', '#1c2415', 12000);
         groundTextureCanvas.repeat.set(40, 40);
+        const terrainBumpMap = createTerrainBumpMap();
+
+        // Dynamic Light & Particle List
+        let pointLights = [];
 
         // ============================================================================
         // 3. GAME CONSTANTS & STATE
@@ -563,12 +635,12 @@
         }
 
         // ============================================================================
-        // 5. THREE.JS SCENE SETUP & LIGHTING
+        // 5. THREE.JS ENHANCED ATMOSPHERIC LIGHTING & SCENE SETUP
         // ============================================================================
         function setupThreeScene() {
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x87ceeb); // Sky Blue
-            scene.fog = new THREE.FogExp2(0x87ceeb, 0.0015);
+            scene.background = new THREE.Color(0x6ca0dc); // Atmospheric Sky Blue
+            scene.fog = new THREE.FogExp2(0x8eb3dd, 0.0012);
 
             camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 2000);
 
@@ -578,33 +650,54 @@
             renderer.shadowMap.enabled = true;
             renderer.shadowMap.type = THREE.PCFSoftShadowMap;
             renderer.toneMapping = THREE.ACESFilmicToneMapping;
-            renderer.toneMappingExposure = 1.1;
+            renderer.toneMappingExposure = 1.25;
 
             document.getElementById('game-container').appendChild(renderer.domElement);
 
-            // Dynamic Atmospheric Sunlight
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-            scene.add(ambientLight);
+            // 1. Dual Hemisphere Light (Sky Blue + Earthy Ground Bounce)
+            const hemiLight = new THREE.HemisphereLight(0xb1e1ff, 0x3d472a, 0.75);
+            scene.add(hemiLight);
 
-            const sunLight = new THREE.DirectionalLight(0xfffaed, 1.3);
-            sunLight.position.set(250, 400, 150);
+            // 2. High Quality Sunlight with Soft Shadow Map Calibration
+            const sunLight = new THREE.DirectionalLight(0xfff5ea, 1.6);
+            sunLight.position.set(280, 450, 180);
             sunLight.castShadow = true;
             sunLight.shadow.mapSize.width = 2048;
             sunLight.shadow.mapSize.height = 2048;
             sunLight.shadow.camera.near = 10;
-            sunLight.shadow.camera.far = 1000;
-            const d = 250;
+            sunLight.shadow.camera.far = 1200;
+            sunLight.shadow.bias = -0.0003;
+            sunLight.shadow.radius = 2.0;
+
+            const d = 300;
             sunLight.shadow.camera.left = -d;
             sunLight.shadow.camera.right = d;
             sunLight.shadow.camera.top = d;
             sunLight.shadow.camera.bottom = -d;
             scene.add(sunLight);
 
-            // Procedural Heightmap Terrain
-            const terrainGeo = new THREE.PlaneGeometry(MAP_SIZE, MAP_SIZE, 128, 128);
+            // Visual Sun Disc in Skybox
+            const sunMesh = new THREE.Mesh(
+                new THREE.SphereGeometry(14, 16, 16),
+                new THREE.MeshBasicMaterial({ color: 0xfff0cb, fog: false })
+            );
+            sunMesh.position.copy(sunLight.position).normalize().multiplyScalar(900);
+            scene.add(sunMesh);
+
+            // Atmospheric Sky Gradient Dome
+            const skyDomeGeo = new THREE.SphereGeometry(1200, 32, 16);
+            const skyDomeMat = new THREE.MeshBasicMaterial({
+                color: 0x7bb3ef,
+                side: THREE.BackSide,
+                fog: false
+            });
+            const skyDome = new THREE.Mesh(skyDomeGeo, skyDomeMat);
+            scene.add(skyDome);
+
+            // Enhanced Procedural Heightmap Terrain with Bump Highlights
+            const terrainGeo = new THREE.PlaneGeometry(MAP_SIZE, MAP_SIZE, 140, 140);
             terrainGeo.rotateX(-Math.PI / 2);
 
-            // Apply Perlin-style subtle terrain height variations
             const pos = terrainGeo.attributes.position;
             for (let i = 0; i < pos.count; i++) {
                 const x = pos.getX(i);
@@ -616,64 +709,103 @@
 
             const terrainMat = new THREE.MeshStandardMaterial({
                 map: groundTextureCanvas,
-                roughness: 0.9,
-                metalness: 0.1
+                bumpMap: terrainBumpMap,
+                bumpScale: 0.35,
+                roughness: 0.85,
+                metalness: 0.15
             });
 
             const terrain = new THREE.Mesh(terrainGeo, terrainMat);
             terrain.receiveShadow = true;
             scene.add(terrain);
 
-            // Add Trees & Foliage Objects
+            // Add Trees, Foliage, Rocks, and Glowing Capture Zones
             createEnvironmentObjects();
 
-            // Setup Hit-Cam Sub-Scene (X-Ray Inspector)
+            // Setup Hit-Cam Sub-Scene
             setupHitCamScene();
         }
 
-        // Helper: Get terrain height at (x, z)
-        function getTerrainHeight(x, z) {
-            return Math.sin(x * 0.015) * Math.cos(z * 0.015) * 8.0 + Math.sin(x * 0.03) * 3.0;
-        }
-
         function createEnvironmentObjects() {
-            const treeGeo = new THREE.ConeGeometry(3, 9, 7);
-            const trunkGeo = new THREE.CylinderGeometry(0.4, 0.6, 3, 6);
-            const leavesMat = new THREE.MeshStandardMaterial({ color: 0x2e4a23, roughness: 0.8 });
-            const trunkMat = new THREE.MeshStandardMaterial({ color: 0x4a3728, roughness: 0.9 });
+            // Enhanced Multi-tier Evergreen Trees
+            const trunkGeo = new THREE.CylinderGeometry(0.4, 0.7, 3.5, 7);
+            const foliageMat1 = new THREE.MeshStandardMaterial({ color: 0x223d1a, roughness: 0.8 });
+            const foliageMat2 = new THREE.MeshStandardMaterial({ color: 0x2d4f23, roughness: 0.7 });
+            const trunkMat = new THREE.MeshStandardMaterial({ color: 0x3d2a1d, roughness: 0.9 });
+            const rockMat = new THREE.MeshStandardMaterial({ color: 0x5a636a, roughness: 0.85, metalness: 0.2 });
 
-            for (let i = 0; i < 140; i++) {
-                const x = (Math.random() - 0.5) * (MAP_SIZE - 60);
-                const z = (Math.random() - 0.5) * (MAP_SIZE - 60);
+            for (let i = 0; i < 160; i++) {
+                const x = (Math.random() - 0.5) * (MAP_SIZE - 70);
+                const z = (Math.random() - 0.5) * (MAP_SIZE - 70);
 
-                // Don't place trees inside capture zones
-                if (Math.abs(x) < 30 && Math.abs(z) < 30) continue;
+                if (Math.abs(x) < 35 && Math.abs(z) < 35) continue; // Keep center spawn clear
 
                 const y = getTerrainHeight(x, z);
 
                 const treeGroup = new THREE.Group();
                 const trunk = new THREE.Mesh(trunkGeo, trunkMat);
-                trunk.position.y = 1.5;
+                trunk.position.y = 1.75;
                 trunk.castShadow = true;
-
-                const leaves = new THREE.Mesh(treeGeo, leavesMat);
-                leaves.position.y = 6;
-                leaves.castShadow = true;
-
                 treeGroup.add(trunk);
-                treeGroup.add(leaves);
+
+                // 3 Layer Cones for Lush Tree Density
+                const cone1 = new THREE.Mesh(new THREE.ConeGeometry(3.2, 5, 7), foliageMat1);
+                cone1.position.y = 4.5;
+                cone1.castShadow = true;
+                treeGroup.add(cone1);
+
+                const cone2 = new THREE.Mesh(new THREE.ConeGeometry(2.4, 4.5, 7), foliageMat2);
+                cone2.position.y = 6.8;
+                cone2.castShadow = true;
+                treeGroup.add(cone2);
+
+                const cone3 = new THREE.Mesh(new THREE.ConeGeometry(1.6, 3.8, 7), foliageMat1);
+                cone3.position.y = 8.8;
+                cone3.castShadow = true;
+                treeGroup.add(cone3);
+
                 treeGroup.position.set(x, y, z);
                 scene.add(treeGroup);
             }
 
-            // Setup Capture Zone Flags
+            // Scattered Rocks & Boulders with Specular Details
+            const rockGeo = new THREE.DodecahedronGeometry(1.8, 1);
+            for (let r = 0; r < 60; r++) {
+                const rx = (Math.random() - 0.5) * (MAP_SIZE - 80);
+                const rz = (Math.random() - 0.5) * (MAP_SIZE - 80);
+                const ry = getTerrainHeight(rx, rz);
+
+                const rock = new THREE.Mesh(rockGeo, rockMat);
+                rock.position.set(rx, ry + 0.6, rz);
+                rock.scale.set(Math.random() * 1.5 + 0.8, Math.random() * 0.8 + 0.5, Math.random() * 1.5 + 0.8);
+                rock.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, 0);
+                rock.castShadow = true;
+                rock.receiveShadow = true;
+                scene.add(rock);
+            }
+
+            // Setup Capture Zone Flags & Glowing Ground Rings
             controlPoints.forEach(cp => {
-                const flagPoleGeo = new THREE.CylinderGeometry(0.1, 0.1, 14, 8);
-                const flagMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8 });
-                const pole = new THREE.Mesh(flagPoleGeo, flagMat);
+                const flagPoleGeo = new THREE.CylinderGeometry(0.12, 0.12, 16, 8);
+                const poleMat = new THREE.MeshStandardMaterial({ color: 0xc0caf5, metalness: 0.8, roughness: 0.2 });
+                const pole = new THREE.Mesh(flagPoleGeo, poleMat);
                 const y = getTerrainHeight(cp.pos.x, cp.pos.z);
-                pole.position.set(cp.pos.x, y + 7, cp.pos.z);
+                pole.position.set(cp.pos.x, y + 8, cp.pos.z);
+                pole.castShadow = true;
                 scene.add(pole);
+
+                // Ground Ring Marker with Emissive Glow
+                const ringGeo = new THREE.RingGeometry(18, 19.5, 32);
+                ringGeo.rotateX(-Math.PI / 2);
+                const ringMat = new THREE.MeshBasicMaterial({
+                    color: 0x38bdf8,
+                    side: THREE.DoubleSide,
+                    transparent: true,
+                    opacity: 0.55
+                });
+                const ring = new THREE.Mesh(ringGeo, ringMat);
+                ring.position.set(cp.pos.x, y + 0.25, cp.pos.z);
+                scene.add(ring);
             });
         }
 
@@ -819,7 +951,7 @@
         }
 
         // ============================================================================
-        // 8. BALLISTICS & PARTICLE SYSTEM
+        // 8. BALLISTICS, ILLUMINATED TRACERS & DYNAMIC LIGHTING EFFECTS
         // ============================================================================
         class ShellProjectile {
             constructor(pos, dir, shellType, owner) {
@@ -831,12 +963,17 @@
                 this.owner = owner;
                 this.alive = true;
 
-                // Visual tracer mesh
-                const tracerGeo = new THREE.CylinderGeometry(0.08, 0.08, 1.8);
-                const tracerMat = new THREE.MeshBasicMaterial({ color: 0xfde047 });
+                // Visual tracer mesh with vibrant glow
+                const tracerGeo = new THREE.CylinderGeometry(0.12, 0.12, 2.2);
+                const tracerMat = new THREE.MeshBasicMaterial({ color: 0xfff176 });
                 this.mesh = new THREE.Mesh(tracerGeo, tracerMat);
                 this.mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize());
                 this.mesh.position.copy(this.position);
+
+                // Dynamic Tracer Point Light Source
+                this.light = new THREE.PointLight(0xffaa22, 3.5, 30);
+                this.mesh.add(this.light);
+
                 scene.add(this.mesh);
             }
 
@@ -862,7 +999,7 @@
                     if (tank === this.owner || tank.isDestroyed) continue;
 
                     const dist = this.position.distanceTo(tank.position);
-                    if (dist < 3.2) { // Hit box radius
+                    if (dist < 3.2) {
                         tank.takeDamage(75, 'front', this.pen, this.shellTypeName);
                         this.destroy();
                         createImpactDust(this.position);
@@ -877,25 +1014,39 @@
             }
         }
 
+        // Muzzle Flash Dynamic Light Burst
+        function createMuzzleFlashLight(pos) {
+            const flashLight = new THREE.PointLight(0xffca28, 8.0, 45);
+            flashLight.position.copy(pos);
+            scene.add(flashLight);
+            setTimeout(() => scene.remove(flashLight), 90);
+        }
+
         function createExplosionEffect(pos) {
-            // Particle explosion on tank destruction
-            const pGeo = new THREE.SphereGeometry(0.5, 8, 8);
-            const pMat = new THREE.MeshBasicMaterial({ color: 0xf97316, transparent: true, opacity: 0.9 });
-            for (let i = 0; i < 15; i++) {
+            // Dynamic Light Burst on Tank Destruction
+            const expLight = new THREE.PointLight(0xff5722, 12.0, 60);
+            expLight.position.copy(pos).add(new THREE.Vector3(0, 2, 0));
+            scene.add(expLight);
+            setTimeout(() => scene.remove(expLight), 300);
+
+            // Particle explosion mesh cluster
+            const pGeo = new THREE.SphereGeometry(0.6, 8, 8);
+            const pMat = new THREE.MeshBasicMaterial({ color: 0xf97316, transparent: true, opacity: 0.95 });
+            for (let i = 0; i < 20; i++) {
                 const particle = new THREE.Mesh(pGeo, pMat);
-                particle.position.copy(pos).add(new THREE.Vector3((Math.random() - 0.5) * 3, Math.random() * 3, (Math.random() - 0.5) * 3));
+                particle.position.copy(pos).add(new THREE.Vector3((Math.random() - 0.5) * 4, Math.random() * 4, (Math.random() - 0.5) * 4));
                 scene.add(particle);
-                setTimeout(() => scene.remove(particle), 1200);
+                setTimeout(() => scene.remove(particle), 1400);
             }
         }
 
         function createImpactDust(pos) {
-            const pGeo = new THREE.SphereGeometry(0.8, 6, 6);
-            const pMat = new THREE.MeshBasicMaterial({ color: 0xa8a29e, transparent: true, opacity: 0.6 });
+            const pGeo = new THREE.SphereGeometry(1.0, 6, 6);
+            const pMat = new THREE.MeshBasicMaterial({ color: 0x8d8374, transparent: true, opacity: 0.7 });
             const particle = new THREE.Mesh(pGeo, pMat);
             particle.position.copy(pos);
             scene.add(particle);
-            setTimeout(() => scene.remove(particle), 800);
+            setTimeout(() => scene.remove(particle), 900);
         }
 
         // ============================================================================
@@ -996,7 +1147,9 @@
             const dir = new THREE.Vector3(0, 0, 1);
             dir.applyQuaternion(playerTank.meshObj.barrel.getWorldQuaternion(new THREE.Quaternion()));
 
+            // Spawn projectile & realistic muzzle flash illumination
             projectiles.push(new ShellProjectile(muzzleWorldPos, dir, currentShell, playerTank));
+            createMuzzleFlashLight(muzzleWorldPos);
 
             soundEngine.playCannonFire();
 
