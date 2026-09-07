@@ -26,24 +26,20 @@
         }
         /* Glassmorphism Styling */
         .glass-panel {
-            background: rgba(10, 16, 28, 0.75);
-            backdrop-filter: blur(8px);
+            background: rgba(10, 16, 28, 0.78);
+            backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.12);
             box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
         }
         .glass-panel-gold {
-            background: rgba(28, 22, 10, 0.85);
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(234, 179, 8, 0.3);
+            background: rgba(28, 22, 10, 0.88);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(234, 179, 8, 0.4);
         }
         /* Sniper Sight Vignette */
         #sniper-scope {
-            background: radial-gradient(circle at center, transparent 35%, rgba(0, 5, 2, 0.85) 60%, rgba(0, 0, 0, 0.98) 75%);
+            background: radial-gradient(circle at center, transparent 32%, rgba(0, 5, 2, 0.88) 58%, rgba(0, 0, 0, 0.99) 75%);
             pointer-events: none;
-        }
-        /* Reticle distance ticks */
-        .scope-line {
-            background-color: rgba(34, 197, 94, 0.85);
         }
         /* Hit Cam Animation Canvas */
         #hit-cam-container {
@@ -60,46 +56,54 @@
 </head>
 <body class="text-slate-100">
 
-    <!-- MAIN CANVAS -->
+    <!-- MAIN CANVAS CONTAINER -->
     <div id="game-container" class="relative w-full h-full">
 
-        <!-- SNIPER SCOPE OVERLAY (Hidden by default) -->
+        <!-- SNIPER SCOPE OVERLAY -->
         <div id="sniper-scope" class="hidden absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
             <!-- Dynamic Scope Reticle Grid -->
             <div class="relative w-full h-full flex items-center justify-center">
-                <!-- Outer Crosshair Lines -->
-                <div class="absolute w-full h-[1px] bg-emerald-500/60"></div>
-                <div class="absolute h-full w-[1px] bg-emerald-500/60"></div>
+                <!-- Main Reticle Crosshairs -->
+                <div id="scope-crosshair-h" class="absolute w-full h-[1px] bg-emerald-500/70"></div>
+                <div id="scope-crosshair-v" class="absolute h-full w-[1px] bg-emerald-500/70"></div>
 
-                <!-- Central Rangefinder Ticks -->
-                <div class="absolute flex flex-col items-center space-y-3">
+                <!-- Calibrated Ballistic Range Ticks -->
+                <div class="absolute flex flex-col items-center space-y-3 pt-6">
                     <div class="w-12 h-[1px] bg-emerald-400"></div>
-                    <div class="w-8 h-[1px] bg-emerald-400 flex justify-between text-[10px] text-emerald-400 -mt-1"><span class="-ml-6">04</span><span class="-mr-6">04</span></div>
+                    <div class="w-8 h-[1px] bg-emerald-400 flex justify-between text-[10px] text-emerald-400 -mt-1"><span class="-ml-7">200m</span><span class="-mr-7">200m</span></div>
                     <div class="w-10 h-[1px] bg-emerald-400"></div>
-                    <div class="w-14 h-[1px] bg-emerald-400 flex justify-between text-[10px] text-emerald-400 -mt-1"><span class="-ml-6">08</span><span class="-mr-6">08</span></div>
+                    <div class="w-14 h-[1px] bg-emerald-400 flex justify-between text-[10px] text-emerald-400 -mt-1"><span class="-ml-7">400m</span><span class="-mr-7">400m</span></div>
                     <div class="w-8 h-[1px] bg-emerald-400"></div>
-                    <div class="w-16 h-[1px] bg-emerald-400 flex justify-between text-[10px] text-emerald-400 -mt-1"><span class="-ml-6">12</span><span class="-mr-6">12</span></div>
+                    <div class="w-16 h-[1px] bg-emerald-400 flex justify-between text-[10px] text-emerald-400 -mt-1"><span class="-ml-7">600m</span><span class="-mr-7">600m</span></div>
                     <div class="w-8 h-[1px] bg-emerald-400"></div>
-                    <div class="w-20 h-[1px] bg-emerald-400 flex justify-between text-[10px] text-emerald-400 -mt-1"><span class="-ml-6">16</span><span class="-mr-6">16</span></div>
+                    <div class="w-20 h-[1px] bg-emerald-400 flex justify-between text-[10px] text-emerald-400 -mt-1"><span class="-ml-7">800m</span><span class="-mr-7">800m</span></div>
+                    <div class="w-8 h-[1px] bg-emerald-400"></div>
+                    <div class="w-24 h-[1px] bg-emerald-400 flex justify-between text-[10px] text-emerald-400 -mt-1"><span class="-ml-8">1000m</span><span class="-mr-8">1000m</span></div>
                 </div>
 
-                <!-- Scope Info HUD -->
-                <div class="absolute top-12 left-1/2 -translate-x-1/2 flex gap-8 text-xs font-mono text-emerald-400 bg-black/60 px-4 py-1 rounded border border-emerald-900/50">
-                    <div>MODE: <span id="scope-mode">OPTICAL 8x</span></div>
-                    <div>DIST: <span id="target-dist">--- m</span></div>
-                    <div>SHELL: <span id="scope-shell-name" class="text-amber-400">APFSDS</span></div>
+                <!-- Scope Laser Rangefinder HUD -->
+                <div class="absolute top-12 left-1/2 -translate-x-1/2 flex gap-6 text-xs font-mono text-emerald-400 bg-black/75 px-5 py-1.5 rounded-lg border border-emerald-800/60 shadow-lg">
+                    <div>OPTICS: <span id="scope-mode" class="text-white font-bold">12x LRF</span></div>
+                    <div>RANGE: <span id="target-dist" class="text-amber-300 font-bold">--- m</span></div>
+                    <div>SHELL: <span id="scope-shell-name" class="text-amber-400 font-bold">APFSDS</span></div>
+                    <div>ZEROING: <span id="scope-zeroing" class="text-emerald-300 font-bold">0m</span></div>
                 </div>
             </div>
         </div>
 
+        <!-- AIR STRIKE WARNING ALERTS -->
+        <div id="air-warning-banner" class="hidden absolute top-20 left-1/2 -translate-x-1/2 z-30 bg-rose-950/90 border border-rose-500 px-6 py-2 rounded-xl flex items-center gap-3 text-rose-200 font-bold text-sm tracking-widest shadow-2xl animate-bounce">
+            <i class="fa-solid fa-plane-triangle text-rose-400 text-xl animate-pulse"></i>
+            <span>WARNING: ENEMY CAS AIRCRAFT IN AIRSPACE!</span>
+        </div>
+
         <!-- TOP HUD: TICKETS & CAPTURE ZONES -->
         <div class="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center pointer-events-none w-full max-w-xl px-4">
-            <!-- Ticket Bars -->
             <div class="w-full flex items-center justify-between gap-4 mb-2">
                 <!-- Allied Tickets -->
                 <div class="flex-1">
                     <div class="flex justify-between text-xs font-bold text-blue-400 mb-1">
-                        <span>BLUE TEAM</span>
+                        <span>ALLIED TEAM</span>
                         <span id="blue-tickets">10000</span>
                     </div>
                     <div class="w-full h-2.5 bg-slate-900/80 rounded-full overflow-hidden border border-blue-900/50">
@@ -107,7 +111,7 @@
                     </div>
                 </div>
 
-                <!-- Capture Points Flags -->
+                <!-- Capture Points -->
                 <div class="flex gap-2">
                     <div id="cap-a" class="w-8 h-8 rounded-lg bg-slate-800/90 border-2 border-slate-600 flex items-center justify-center font-black text-sm text-slate-300 shadow-md">A</div>
                     <div id="cap-b" class="w-8 h-8 rounded-lg bg-slate-800/90 border-2 border-slate-600 flex items-center justify-center font-black text-sm text-slate-300 shadow-md">B</div>
@@ -118,7 +122,7 @@
                 <div class="flex-1">
                     <div class="flex justify-between text-xs font-bold text-rose-400 mb-1">
                         <span id="red-tickets">10000</span>
-                        <span>RED TEAM</span>
+                        <span>ENEMY FORCE</span>
                     </div>
                     <div class="w-full h-2.5 bg-slate-900/80 rounded-full overflow-hidden border border-rose-900/50">
                         <div id="red-ticket-bar" class="h-full bg-rose-500 transition-all duration-300 float-right" style="width: 100%"></div>
@@ -130,75 +134,61 @@
         <!-- TOP RIGHT: WAR THUNDER X-RAY HIT CAM -->
         <div id="hit-cam-card" class="hidden absolute top-4 right-4 z-20 w-64 h-48 rounded-xl glass-panel p-2 flex flex-col pointer-events-none transition-opacity duration-300">
             <div class="flex justify-between items-center text-[10px] font-bold tracking-wider text-rose-400 border-b border-slate-700/60 pb-1 mb-1">
-                <span><i class="fa-solid fa-crosshairs mr-1"></i>HIT CAMERA</span>
-                <span id="hit-cam-target-name" class="text-slate-300">T-72B</span>
+                <span><i class="fa-solid fa-crosshairs mr-1"></i>X-RAY DAMAGE CAM</span>
+                <span id="hit-cam-target-name" class="text-slate-300">T-90M</span>
             </div>
-            <!-- Sub-Canvas for rendering hit scene -->
             <div id="hit-cam-container" class="relative flex-1 rounded-lg overflow-hidden">
                 <canvas id="hit-cam-canvas" class="w-full h-full"></canvas>
             </div>
             <div id="hit-cam-status" class="text-[11px] font-mono mt-1 text-amber-400 truncate font-semibold">
-                Critical Damage!
+                Critical Module Pen!
             </div>
         </div>
 
         <!-- TOP LEFT: KILL FEED -->
         <div id="kill-feed" class="absolute top-4 left-4 z-20 space-y-1.5 pointer-events-none max-w-xs text-xs font-mono">
-            <!-- Messages added dynamically -->
+            <!-- Feed items added dynamically -->
         </div>
 
         <!-- BOTTOM LEFT: VEHICLE PAPERDOLL DAMAGE STATUS & REPAIR -->
         <div class="absolute bottom-4 left-4 z-20 flex gap-3 pointer-events-none">
-            <!-- Paperdoll Card -->
             <div class="glass-panel p-3 rounded-2xl flex flex-col items-center w-36">
                 <div class="text-[10px] font-bold text-slate-400 mb-1 tracking-wider uppercase">Damage Model</div>
                 <div class="relative w-24 h-28 flex items-center justify-center">
-                    <!-- Tank Wireframe Graphic / Modules -->
                     <svg viewBox="0 0 100 120" class="w-full h-full">
-                        <!-- Hull -->
-                        <rect id="pd-hull" x="25" y="25" width="50" height="70" rx="6" fill="#1e293b" stroke="#334155" stroke-width="2"/>
-                        <!-- Tracks Left/Right -->
-                        <rect id="pd-track-l" x="15" y="20" width="8" height="80" rx="3" fill="#334155"/>
-                        <rect id="pd-track-r" x="77" y="20" width="8" height="80" rx="3" fill="#334155"/>
-                        <!-- Engine (Back) -->
+                        <rect id="pd-hull" x="25" y="25" width="50" height="70" rx="6" fill="#22c55e" stroke="#15803d" stroke-width="2"/>
+                        <rect id="pd-track-l" x="15" y="20" width="8" height="80" rx="3" fill="#22c55e"/>
+                        <rect id="pd-track-r" x="77" y="20" width="8" height="80" rx="3" fill="#22c55e"/>
                         <rect id="pd-engine" x="30" y="70" width="40" height="20" rx="2" fill="#22c55e"/>
-                        <!-- Turret -->
                         <circle id="pd-turret" cx="50" cy="50" r="18" fill="#22c55e" stroke="#15803d" stroke-width="1.5"/>
-                        <!-- Gun Barrel -->
                         <rect id="pd-barrel" x="47" y="10" width="6" height="30" fill="#22c55e"/>
-                        <!-- Crew Icons -->
                         <circle id="pd-crew-driver" cx="40" cy="35" r="3" fill="#22c55e"/>
                         <circle id="pd-crew-gunner" cx="60" cy="48" r="3" fill="#22c55e"/>
                         <circle id="pd-crew-commander" cx="40" cy="52" r="3" fill="#22c55e"/>
-                        <!-- Ammo Rack -->
                         <rect id="pd-ammo" x="32" y="58" width="8" height="10" rx="1" fill="#22c55e"/>
                     </svg>
                 </div>
                 <div class="text-[10px] text-slate-400 mt-1 flex justify-between w-full">
                     <span>SPD: <b id="speed-indicator" class="text-white">0</b> km/h</span>
-                    <span>RPM: <b id="rpm-indicator" class="text-emerald-400">1200</b></span>
+                    <span>HP: <b id="hp-indicator" class="text-emerald-400">100%</b></span>
                 </div>
             </div>
 
-            <!-- Reload & Action Timers -->
             <div class="flex flex-col justify-end space-y-2 pointer-events-auto">
                 <div id="repair-prompt" class="hidden glass-panel-gold px-3 py-1.5 rounded-xl flex items-center gap-2 text-xs text-amber-300 font-bold animate-pulse">
-                    <span class="keycap px-1.5 py-0.5 text-[10px] text-white">F</span> Hold to Repair (<span id="repair-timer">10</span>s)
-                </div>
-                <div id="extinguish-prompt" class="hidden bg-rose-900/90 border border-rose-500 px-3 py-1.5 rounded-xl flex items-center gap-2 text-xs text-rose-200 font-bold animate-bounce">
-                    <span class="keycap px-1.5 py-0.5 text-[10px] text-white">6</span> Fire Extinguisher!
+                    <span class="keycap px-1.5 py-0.5 text-[10px] text-white">F</span> <span id="repair-prompt-text">Press F to Repair Tank</span> (<span id="repair-timer">8.0</span>s)
                 </div>
             </div>
         </div>
 
-        <!-- BOTTOM CENTER: SHELL SELECTION & AMMO BAR -->
+        <!-- BOTTOM CENTER: SHELL SELECTION, MACHINE GUN & AMMO BAR -->
         <div class="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 glass-panel p-2.5 rounded-2xl flex items-center gap-3 pointer-events-auto">
             <!-- Shell 1: APFSDS -->
             <button id="shell-btn-1" onclick="selectShell(0)" class="relative p-2 rounded-xl bg-slate-800/90 hover:bg-slate-700 border-2 border-amber-500 flex flex-col items-center w-20 transition">
                 <span class="absolute top-1 left-1.5 text-[10px] font-bold text-slate-400 keycap px-1 rounded">1</span>
                 <i class="fa-solid fa-bolt text-amber-400 my-1 text-lg"></i>
                 <span class="text-[10px] font-bold tracking-wider text-slate-200">APFSDS</span>
-                <span id="shell-count-1" class="text-[10px] font-mono text-emerald-400">24</span>
+                <span id="shell-count-1" class="text-[10px] font-mono text-emerald-400">28</span>
             </button>
 
             <!-- Shell 2: HEAT-FS -->
@@ -206,7 +196,7 @@
                 <span class="absolute top-1 left-1.5 text-[10px] font-bold text-slate-400 keycap px-1 rounded">2</span>
                 <i class="fa-solid fa-fire text-rose-400 my-1 text-lg"></i>
                 <span class="text-[10px] font-bold tracking-wider text-slate-200">HEAT-FS</span>
-                <span id="shell-count-2" class="text-[10px] font-mono text-emerald-400">12</span>
+                <span id="shell-count-2" class="text-[10px] font-mono text-emerald-400">14</span>
             </button>
 
             <!-- Shell 3: HE -->
@@ -214,13 +204,22 @@
                 <span class="absolute top-1 left-1.5 text-[10px] font-bold text-slate-400 keycap px-1 rounded">3</span>
                 <i class="fa-solid fa-burst text-orange-400 my-1 text-lg"></i>
                 <span class="text-[10px] font-bold tracking-wider text-slate-200">HE</span>
-                <span id="shell-count-3" class="text-[10px] font-mono text-emerald-400">8</span>
+                <span id="shell-count-3" class="text-[10px] font-mono text-emerald-400">10</span>
             </button>
 
-            <!-- Reload Progress Circle / Bar -->
-            <div class="h-12 w-[2px] bg-slate-700 mx-1"></div>
+            <!-- Machine Gun AA Status -->
+            <div class="h-12 w-[1px] bg-slate-700 mx-1"></div>
             <div class="flex flex-col items-center px-2">
-                <div class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Reload</div>
+                <div class="text-[9px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
+                    <i class="fa-solid fa-gun text-amber-400"></i> 12.7mm MG
+                </div>
+                <div class="text-xs font-mono font-bold text-amber-300 mt-1"><kbd class="keycap px-1.5 py-0.5 text-white text-[10px]">SPACE</kbd> FIRE</div>
+            </div>
+
+            <!-- Reload Progress Circle / Bar -->
+            <div class="h-12 w-[1px] bg-slate-700 mx-1"></div>
+            <div class="flex flex-col items-center px-2">
+                <div class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Cannon Reload</div>
                 <div class="text-sm font-black font-mono text-emerald-400 my-0.5" id="reload-time-text">READY</div>
                 <div class="w-16 h-1.5 bg-slate-800 rounded-full overflow-hidden border border-slate-700">
                     <div id="reload-progress-bar" class="h-full bg-emerald-500 w-full transition-all"></div>
@@ -230,57 +229,49 @@
 
         <!-- BOTTOM RIGHT: TACTICAL MINIMAP -->
         <div class="absolute bottom-4 right-4 z-20 glass-panel p-2 rounded-2xl flex flex-col items-center pointer-events-auto">
-            <div class="relative w-40 h-40 bg-slate-950 rounded-xl overflow-hidden border border-slate-700">
-                <canvas id="minimap-canvas" width="160" height="160" class="w-full h-full"></canvas>
+            <div class="relative w-44 h-44 bg-slate-950 rounded-xl overflow-hidden border border-slate-700">
+                <canvas id="minimap-canvas" width="176" height="176" class="w-full h-full"></canvas>
             </div>
             <div class="flex justify-between w-full px-1 mt-1 text-[9px] text-slate-400 font-mono">
-                <span>GRID: 200m</span>
-                <span id="player-grid-pos">E4</span>
+                <span>GRID: 250m</span>
+                <span id="player-grid-pos">D5</span>
             </div>
         </div>
 
         <!-- START / PAUSE / GAME OVER MODAL OVERLAY -->
         <div id="start-modal" class="absolute inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4">
             <div class="max-w-xl w-full glass-panel p-8 rounded-3xl border border-slate-700 shadow-2xl text-center relative overflow-hidden">
-                <!-- Background Accent Glow -->
                 <div class="absolute -top-24 -left-24 w-48 h-48 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none"></div>
                 <div class="absolute -bottom-24 -right-24 w-48 h-48 bg-blue-500/20 rounded-full blur-3xl pointer-events-none"></div>
 
                 <div class="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 rounded-full text-emerald-400 text-xs font-bold uppercase tracking-widest mb-4">
-                    <i class="fa-solid fa-shield-halved"></i> Simulation Mode
+                    <i class="fa-solid fa-crosshairs"></i> Enhanced Realistic Physics & Aircraft CAS
                 </div>
 
-                <h1 class="text-4xl font-black tracking-tight text-white mb-2">WAR THUNDER</h1>
-                <p class="text-base font-medium text-emerald-400 mb-6 tracking-wide">GROUND REALISTIC BATTLES</p>
+                <h1 class="text-4xl font-black tracking-tight text-white mb-1">WAR THUNDER</h1>
+                <p class="text-sm font-bold text-amber-400 mb-6 tracking-widest uppercase">3X Realistic Ballistics & Dynamic Air Battles</p>
 
-                <div class="grid grid-cols-2 gap-4 text-left text-xs bg-slate-900/60 p-4 rounded-2xl border border-slate-800 mb-6 font-sans">
+                <div class="grid grid-cols-2 gap-4 text-left text-xs bg-slate-900/70 p-4 rounded-2xl border border-slate-800 mb-6 font-sans">
                     <div class="space-y-2">
-                        <div class="font-bold text-slate-300 border-b border-slate-800 pb-1"><i class="fa-solid fa-gamepad text-emerald-400 mr-1.5"></i> Driving & Fire</div>
+                        <div class="font-bold text-slate-300 border-b border-slate-800 pb-1"><i class="fa-solid fa-gamepad text-emerald-400 mr-1.5"></i> Tank & Gun Controls</div>
                         <div><kbd class="keycap px-1.5 py-0.5 text-white font-mono">W A S D</kbd> Tank Movement</div>
-                        <div><kbd class="keycap px-1.5 py-0.5 text-white font-mono">Mouse</kbd> Turret Aim & Cannon</div>
-                        <div><kbd class="keycap px-1.5 py-0.5 text-white font-mono">L-Click</kbd> Fire Main Gun</div>
-                        <div><kbd class="keycap px-1.5 py-0.5 text-white font-mono">Shift</kbd> / <kbd class="keycap px-1.5 py-0.5 text-white font-mono">R-Click</kbd> Sniper Scope</div>
+                        <div><kbd class="keycap px-1.5 py-0.5 text-white font-mono">Mouse</kbd> Turret Aiming</div>
+                        <div><kbd class="keycap px-1.5 py-0.5 text-white font-mono">L-Click</kbd> Main Cannon Fire</div>
+                        <div><kbd class="keycap px-1.5 py-0.5 text-white font-mono">Space</kbd> Roof 12.7mm AA Gun</div>
+                        <div><kbd class="keycap px-1.5 py-0.5 text-white font-mono">Shift</kbd> / <kbd class="keycap px-1.5 py-0.5 text-white font-mono">R-Click</kbd> 12x Optical Sight</div>
                     </div>
                     <div class="space-y-2">
-                        <div class="font-bold text-slate-300 border-b border-slate-800 pb-1"><i class="fa-solid fa-gear text-emerald-400 mr-1.5"></i> Combat Controls</div>
-                        <div><kbd class="keycap px-1.5 py-0.5 text-white font-mono">1 2 3</kbd> Select Shell Type</div>
+                        <div class="font-bold text-slate-300 border-b border-slate-800 pb-1"><i class="fa-solid fa-microchip text-emerald-400 mr-1.5"></i> Ballistics & Avionics</div>
+                        <div><kbd class="keycap px-1.5 py-0.5 text-white font-mono">E</kbd> Laser Rangefinder & Auto-Zero</div>
+                        <div><kbd class="keycap px-1.5 py-0.5 text-white font-mono">1 2 3</kbd> Ammo: APFSDS / HEAT / HE</div>
                         <div><kbd class="keycap px-1.5 py-0.5 text-white font-mono">C</kbd> Free Camera Orbit</div>
-                        <div><kbd class="keycap px-1.5 py-0.5 text-white font-mono">F</kbd> Repair Tank Modules</div>
-                        <div><kbd class="keycap px-1.5 py-0.5 text-white font-mono">G</kbd> Deploy Smoke Grenades</div>
+                        <div><kbd class="keycap px-1.5 py-0.5 text-white font-mono">F</kbd> Module Field Repair</div>
+                        <div class="text-[10px] text-amber-400 font-semibold">* Sloped armor ricochets & air drag active!</div>
                     </div>
-                </div>
-
-                <div class="mb-6 flex justify-center gap-6 text-xs text-slate-300 font-medium">
-                    <label class="flex items-center gap-2 cursor-pointer hover:text-white">
-                        <input type="checkbox" id="setting-shadows" checked class="rounded accent-emerald-500"> Ultra Quality Shadows
-                    </label>
-                    <label class="flex items-center gap-2 cursor-pointer hover:text-white">
-                        <input type="checkbox" id="setting-audio" checked class="rounded accent-emerald-500"> Dynamic Audio Engine
-                    </label>
                 </div>
 
                 <button id="btn-start-game" onclick="initAndStartGame()" class="w-full py-4 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-black rounded-2xl text-lg tracking-wider shadow-lg shadow-emerald-950/50 hover:shadow-emerald-500/25 transition duration-200 cursor-pointer">
-                    DEPLOY TO BATTLEFIELD
+                    COMMENCE GROUND & AIR COMBAT
                 </button>
             </div>
         </div>
@@ -290,14 +281,15 @@
     <!-- MAIN GAME LOGIC SCRIPT -->
     <script>
         // ============================================================================
-        // 1. PROCEDURAL AUDIO ENGINE (Web Audio API)
+        // 1. ADVANCED PROCEDURAL AUDIO ENGINE (Web Audio API)
         // ============================================================================
         class SoundEngine {
             constructor() {
                 this.ctx = null;
-                this.isMuted = false;
                 this.engineGain = null;
                 this.engineOsc = null;
+                this.jetGain = null;
+                this.jetOsc = null;
             }
 
             init() {
@@ -305,30 +297,45 @@
                 const AudioCtx = window.AudioContext || window.webkitAudioContext;
                 this.ctx = new AudioCtx();
 
-                // Engine sound setup
+                // Tank Engine Sound Generator
                 this.engineOsc = this.ctx.createOscillator();
                 const engineFilter = this.ctx.createBiquadFilter();
                 this.engineGain = this.ctx.createGain();
 
                 this.engineOsc.type = 'sawtooth';
-                this.engineOsc.frequency.setValueAtTime(45, this.ctx.currentTime); // Idle diesel pitch
+                this.engineOsc.frequency.setValueAtTime(42, this.ctx.currentTime);
 
                 engineFilter.type = 'lowpass';
-                engineFilter.frequency.setValueAtTime(250, this.ctx.currentTime);
+                engineFilter.frequency.setValueAtTime(260, this.ctx.currentTime);
 
                 this.engineGain.gain.setValueAtTime(0.08, this.ctx.currentTime);
 
                 this.engineOsc.connect(engineFilter);
                 engineFilter.connect(this.engineGain);
                 this.engineGain.connect(this.ctx.destination);
-
                 this.engineOsc.start();
+
+                // Aircraft Jet Engine Audio Generator
+                this.jetOsc = this.ctx.createOscillator();
+                const jetFilter = this.ctx.createBiquadFilter();
+                this.jetGain = this.ctx.createGain();
+
+                this.jetOsc.type = 'sine';
+                this.jetOsc.frequency.setValueAtTime(320, this.ctx.currentTime);
+                jetFilter.type = 'bandpass';
+                jetFilter.frequency.setValueAtTime(1200, this.ctx.currentTime);
+                this.jetGain.gain.setValueAtTime(0.02, this.ctx.currentTime);
+
+                this.jetOsc.connect(jetFilter);
+                jetFilter.connect(this.jetGain);
+                this.jetGain.connect(this.ctx.destination);
+                this.jetOsc.start();
             }
 
             updateEngine(speed, maxSpeed) {
                 if (!this.ctx || !this.engineOsc) return;
                 const ratio = Math.abs(speed) / maxSpeed;
-                const pitch = 45 + ratio * 85;
+                const pitch = 40 + ratio * 95;
                 this.engineOsc.frequency.setTargetAtTime(pitch, this.ctx.currentTime, 0.1);
             }
 
@@ -337,7 +344,7 @@
                 const now = this.ctx.currentTime;
 
                 // Transient explosion noise burst
-                const bufferSize = this.ctx.sampleRate * 1.5;
+                const bufferSize = this.ctx.sampleRate * 1.6;
                 const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
                 const data = buffer.getChannelData(0);
                 for (let i = 0; i < bufferSize; i++) {
@@ -349,55 +356,104 @@
 
                 const filter = this.ctx.createBiquadFilter();
                 filter.type = 'lowpass';
-                filter.frequency.setValueAtTime(800, now);
-                filter.frequency.exponentialRampToValueAtTime(30, now + 1.2);
+                filter.frequency.setValueAtTime(900, now);
+                filter.frequency.exponentialRampToValueAtTime(25, now + 1.3);
 
                 const gain = this.ctx.createGain();
                 gain.gain.setValueAtTime(1.0, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 1.4);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 1.5);
 
                 noise.connect(filter);
                 filter.connect(gain);
                 gain.connect(this.ctx.destination);
 
-                // Deep bass punch drop
+                // Deep low-frequency sub-bass shockwave
                 const bass = this.ctx.createOscillator();
                 const bassGain = this.ctx.createGain();
                 bass.type = 'sine';
-                bass.frequency.setValueAtTime(160, now);
-                bass.frequency.exponentialRampToValueAtTime(20, now + 0.8);
+                bass.frequency.setValueAtTime(180, now);
+                bass.frequency.exponentialRampToValueAtTime(18, now + 0.9);
 
                 bassGain.gain.setValueAtTime(1.0, now);
-                bassGain.gain.exponentialRampToValueAtTime(0.001, now + 0.9);
+                bassGain.gain.exponentialRampToValueAtTime(0.001, now + 1.0);
 
                 bass.connect(bassGain);
                 bassGain.connect(this.ctx.destination);
 
                 noise.start(now);
                 bass.start(now);
-                bass.stop(now + 1.5);
+                bass.stop(now + 1.6);
             }
 
-            playArmorImpact(penetrated) {
+            playMachineGun() {
                 if (!this.ctx) return;
                 const now = this.ctx.currentTime;
-
                 const osc = this.ctx.createOscillator();
                 const gain = this.ctx.createGain();
 
-                if (penetrated) {
-                    // Heavy metal crash & spall thud
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(450, now);
+                osc.frequency.exponentialRampToValueAtTime(120, now + 0.08);
+
+                gain.gain.setValueAtTime(0.25, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.08);
+            }
+
+            playBombWhistleAndExplosion() {
+                if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+
+                // High pitch bomb whistle dive
+                const whistle = this.ctx.createOscillator();
+                const wGain = this.ctx.createGain();
+                whistle.type = 'sine';
+                whistle.frequency.setValueAtTime(2200, now);
+                whistle.frequency.exponentialRampToValueAtTime(300, now + 1.2);
+                wGain.gain.setValueAtTime(0.2, now);
+                wGain.gain.exponentialRampToValueAtTime(0.01, now + 1.2);
+
+                whistle.connect(wGain);
+                wGain.connect(this.ctx.destination);
+                whistle.start(now);
+                whistle.stop(now + 1.2);
+
+                // Delayed massive detonation thud
+                setTimeout(() => {
+                    this.playCannonFire();
+                }, 1150);
+            }
+
+            playArmorImpact(penetrated, ricochet) {
+                if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                if (ricochet) {
+                    // High metallic ping ricochet
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(1600, now);
+                    osc.frequency.exponentialRampToValueAtTime(500, now + 0.35);
+                    gain.gain.setValueAtTime(0.7, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+                } else if (penetrated) {
+                    // Heavy armor penetration crash
                     osc.type = 'triangle';
-                    osc.frequency.setValueAtTime(300, now);
-                    osc.frequency.exponentialRampToValueAtTime(40, now + 0.4);
+                    osc.frequency.setValueAtTime(320, now);
+                    osc.frequency.exponentialRampToValueAtTime(35, now + 0.5);
                     gain.gain.setValueAtTime(0.9, now);
                     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
                 } else {
-                    // High metallic ping ricochet
+                    // Non-penetration thud
                     osc.type = 'sine';
-                    osc.frequency.setValueAtTime(1200, now);
-                    osc.frequency.exponentialRampToValueAtTime(400, now + 0.3);
-                    gain.gain.setValueAtTime(0.6, now);
+                    osc.frequency.setValueAtTime(220, now);
+                    osc.frequency.exponentialRampToValueAtTime(80, now + 0.3);
+                    gain.gain.setValueAtTime(0.5, now);
                     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
                 }
 
@@ -411,70 +467,51 @@
         const soundEngine = new SoundEngine();
 
         // ============================================================================
-        // 2. ENHANCED PROCEDURAL TEXTURE & MAP GENERATION
+        // 2. HIGH-DETAIL PROCEDURAL TEXTURES & MULTI-LAYER BUMP MAPS
         // ============================================================================
-        function createProceduralNoiseTexture(colorBase, colorDetail, detailDensity = 8000) {
-            const canvas = document.createElement('canvas');
-            canvas.width = 512;
-            canvas.height = 512;
-            const ctx = canvas.getContext('2d');
-
-            ctx.fillStyle = colorBase;
-            ctx.fillRect(0, 0, 512, 512);
-
-            // Detailed texture noise pass
-            for (let i = 0; i < detailDensity; i++) {
-                const x = Math.random() * 512;
-                const y = Math.random() * 512;
-                const size = Math.random() * 3 + 1;
-                ctx.fillStyle = colorDetail;
-                ctx.globalAlpha = Math.random() * 0.25;
-                ctx.fillRect(x, y, size, size);
-            }
-
-            const texture = new THREE.CanvasTexture(canvas);
-            texture.wrapS = THREE.RepeatWrapping;
-            texture.wrapT = THREE.RepeatWrapping;
-            return texture;
-        }
-
-        // Camouflage generator with panel seam lines and rivet wear patterns
         function createAdvancedTankCamo(camoType) {
             const canvas = document.createElement('canvas');
             canvas.width = 1024;
             canvas.height = 1024;
             const ctx = canvas.getContext('2d');
 
-            // Base camouflage coat
-            const baseColor = camoType === 'nato' ? '#323f2b' : '#4d553e';
+            const baseColor = camoType === 'nato' ? '#2f3d27' : '#49523b';
             ctx.fillStyle = baseColor;
             ctx.fillRect(0, 0, 1024, 1024);
 
-            // Camo splotches pass
-            const spotColors = camoType === 'nato' ? ['#1e251b', '#574835', '#171c14'] : ['#2c3224', '#70644d', '#22281d'];
-            for (let i = 0; i < 45; i++) {
+            // Dynamic camouflage splotch patterns
+            const spotColors = camoType === 'nato' ? ['#1a2117', '#4a3d2e', '#131810', '#3b4733'] : ['#252b1e', '#615642', '#1b2017', '#524b3a'];
+            for (let i = 0; i < 60; i++) {
                 ctx.fillStyle = spotColors[i % spotColors.length];
                 ctx.beginPath();
                 const cx = Math.random() * 1024;
                 const cy = Math.random() * 1024;
-                const rx = Math.random() * 140 + 40;
-                const ry = Math.random() * 140 + 40;
+                const rx = Math.random() * 160 + 50;
+                const ry = Math.random() * 160 + 50;
                 ctx.ellipse(cx, cy, rx, ry, Math.random() * Math.PI, 0, Math.PI * 2);
                 ctx.fill();
             }
 
-            // Armor Panel Lines & Wear Seams
-            ctx.strokeStyle = 'rgba(10, 12, 10, 0.55)';
-            ctx.lineWidth = 3;
+            // Detailed Armor Seams & Panel Lines
+            ctx.strokeStyle = 'rgba(12, 16, 12, 0.65)';
+            ctx.lineWidth = 4;
             for (let p = 0; p < 1024; p += 128) {
                 ctx.beginPath(); ctx.moveTo(p, 0); ctx.lineTo(p, 1024); ctx.stroke();
                 ctx.beginPath(); ctx.moveTo(0, p); ctx.lineTo(1024, p); ctx.stroke();
             }
 
-            // Grime & Edge Scratches
-            for (let i = 0; i < 12000; i++) {
-                ctx.fillStyle = Math.random() > 0.5 ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.06)';
-                ctx.fillRect(Math.random() * 1024, Math.random() * 1024, Math.random() * 4 + 1, Math.random() * 4 + 1);
+            // Rivet head dots along panel lines
+            ctx.fillStyle = 'rgba(5, 8, 5, 0.7)';
+            for (let x = 64; x < 1024; x += 128) {
+                for (let y = 16; y < 1024; y += 32) {
+                    ctx.beginPath(); ctx.arc(x, y, 2.5, 0, Math.PI * 2); ctx.fill();
+                }
+            }
+
+            // Mud splatter & worn paint scratches pass
+            for (let i = 0; i < 18000; i++) {
+                ctx.fillStyle = Math.random() > 0.4 ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.08)';
+                ctx.fillRect(Math.random() * 1024, Math.random() * 1024, Math.random() * 3 + 1, Math.random() * 3 + 1);
             }
 
             const texture = new THREE.CanvasTexture(canvas);
@@ -483,155 +520,251 @@
             return texture;
         }
 
-        // Terrain Bump Map for realistic surface light scattering
-        function createTerrainBumpMap() {
+        // Detailed Cast Armor Bump Map
+        function createArmorBumpMap() {
             const canvas = document.createElement('canvas');
             canvas.width = 512;
             canvas.height = 512;
             const ctx = canvas.getContext('2d');
-
-            ctx.fillStyle = '#808080'; // Neutral bump
+            ctx.fillStyle = '#808080';
             ctx.fillRect(0, 0, 512, 512);
 
-            for (let i = 0; i < 20000; i++) {
+            for (let i = 0; i < 25000; i++) {
                 const val = Math.floor(Math.random() * 255);
                 ctx.fillStyle = `rgb(${val},${val},${val})`;
-                ctx.fillRect(Math.random() * 512, Math.random() * 512, Math.random() * 3 + 1, Math.random() * 3 + 1);
+                ctx.fillRect(Math.random() * 512, Math.random() * 512, Math.random() * 2 + 1, Math.random() * 2 + 1);
             }
 
             const bumpTex = new THREE.CanvasTexture(canvas);
             bumpTex.wrapS = THREE.RepeatWrapping;
             bumpTex.wrapT = THREE.RepeatWrapping;
-            bumpTex.repeat.set(40, 40);
+            bumpTex.repeat.set(4, 4);
             return bumpTex;
+        }
+
+        // Procedural Detailed Terrain & Bump Map
+        function createDetailedTerrainTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 1024;
+            canvas.height = 1024;
+            const ctx = canvas.getContext('2d');
+
+            ctx.fillStyle = '#2b3620';
+            ctx.fillRect(0, 0, 1024, 1024);
+
+            // Grass noise and dirt patches
+            for (let i = 0; i < 35000; i++) {
+                const x = Math.random() * 1024;
+                const y = Math.random() * 1024;
+                ctx.fillStyle = Math.random() > 0.5 ? '#1e2616' : '#38472a';
+                ctx.globalAlpha = Math.random() * 0.3;
+                ctx.fillRect(x, y, Math.random() * 4 + 1, Math.random() * 4 + 1);
+            }
+
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.wrapS = THREE.RepeatWrapping;
+            texture.wrapT = THREE.RepeatWrapping;
+            texture.repeat.set(50, 50);
+            return texture;
         }
 
         const tankCamoTextureNATO = createAdvancedTankCamo('nato');
         const tankCamoTextureWarsaw = createAdvancedTankCamo('warsaw');
-        const groundTextureCanvas = createProceduralNoiseTexture('#2d3824', '#1c2415', 12000);
-        groundTextureCanvas.repeat.set(40, 40);
-        const terrainBumpMap = createTerrainBumpMap();
-
-        // Dynamic Light & Particle List
-        let pointLights = [];
+        const armorBumpMap = createArmorBumpMap();
+        const groundTextureCanvas = createDetailedTerrainTexture();
 
         // ============================================================================
-        // 3. GAME CONSTANTS & STATE
+        // 3. GAME CONSTANTS & BALLISTICS DATA
         // ============================================================================
-        const MAP_SIZE = 600;
+        const MAP_SIZE = 750;
+        const GRAVITY = 9.81;
+
+        // Realistic Ballistic Shell Types (with Air Drag and Sloped Penetration physics)
         const SHELL_TYPES = [
-            { name: "APFSDS", vel: 1500, pen: 480, drop: 9.8, count: 24, icon: "fa-bolt", color: "#f59e0b" },
-            { name: "HEAT-FS", vel: 900, pen: 400, drop: 12.0, count: 12, icon: "fa-fire", color: "#f43f5e" },
-            { name: "HE", vel: 700, pen: 85, drop: 15.0, count: 8, icon: "fa-burst", color: "#f97316" }
+            { name: "APFSDS", vel: 1650, pen: 580, drop: 9.81, drag: 0.00015, count: 28, color: "#f59e0b" },
+            { name: "HEAT-FS", vel: 950, pen: 480, drop: 12.0, drag: 0.00045, count: 14, color: "#f43f5e" },
+            { name: "HE", vel: 780, pen: 110, drop: 15.0, drag: 0.00060, count: 10, color: "#f97316" }
         ];
 
         let scene, camera, renderer;
         let hitCamScene, hitCamCamera, hitCamRenderer;
-        let playerTank, aiTanks = [];
+        let playerTank;
+        let aiTanks = [];
+        let planes = [];
         let projectiles = [];
-        let particleSystems = [];
 
         let currentShellIndex = 0;
         let reloadTimer = 0;
-        const RELOAD_DURATION = 6.0; // 6 seconds reload cycle
+        const RELOAD_DURATION = 5.5;
         let isScopeActive = false;
         let isFreeLook = false;
+        let laserZeroingDistance = 0;
 
-        // Player Input State
-        const keys = { w: false, a: false, s: false, d: false, shift: false, c: false, f: false };
-        let mouseX = 0, mouseY = 0;
+        // Input state
+        const keys = { w: false, a: false, s: false, d: false, shift: false, c: false, f: false, space: false, e: false };
+        let mgCooldown = 0;
         let cameraPitch = 0.2, cameraYaw = 0;
         let turretTargetYaw = 0, turretTargetPitch = 0;
 
-        // Tickets & Control Points
         let blueTickets = 10000;
         let redTickets = 10000;
         let controlPoints = [
-            { id: 'A', pos: new THREE.Vector3(-120, 0, 0), owner: 'neutral', progress: 0 },
-            { id: 'B', pos: new THREE.Vector3(0, 0, 0), owner: 'neutral', progress: 0 },
-            { id: 'C', pos: new THREE.Vector3(120, 0, 0), owner: 'neutral', progress: 0 }
+            { id: 'A', pos: new THREE.Vector3(-180, 0, 0), owner: 'neutral' },
+            { id: 'B', pos: new THREE.Vector3(0, 0, 0), owner: 'neutral' },
+            { id: 'C', pos: new THREE.Vector3(180, 0, 0), owner: 'neutral' }
         ];
 
+        function getTerrainHeight(x, z) {
+            return Math.sin(x * 0.012) * Math.cos(z * 0.012) * 9.5 + Math.sin(x * 0.025) * 3.5;
+        }
+
         // ============================================================================
-        // 4. PROCEDURAL 3D TANK MESH CREATOR
+        // 4. PROCEDURAL 3D TANK & AIRCRAFT MESHES
         // ============================================================================
         function create3DTankMesh(isEnemy = false) {
             const tankGroup = new THREE.Group();
 
             const bodyMat = new THREE.MeshStandardMaterial({
                 map: isEnemy ? tankCamoTextureWarsaw : tankCamoTextureNATO,
-                roughness: 0.5,
-                metalness: 0.4
+                bumpMap: armorBumpMap,
+                bumpScale: 0.08,
+                roughness: 0.45,
+                metalness: 0.55
             });
 
-            const metalDarkMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.7, metalness: 0.6 });
+            const metalDarkMat = new THREE.MeshStandardMaterial({ color: 0x18202c, roughness: 0.6, metalness: 0.7 });
 
-            // 1. Lower Glacis / Chassis Hull
-            const hullGeo = new THREE.BoxGeometry(3.6, 1.4, 6.8);
+            // Hull Geometry
+            const hullGeo = new THREE.BoxGeometry(3.8, 1.4, 7.2);
             const hullMesh = new THREE.Mesh(hullGeo, bodyMat);
             hullMesh.position.y = 1.1;
             hullMesh.castShadow = true;
             hullMesh.receiveShadow = true;
             tankGroup.add(hullMesh);
 
-            // Side Skirts / Tracks
-            const trackGeo = new THREE.BoxGeometry(0.7, 1.2, 7.0);
+            // Left & Right Tread Tracks
+            const trackGeo = new THREE.BoxGeometry(0.75, 1.2, 7.4);
             const leftTrack = new THREE.Mesh(trackGeo, metalDarkMat);
-            leftTrack.position.set(-2.0, 0.9, 0);
+            leftTrack.position.set(-2.1, 0.9, 0);
             leftTrack.castShadow = true;
             tankGroup.add(leftTrack);
 
             const rightTrack = new THREE.Mesh(trackGeo, metalDarkMat);
-            rightTrack.position.set(2.0, 0.9, 0);
+            rightTrack.position.set(2.1, 0.9, 0);
             rightTrack.castShadow = true;
             tankGroup.add(rightTrack);
 
-            // 2. Turret Base Group
+            // Turret Base
             const turretGroup = new THREE.Group();
-            turretGroup.position.set(0, 1.9, -0.2);
+            turretGroup.position.set(0, 1.95, -0.2);
 
-            const turretGeo = new THREE.BoxGeometry(3.2, 1.1, 4.2);
+            const turretGeo = new THREE.BoxGeometry(3.4, 1.15, 4.4);
             const turretMesh = new THREE.Mesh(turretGeo, bodyMat);
             turretMesh.castShadow = true;
             turretGroup.add(turretMesh);
 
-            // Commander Cupola
+            // Cupola & Roof 12.7mm Machine Gun
             const cupolaGeo = new THREE.CylinderGeometry(0.5, 0.5, 0.4, 12);
             const cupolaMesh = new THREE.Mesh(cupolaGeo, metalDarkMat);
-            cupolaMesh.position.set(0.8, 0.75, -0.5);
+            cupolaMesh.position.set(0.85, 0.78, -0.5);
             turretGroup.add(cupolaMesh);
 
-            // 3. Cannon Barrel & Mantlet
-            const barrelGroup = new THREE.Group();
-            barrelGroup.position.set(0, 0.1, 1.8);
+            const mgGroup = new THREE.Group();
+            mgGroup.position.set(0.85, 1.1, -0.5);
+            const mgBody = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.25, 0.9), metalDarkMat);
+            const mgBarrel = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.2), metalDarkMat);
+            mgBarrel.rotation.x = Math.PI / 2;
+            mgBarrel.position.z = 0.7;
+            mgGroup.add(mgBody);
+            mgGroup.add(mgBarrel);
+            turretGroup.add(mgGroup);
 
-            const mantletGeo = new THREE.BoxGeometry(1.2, 0.8, 0.8);
+            // Main Cannon Barrel & Mantlet
+            const barrelGroup = new THREE.Group();
+            barrelGroup.position.set(0, 0.1, 1.9);
+
+            const mantletGeo = new THREE.BoxGeometry(1.3, 0.85, 0.8);
             const mantlet = new THREE.Mesh(mantletGeo, metalDarkMat);
             barrelGroup.add(mantlet);
 
-            const barrelGeo = new THREE.CylinderGeometry(0.12, 0.14, 4.8, 16);
+            const barrelGeo = new THREE.CylinderGeometry(0.13, 0.15, 5.2, 16);
             const barrel = new THREE.Mesh(barrelGeo, metalDarkMat);
             barrel.rotation.x = Math.PI / 2;
-            barrel.position.z = 2.4;
+            barrel.position.z = 2.6;
             barrel.castShadow = true;
             barrelGroup.add(barrel);
 
-            // Muzzle Flash Point Reference
             const muzzlePoint = new THREE.Object3D();
-            muzzlePoint.position.set(0, 0, 4.8);
+            muzzlePoint.position.set(0, 0, 5.2);
             barrelGroup.add(muzzlePoint);
+
+            const mgMuzzlePoint = new THREE.Object3D();
+            mgMuzzlePoint.position.set(0.85, 1.1, 0.8);
+            turretGroup.add(mgMuzzlePoint);
 
             turretGroup.add(barrelGroup);
             tankGroup.add(turretGroup);
 
-            // Store references inside object for animation
             return {
                 mesh: tankGroup,
                 turret: turretGroup,
                 barrel: barrelGroup,
                 muzzlePoint: muzzlePoint,
+                mgMuzzlePoint: mgMuzzlePoint,
                 hull: hullMesh
             };
+        }
+
+        // Procedural Close Air Support Fighter Aircraft
+        function createAircraftMesh(isEnemy = true) {
+            const planeGroup = new THREE.Group();
+
+            const bodyMat = new THREE.MeshStandardMaterial({
+                color: isEnemy ? 0x4a5568 : 0x2b4c7e,
+                metalness: 0.8,
+                roughness: 0.3
+            });
+            const wingMat = new THREE.MeshStandardMaterial({ color: 0x2d3748, metalness: 0.7, roughness: 0.4 });
+            const canopyMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.7 });
+
+            // Fuselage Body
+            const bodyGeo = new THREE.ConeGeometry(0.9, 9.0, 12);
+            const bodyMesh = new THREE.Mesh(bodyGeo, bodyMat);
+            bodyMesh.rotation.x = Math.PI / 2;
+            planeGroup.add(bodyMesh);
+
+            // Swept Back Main Wings
+            const wingGeo = new THREE.BoxGeometry(11.0, 0.12, 2.2);
+            const wingMesh = new THREE.Mesh(wingGeo, wingMat);
+            wingMesh.position.set(0, 0, 0.5);
+            planeGroup.add(wingMesh);
+
+            // Tail Fin
+            const tailGeo = new THREE.BoxGeometry(0.12, 2.0, 1.5);
+            const tailMesh = new THREE.Mesh(tailGeo, wingMat);
+            tailMesh.position.set(0, 1.0, -3.8);
+            planeGroup.add(tailMesh);
+
+            // Glass Cockpit Canopy
+            const canopyGeo = new THREE.SphereGeometry(0.65, 8, 8);
+            const canopyMesh = new THREE.Mesh(canopyGeo, canopyMat);
+            canopyMesh.position.set(0, 0.5, 1.2);
+            canopyMesh.scale.set(0.8, 0.8, 1.8);
+            planeGroup.add(canopyMesh);
+
+            // Underwing Payload Bombs
+            const bombGeo = new THREE.CylinderGeometry(0.2, 0.2, 1.2);
+            const bombMat = new THREE.MeshStandardMaterial({ color: 0x1e293b });
+            const bombL = new THREE.Mesh(bombGeo, bombMat);
+            bombL.rotation.x = Math.PI / 2;
+            bombL.position.set(-2.5, -0.4, 0.5);
+            planeGroup.add(bombL);
+
+            const bombR = bombL.clone();
+            bombR.position.x = 2.5;
+            planeGroup.add(bombR);
+
+            return { mesh: planeGroup, bombL: bombL, bombR: bombR };
         }
 
         // ============================================================================
@@ -639,10 +772,10 @@
         // ============================================================================
         function setupThreeScene() {
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x6ca0dc); // Atmospheric Sky Blue
-            scene.fog = new THREE.FogExp2(0x8eb3dd, 0.0012);
+            scene.background = new THREE.Color(0x6093cd);
+            scene.fog = new THREE.FogExp2(0x7faee2, 0.0010);
 
-            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 2000);
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 2500);
 
             renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
             renderer.setSize(window.innerWidth, window.innerHeight);
@@ -650,168 +783,119 @@
             renderer.shadowMap.enabled = true;
             renderer.shadowMap.type = THREE.PCFSoftShadowMap;
             renderer.toneMapping = THREE.ACESFilmicToneMapping;
-            renderer.toneMappingExposure = 1.25;
+            renderer.toneMappingExposure = 1.35;
 
             document.getElementById('game-container').appendChild(renderer.domElement);
 
-            // 1. Dual Hemisphere Light (Sky Blue + Earthy Ground Bounce)
-            const hemiLight = new THREE.HemisphereLight(0xb1e1ff, 0x3d472a, 0.75);
+            // Sky & Ground Bounce Lighting
+            const hemiLight = new THREE.HemisphereLight(0xcce7ff, 0x3b4d28, 0.85);
             scene.add(hemiLight);
 
-            // 2. High Quality Sunlight with Soft Shadow Map Calibration
-            const sunLight = new THREE.DirectionalLight(0xfff5ea, 1.6);
-            sunLight.position.set(280, 450, 180);
+            // Sun Directional Light with Soft Shadows
+            const sunLight = new THREE.DirectionalLight(0xfff8ee, 1.8);
+            sunLight.position.set(350, 520, 220);
             sunLight.castShadow = true;
             sunLight.shadow.mapSize.width = 2048;
             sunLight.shadow.mapSize.height = 2048;
             sunLight.shadow.camera.near = 10;
-            sunLight.shadow.camera.far = 1200;
-            sunLight.shadow.bias = -0.0003;
-            sunLight.shadow.radius = 2.0;
+            sunLight.shadow.camera.far = 1400;
+            sunLight.shadow.bias = -0.0002;
+            sunLight.shadow.radius = 2.2;
 
-            const d = 300;
+            const d = 400;
             sunLight.shadow.camera.left = -d;
             sunLight.shadow.camera.right = d;
             sunLight.shadow.camera.top = d;
             sunLight.shadow.camera.bottom = -d;
             scene.add(sunLight);
 
-            // Visual Sun Disc in Skybox
+            // Sun Disc in Skybox
             const sunMesh = new THREE.Mesh(
-                new THREE.SphereGeometry(14, 16, 16),
-                new THREE.MeshBasicMaterial({ color: 0xfff0cb, fog: false })
+                new THREE.SphereGeometry(18, 16, 16),
+                new THREE.MeshBasicMaterial({ color: 0xfff3d1, fog: false })
             );
-            sunMesh.position.copy(sunLight.position).normalize().multiplyScalar(900);
+            sunMesh.position.copy(sunLight.position).normalize().multiplyScalar(1200);
             scene.add(sunMesh);
 
-            // Atmospheric Sky Gradient Dome
-            const skyDomeGeo = new THREE.SphereGeometry(1200, 32, 16);
-            const skyDomeMat = new THREE.MeshBasicMaterial({
-                color: 0x7bb3ef,
-                side: THREE.BackSide,
-                fog: false
-            });
-            const skyDome = new THREE.Mesh(skyDomeGeo, skyDomeMat);
-            scene.add(skyDome);
-
-            // Enhanced Procedural Heightmap Terrain with Bump Highlights
-            const terrainGeo = new THREE.PlaneGeometry(MAP_SIZE, MAP_SIZE, 140, 140);
+            // Procedural Heightmap Terrain
+            const terrainGeo = new THREE.PlaneGeometry(MAP_SIZE, MAP_SIZE, 160, 160);
             terrainGeo.rotateX(-Math.PI / 2);
 
             const pos = terrainGeo.attributes.position;
             for (let i = 0; i < pos.count; i++) {
                 const x = pos.getX(i);
                 const z = pos.getZ(i);
-                const height = Math.sin(x * 0.015) * Math.cos(z * 0.015) * 8.0 + Math.sin(x * 0.03) * 3.0;
-                pos.setY(i, height);
+                pos.setY(i, getTerrainHeight(x, z));
             }
             terrainGeo.computeVertexNormals();
 
             const terrainMat = new THREE.MeshStandardMaterial({
                 map: groundTextureCanvas,
-                bumpMap: terrainBumpMap,
-                bumpScale: 0.35,
-                roughness: 0.85,
-                metalness: 0.15
+                roughness: 0.88,
+                metalness: 0.12
             });
 
             const terrain = new THREE.Mesh(terrainGeo, terrainMat);
             terrain.receiveShadow = true;
             scene.add(terrain);
 
-            // Add Trees, Foliage, Rocks, and Glowing Capture Zones
             createEnvironmentObjects();
-
-            // Setup Hit-Cam Sub-Scene
             setupHitCamScene();
         }
 
         function createEnvironmentObjects() {
-            // Enhanced Multi-tier Evergreen Trees
-            const trunkGeo = new THREE.CylinderGeometry(0.4, 0.7, 3.5, 7);
-            const foliageMat1 = new THREE.MeshStandardMaterial({ color: 0x223d1a, roughness: 0.8 });
-            const foliageMat2 = new THREE.MeshStandardMaterial({ color: 0x2d4f23, roughness: 0.7 });
-            const trunkMat = new THREE.MeshStandardMaterial({ color: 0x3d2a1d, roughness: 0.9 });
-            const rockMat = new THREE.MeshStandardMaterial({ color: 0x5a636a, roughness: 0.85, metalness: 0.2 });
+            // Pine Forests & Rocks
+            const trunkGeo = new THREE.CylinderGeometry(0.4, 0.75, 3.8, 7);
+            const foliageMat1 = new THREE.MeshStandardMaterial({ color: 0x1f3818, roughness: 0.8 });
+            const foliageMat2 = new THREE.MeshStandardMaterial({ color: 0x2b4c21, roughness: 0.7 });
+            const trunkMat = new THREE.MeshStandardMaterial({ color: 0x3d281a, roughness: 0.9 });
 
-            for (let i = 0; i < 160; i++) {
-                const x = (Math.random() - 0.5) * (MAP_SIZE - 70);
-                const z = (Math.random() - 0.5) * (MAP_SIZE - 70);
-
-                if (Math.abs(x) < 35 && Math.abs(z) < 35) continue; // Keep center spawn clear
+            for (let i = 0; i < 220; i++) {
+                const x = (Math.random() - 0.5) * (MAP_SIZE - 90);
+                const z = (Math.random() - 0.5) * (MAP_SIZE - 90);
+                if (Math.abs(x) < 40 && Math.abs(z) < 40) continue;
 
                 const y = getTerrainHeight(x, z);
 
                 const treeGroup = new THREE.Group();
                 const trunk = new THREE.Mesh(trunkGeo, trunkMat);
-                trunk.position.y = 1.75;
+                trunk.position.y = 1.9;
                 trunk.castShadow = true;
                 treeGroup.add(trunk);
 
-                // 3 Layer Cones for Lush Tree Density
-                const cone1 = new THREE.Mesh(new THREE.ConeGeometry(3.2, 5, 7), foliageMat1);
-                cone1.position.y = 4.5;
+                const cone1 = new THREE.Mesh(new THREE.ConeGeometry(3.4, 5.2, 7), foliageMat1);
+                cone1.position.y = 4.8;
                 cone1.castShadow = true;
                 treeGroup.add(cone1);
 
-                const cone2 = new THREE.Mesh(new THREE.ConeGeometry(2.4, 4.5, 7), foliageMat2);
-                cone2.position.y = 6.8;
+                const cone2 = new THREE.Mesh(new THREE.ConeGeometry(2.5, 4.6, 7), foliageMat2);
+                cone2.position.y = 7.2;
                 cone2.castShadow = true;
                 treeGroup.add(cone2);
-
-                const cone3 = new THREE.Mesh(new THREE.ConeGeometry(1.6, 3.8, 7), foliageMat1);
-                cone3.position.y = 8.8;
-                cone3.castShadow = true;
-                treeGroup.add(cone3);
 
                 treeGroup.position.set(x, y, z);
                 scene.add(treeGroup);
             }
 
-            // Scattered Rocks & Boulders with Specular Details
-            const rockGeo = new THREE.DodecahedronGeometry(1.8, 1);
-            for (let r = 0; r < 60; r++) {
-                const rx = (Math.random() - 0.5) * (MAP_SIZE - 80);
-                const rz = (Math.random() - 0.5) * (MAP_SIZE - 80);
-                const ry = getTerrainHeight(rx, rz);
-
-                const rock = new THREE.Mesh(rockGeo, rockMat);
-                rock.position.set(rx, ry + 0.6, rz);
-                rock.scale.set(Math.random() * 1.5 + 0.8, Math.random() * 0.8 + 0.5, Math.random() * 1.5 + 0.8);
-                rock.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, 0);
-                rock.castShadow = true;
-                rock.receiveShadow = true;
-                scene.add(rock);
-            }
-
-            // Setup Capture Zone Flags & Glowing Ground Rings
+            // Capture Point Flags
             controlPoints.forEach(cp => {
-                const flagPoleGeo = new THREE.CylinderGeometry(0.12, 0.12, 16, 8);
-                const poleMat = new THREE.MeshStandardMaterial({ color: 0xc0caf5, metalness: 0.8, roughness: 0.2 });
-                const pole = new THREE.Mesh(flagPoleGeo, poleMat);
+                const poleGeo = new THREE.CylinderGeometry(0.12, 0.12, 18, 8);
+                const poleMat = new THREE.MeshStandardMaterial({ color: 0xc0caf5, metalness: 0.8 });
+                const pole = new THREE.Mesh(poleGeo, poleMat);
                 const y = getTerrainHeight(cp.pos.x, cp.pos.z);
-                pole.position.set(cp.pos.x, y + 8, cp.pos.z);
+                pole.position.set(cp.pos.x, y + 9, cp.pos.z);
                 pole.castShadow = true;
                 scene.add(pole);
 
-                // Ground Ring Marker with Emissive Glow
-                const ringGeo = new THREE.RingGeometry(18, 19.5, 32);
+                const ringGeo = new THREE.RingGeometry(20, 22, 32);
                 ringGeo.rotateX(-Math.PI / 2);
-                const ringMat = new THREE.MeshBasicMaterial({
-                    color: 0x38bdf8,
-                    side: THREE.DoubleSide,
-                    transparent: true,
-                    opacity: 0.55
-                });
+                const ringMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, side: THREE.DoubleSide, transparent: true, opacity: 0.6 });
                 const ring = new THREE.Mesh(ringGeo, ringMat);
-                ring.position.set(cp.pos.x, y + 0.25, cp.pos.z);
+                ring.position.set(cp.pos.x, y + 0.3, cp.pos.z);
                 scene.add(ring);
             });
         }
 
-        // ============================================================================
-        // 6. WAR THUNDER HIT-CAM (X-RAY VIEW)
-        // ============================================================================
         function setupHitCamScene() {
             hitCamScene = new THREE.Scene();
             hitCamScene.background = new THREE.Color(0x050811);
@@ -824,52 +908,38 @@
             hitCamRenderer = new THREE.WebGLRenderer({ canvas: hitCamCanvas, antialias: true });
             hitCamRenderer.setSize(256, 160);
 
-            const amb = new THREE.AmbientLight(0xffffff, 0.8);
+            const amb = new THREE.AmbientLight(0xffffff, 0.9);
             hitCamScene.add(amb);
         }
 
         function triggerHitCam(targetName, modulesDamaged, penetrated) {
             const card = document.getElementById('hit-cam-card');
-            const targetNameEl = document.getElementById('hit-cam-target-name');
-            const statusEl = document.getElementById('hit-cam-status');
-
-            targetNameEl.innerText = targetName;
+            document.getElementById('hit-cam-target-name').innerText = targetName;
             card.classList.remove('hidden');
 
-            // Clear previous hit cam meshes
             while (hitCamScene.children.length > 1) {
                 hitCamScene.remove(hitCamScene.children[hitCamScene.children.length - 1]);
             }
 
-            // Render Wireframe X-Ray Model
-            const xrayMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, wireframe: true, transparent: true, opacity: 0.4 });
-            const xrayTank = new THREE.Mesh(new THREE.BoxGeometry(3.2, 1.4, 6.0), xrayMat);
+            const xrayMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, wireframe: true, transparent: true, opacity: 0.45 });
+            const xrayTank = new THREE.Mesh(new THREE.BoxGeometry(3.4, 1.4, 6.2), xrayMat);
             hitCamScene.add(xrayTank);
 
-            // Add Internal Modules (Engine, Ammo)
             const engineMat = new THREE.MeshBasicMaterial({ color: modulesDamaged.includes("Engine") ? 0xef4444 : 0x22c55e });
             const engine = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.8, 1.6), engineMat);
             engine.position.set(0, -0.1, -1.8);
             hitCamScene.add(engine);
 
-            const ammoMat = new THREE.MeshBasicMaterial({ color: modulesDamaged.includes("Ammo Rack") ? 0xef4444 : 0x22c55e });
-            const ammo = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 1.2), ammoMat);
-            ammo.position.set(0.8, -0.1, 0.2);
-            hitCamScene.add(ammo);
-
-            statusEl.innerText = penetrated ? (modulesDamaged.join(", ") || "Target Hit!") : "Ricochet / Non-Penetration!";
+            const statusEl = document.getElementById('hit-cam-status');
+            statusEl.innerText = penetrated ? (modulesDamaged.join(", ") || "Armor Penetration!") : "Ricochet / Non-Penetration!";
             statusEl.className = penetrated ? "text-[11px] font-mono mt-1 text-amber-400 font-bold truncate" : "text-[11px] font-mono mt-1 text-slate-400 font-bold truncate";
 
             hitCamRenderer.render(hitCamScene, hitCamCamera);
-
-            // Hide after 3.5 seconds
-            setTimeout(() => {
-                card.classList.add('hidden');
-            }, 3500);
+            setTimeout(() => card.classList.add('hidden'), 3500);
         }
 
         // ============================================================================
-        // 7. TANK ENTITY CONTROLLER & AI TANK LOGIC
+        // 6. ENTITY CONTROLLERS (TANKS & CAS AIRCRAFT)
         // ============================================================================
         class TankEntity {
             constructor(x, z, isEnemy = false, name = "M1A2 Abrams") {
@@ -880,98 +950,169 @@
                 this.meshObj.mesh.position.copy(this.position);
 
                 this.speed = 0;
-                this.maxSpeed = isEnemy ? 11 : 14; // Speed units
-                this.rotation = 0; // Hull yaw
-                this.turretYaw = 0;
+                this.maxSpeed = isEnemy ? 12 : 15;
+                this.rotation = Math.random() * Math.PI * 2;
+                this.turretYaw = this.rotation;
                 this.barrelPitch = 0;
 
-                // Health & Module Status
                 this.hp = 100;
+                this.maxHp = 100;
                 this.isDestroyed = false;
-                this.modules = {
-                    engine: { status: 'ok', hp: 100 },
-                    barrel: { status: 'ok', hp: 100 },
-                    gunner: { status: 'ok', hp: 100 },
-                    ammoRack: { status: 'ok', hp: 100 }
-                };
+                this.modules = { engine: 'ok', ammo: 'ok', barrel: 'ok', tracks: 'ok', turret: 'ok' };
+                this.isRepairing = false;
+                this.repairProgress = 0;
+                this.repairDuration = 8.0;
 
                 scene.add(this.meshObj.mesh);
             }
 
             update(dt) {
                 if (this.isDestroyed) return;
-
-                // Hull position on terrain heightmap
                 this.position.y = getTerrainHeight(this.position.x, this.position.z) + 0.2;
                 this.meshObj.mesh.position.copy(this.position);
                 this.meshObj.mesh.rotation.y = this.rotation;
 
-                // Rotate Turret smoothly towards target angle
                 this.meshObj.turret.rotation.y = this.turretYaw - this.rotation;
                 this.meshObj.barrel.rotation.x = this.barrelPitch;
             }
 
-            takeDamage(damage, hitLocation, shellPen, shellType) {
+            takeDamage(damage, hitAngle, shellPen, shellType) {
                 if (this.isDestroyed) return;
 
-                // Calculate effective armor angle calculation
-                const armorThickness = hitLocation === 'front' ? 420 : 180;
-                const penetrated = shellPen > armorThickness;
+                // Sloped Armor Mechanics: Effective thickness increases with impact angle
+                const effectiveArmor = (this.isEnemy ? 380 : 420) / Math.max(0.2, Math.cos(hitAngle));
+                const ricochet = hitAngle > (68 * Math.PI / 180); // >68 degree slope causes bounce
+                const penetrated = !ricochet && (shellPen > effectiveArmor);
 
-                soundEngine.playArmorImpact(penetrated);
+                soundEngine.playArmorImpact(penetrated, ricochet);
 
                 let damagedMods = [];
                 if (penetrated) {
                     this.hp -= damage;
-                    if (Math.random() < 0.6) {
-                        this.modules.engine.status = 'damaged';
-                        damagedMods.push("Engine");
-                    }
-                    if (Math.random() < 0.4 || shellType === 'APFSDS') {
-                        this.modules.ammoRack.status = 'destroyed';
-                        damagedMods.push("Ammo Rack");
-                        this.hp -= 60; // Critical ammo cook-off
-                    }
+                    if (Math.random() < 0.55) { this.modules.engine = 'damaged'; damagedMods.push("Engine"); }
+                    if (Math.random() < 0.45) { this.modules.barrel = 'damaged'; damagedMods.push("Cannon Barrel"); }
+                    if (Math.random() < 0.45) { this.modules.tracks = 'damaged'; damagedMods.push("Tracks"); }
+                    if (Math.random() < 0.35 || shellType === 'APFSDS') { this.modules.ammo = 'damaged'; damagedMods.push("Ammo Rack"); this.hp -= 20; }
 
                     if (this.hp <= 0) {
                         this.isDestroyed = true;
                         this.hp = 0;
-                        this.meshObj.hull.material.color.setHex(0x111111); // Burned wreck
-                        addKillFeedEntry("Player", this.name, shellType);
+                        this.meshObj.hull.material.color.setHex(0x111111);
+                        addKillFeedEntry(this.isEnemy ? "Player" : "Enemy", this.name, shellType);
                         createExplosionEffect(this.position);
                     }
                 }
 
-                if (!this.isEnemy) {
-                    updatePaperdollHUD(this);
-                } else {
+                if (this.isEnemy) {
                     triggerHitCam(this.name, damagedMods, penetrated);
+                } else {
+                    updatePaperdoll();
+                    checkRepairPromptStatus();
                 }
+            }
+
+            needsRepair() {
+                if (this.isDestroyed) return false;
+                if (this.hp < this.maxHp) return true;
+                return Object.values(this.modules).some(status => status !== 'ok');
+            }
+
+            startRepair() {
+                if (!this.needsRepair() || this.isDestroyed) return;
+                this.isRepairing = true;
+                this.repairProgress = 0;
+            }
+
+            cancelRepair() {
+                this.isRepairing = false;
+                this.repairProgress = 0;
+            }
+
+            completeRepair() {
+                this.isRepairing = false;
+                this.repairProgress = 0;
+                this.hp = this.maxHp;
+                this.modules = { engine: 'ok', ammo: 'ok', barrel: 'ok', tracks: 'ok', turret: 'ok' };
+                updatePaperdoll();
+                checkRepairPromptStatus();
+            }
+        }
+
+        // Close Air Support Aircraft Entity
+        class AircraftEntity {
+            constructor() {
+                this.meshObj = createAircraftMesh(true);
+                this.position = new THREE.Vector3(-600, 180, (Math.random() - 0.5) * 400);
+                this.meshObj.mesh.position.copy(this.position);
+
+                this.speed = 110;
+                this.hasDroppedBomb = false;
+                this.target = playerTank;
+
+                scene.add(this.meshObj.mesh);
+                document.getElementById('air-warning-banner').classList.remove('hidden');
+                setTimeout(() => document.getElementById('air-warning-banner').classList.add('hidden'), 5000);
+            }
+
+            update(dt) {
+                // Fly across map toward target
+                const dir = new THREE.Vector3().subVectors(this.target.position, this.position);
+                dir.y = 0;
+                dir.normalize();
+
+                this.position.x += dir.x * this.speed * dt;
+                this.position.z += dir.z * this.speed * dt;
+                this.meshObj.mesh.position.copy(this.position);
+                this.meshObj.mesh.rotation.y = Math.atan2(dir.x, dir.z);
+
+                // Drop bomb when over target area
+                const distToPlayer = this.position.distanceTo(playerTank.position);
+                if (distToPlayer < 120 && !this.hasDroppedBomb) {
+                    this.hasDroppedBomb = true;
+                    soundEngine.playBombWhistleAndExplosion();
+
+                    // Bomb impact after 1.2 seconds
+                    setTimeout(() => {
+                        const bombPos = playerTank.position.clone().add(new THREE.Vector3((Math.random() - 0.5) * 15, 0, (Math.random() - 0.5) * 15));
+                        createExplosionEffect(bombPos);
+                        if (playerTank.position.distanceTo(bombPos) < 18) {
+                            playerTank.takeDamage(90, 0, 800, '500kg Bomb');
+                        }
+                    }, 1200);
+                }
+
+                // Despawn when out of map bounds
+                if (Math.abs(this.position.x) > 900 || Math.abs(this.position.z) > 900) {
+                    scene.remove(this.meshObj.mesh);
+                    return false;
+                }
+                return true;
             }
         }
 
         // ============================================================================
-        // 8. BALLISTICS, ILLUMINATED TRACERS & DYNAMIC LIGHTING EFFECTS
+        // 7. REALISTIC 3X BALLISTICS & DYNAMIC TRACER LIGHTS
         // ============================================================================
         class ShellProjectile {
             constructor(pos, dir, shellType, owner) {
                 this.position = pos.clone();
                 this.velocity = dir.clone().multiplyScalar(shellType.vel * 0.1);
                 this.drop = shellType.drop;
+                this.drag = shellType.drag;
                 this.pen = shellType.pen;
                 this.shellTypeName = shellType.name;
                 this.owner = owner;
                 this.alive = true;
 
-                // Visual tracer mesh with vibrant glow
-                const tracerGeo = new THREE.CylinderGeometry(0.12, 0.12, 2.2);
-                const tracerMat = new THREE.MeshBasicMaterial({ color: 0xfff176 });
+                // High intensity tracer mesh
+                const tracerGeo = new THREE.CylinderGeometry(0.12, 0.12, 2.5);
+                const tracerMat = new THREE.MeshBasicMaterial({ color: shellType.color });
                 this.mesh = new THREE.Mesh(tracerGeo, tracerMat);
                 this.mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize());
                 this.mesh.position.copy(this.position);
 
-                // Dynamic Tracer Point Light Source
-                this.light = new THREE.PointLight(0xffaa22, 3.5, 30);
+                // Dynamic Tracer Point Light Casting Light on Terrain
+                this.light = new THREE.PointLight(0xffaa22, 4.0, 35);
                 this.mesh.add(this.light);
 
                 scene.add(this.mesh);
@@ -980,12 +1121,17 @@
             update(dt) {
                 if (!this.alive) return;
 
-                // Gravity trajectory drop
-                this.velocity.y -= this.drop * dt * 3.0;
+                // Realistic Ballistic Aerodynamic Drag Velocity Decay
+                const currentSpeed = this.velocity.length();
+                const dragDecay = 1.0 - (this.drag * currentSpeed * dt * 10);
+                this.velocity.multiplyScalar(Math.max(0.8, dragDecay));
+
+                // Gravity trajectory drop curves
+                this.velocity.y -= this.drop * dt * 3.2;
                 this.position.addScaledVector(this.velocity, dt);
                 this.mesh.position.copy(this.position);
 
-                // Check Terrain Collision
+                // Terrain collision check
                 const terrainY = getTerrainHeight(this.position.x, this.position.z);
                 if (this.position.y <= terrainY) {
                     this.destroy();
@@ -993,14 +1139,17 @@
                     return;
                 }
 
-                // Check Hit Against Tanks
+                // Check Tank Collision with Angle of Incidence Calculation
                 const allTanks = [playerTank, ...aiTanks];
                 for (let tank of allTanks) {
                     if (tank === this.owner || tank.isDestroyed) continue;
 
-                    const dist = this.position.distanceTo(tank.position);
-                    if (dist < 3.2) {
-                        tank.takeDamage(75, 'front', this.pen, this.shellTypeName);
+                    if (this.position.distanceTo(tank.position) < 3.4) {
+                        const hitVector = this.position.clone().sub(tank.position).normalize();
+                        const facingVector = new THREE.Vector3(0, 0, 1).applyAxisAngle(new THREE.Vector3(0, 1, 0), tank.rotation);
+                        const hitAngle = hitVector.angleTo(facingVector);
+
+                        tank.takeDamage(85, hitAngle, this.pen, this.shellTypeName);
                         this.destroy();
                         createImpactDust(this.position);
                         break;
@@ -1014,43 +1163,77 @@
             }
         }
 
-        // Muzzle Flash Dynamic Light Burst
+        // Roof 12.7mm Machine Gun Round
+        class MachineGunBullet {
+            constructor(pos, dir) {
+                this.position = pos.clone();
+                this.velocity = dir.clone().multiplyScalar(320);
+                this.alive = true;
+
+                const geo = new THREE.SphereGeometry(0.15, 6, 6);
+                const mat = new THREE.MeshBasicMaterial({ color: 0xffe066 });
+                this.mesh = new THREE.Mesh(geo, mat);
+                this.mesh.position.copy(this.position);
+                scene.add(this.mesh);
+            }
+
+            update(dt) {
+                if (!this.alive) return;
+                this.position.addScaledVector(this.velocity, dt);
+                this.mesh.position.copy(this.position);
+
+                aiTanks.forEach(ai => {
+                    if (!ai.isDestroyed && this.position.distanceTo(ai.position) < 3.2) {
+                        ai.takeDamage(8, 0, 45, '12.7mm MG');
+                        this.destroy();
+                    }
+                });
+
+                if (this.position.y <= getTerrainHeight(this.position.x, this.position.z) || this.position.length() > 1200) {
+                    this.destroy();
+                }
+            }
+
+            destroy() {
+                this.alive = false;
+                scene.remove(this.mesh);
+            }
+        }
+
         function createMuzzleFlashLight(pos) {
-            const flashLight = new THREE.PointLight(0xffca28, 8.0, 45);
+            const flashLight = new THREE.PointLight(0xffca28, 9.0, 50);
             flashLight.position.copy(pos);
             scene.add(flashLight);
-            setTimeout(() => scene.remove(flashLight), 90);
+            setTimeout(() => scene.remove(flashLight), 80);
         }
 
         function createExplosionEffect(pos) {
-            // Dynamic Light Burst on Tank Destruction
-            const expLight = new THREE.PointLight(0xff5722, 12.0, 60);
+            const expLight = new THREE.PointLight(0xff5722, 14.0, 75);
             expLight.position.copy(pos).add(new THREE.Vector3(0, 2, 0));
             scene.add(expLight);
-            setTimeout(() => scene.remove(expLight), 300);
+            setTimeout(() => scene.remove(expLight), 350);
 
-            // Particle explosion mesh cluster
-            const pGeo = new THREE.SphereGeometry(0.6, 8, 8);
-            const pMat = new THREE.MeshBasicMaterial({ color: 0xf97316, transparent: true, opacity: 0.95 });
-            for (let i = 0; i < 20; i++) {
+            const pGeo = new THREE.SphereGeometry(0.8, 8, 8);
+            const pMat = new THREE.MeshBasicMaterial({ color: 0xf97316, transparent: true, opacity: 0.9 });
+            for (let i = 0; i < 22; i++) {
                 const particle = new THREE.Mesh(pGeo, pMat);
-                particle.position.copy(pos).add(new THREE.Vector3((Math.random() - 0.5) * 4, Math.random() * 4, (Math.random() - 0.5) * 4));
+                particle.position.copy(pos).add(new THREE.Vector3((Math.random() - 0.5) * 5, Math.random() * 5, (Math.random() - 0.5) * 5));
                 scene.add(particle);
-                setTimeout(() => scene.remove(particle), 1400);
+                setTimeout(() => scene.remove(particle), 1200);
             }
         }
 
         function createImpactDust(pos) {
-            const pGeo = new THREE.SphereGeometry(1.0, 6, 6);
-            const pMat = new THREE.MeshBasicMaterial({ color: 0x8d8374, transparent: true, opacity: 0.7 });
+            const pGeo = new THREE.SphereGeometry(1.2, 6, 6);
+            const pMat = new THREE.MeshBasicMaterial({ color: 0x8d8374, transparent: true, opacity: 0.65 });
             const particle = new THREE.Mesh(pGeo, pMat);
             particle.position.copy(pos);
             scene.add(particle);
-            setTimeout(() => scene.remove(particle), 900);
+            setTimeout(() => scene.remove(particle), 800);
         }
 
         // ============================================================================
-        // 9. CONTROLS, SCOPE, AND USER INTERFACE
+        // 8. CONTROLS, SIGHT ZEROING & USER INTERFACE
         // ============================================================================
         function setupInputListeners() {
             window.addEventListener('keydown', (e) => {
@@ -1060,10 +1243,13 @@
                 if (k === 'a') keys.a = true;
                 if (k === 'd') keys.d = true;
                 if (k === 'c') isFreeLook = true;
+                if (k === ' ') keys.space = true;
+                if (k === 'f') toggleOrStartRepair();
                 if (k === '1') selectShell(0);
                 if (k === '2') selectShell(1);
                 if (k === '3') selectShell(2);
                 if (k === 'shift') toggleSniperScope();
+                if (k === 'e') performLaserRangefinding();
             });
 
             window.addEventListener('keyup', (e) => {
@@ -1073,14 +1259,15 @@
                 if (k === 'a') keys.a = false;
                 if (k === 'd') keys.d = false;
                 if (k === 'c') isFreeLook = false;
+                if (k === ' ') keys.space = false;
             });
 
             window.addEventListener('mousemove', (e) => {
                 if (document.pointerLockElement === document.body) {
-                    const sensitivity = isScopeActive ? 0.0008 : 0.0025;
+                    const sensitivity = isScopeActive ? 0.0006 : 0.0022;
                     cameraYaw -= e.movementX * sensitivity;
                     cameraPitch += e.movementY * sensitivity;
-                    cameraPitch = Math.max(-0.2, Math.min(0.6, cameraPitch));
+                    cameraPitch = Math.max(-0.25, Math.min(0.6, cameraPitch));
 
                     if (!isFreeLook) {
                         turretTargetYaw = cameraYaw;
@@ -1090,13 +1277,13 @@
             });
 
             window.addEventListener('mousedown', (e) => {
-                if (e.button === 0) { // Left Click Fire
+                if (e.button === 0) {
                     if (document.pointerLockElement !== document.body) {
                         document.body.requestPointerLock();
                     } else {
                         fireMainGun();
                     }
-                } else if (e.button === 2) { // Right Click Scope
+                } else if (e.button === 2) {
                     toggleSniperScope();
                 }
             });
@@ -1104,57 +1291,78 @@
             window.addEventListener('contextmenu', e => e.preventDefault());
         }
 
-        function toggleSniperScope() {
-            isScopeActive = !isScopeActive;
-            const scopeEl = document.getElementById('sniper-scope');
-            if (isScopeActive) {
-                scopeEl.classList.remove('hidden');
-                camera.fov = 18; // 8x Optical Zoom
-            } else {
-                scopeEl.classList.add('hidden');
-                camera.fov = 60; // Standard 3rd person view
-            }
-            camera.updateProjectionMatrix();
-        }
+        // Laser Rangefinder Auto-Zero System
+        function performLaserRangefinding() {
+            if (!isScopeActive) return;
 
-        function selectShell(index) {
-            currentShellIndex = index;
-            document.querySelectorAll('[id^="shell-btn-"]').forEach((btn, i) => {
-                if (i === index) {
-                    btn.classList.add('border-amber-500');
-                    btn.classList.remove('border-slate-700');
-                } else {
-                    btn.classList.remove('border-amber-500');
-                    btn.classList.add('border-slate-700');
-                }
-            });
-            document.getElementById('scope-shell-name').innerText = SHELL_TYPES[index].name;
-        }
-
-        function fireMainGun() {
-            if (reloadTimer > 0 || playerTank.isDestroyed) return;
-
-            const currentShell = SHELL_TYPES[currentShellIndex];
-            if (currentShell.count <= 0) return;
-
-            currentShell.count--;
-            document.getElementById(`shell-count-${currentShellIndex + 1}`).innerText = currentShell.count;
-
-            // Muzzle flash point world position
-            const muzzleWorldPos = new THREE.Vector3();
-            playerTank.meshObj.muzzlePoint.getWorldPosition(muzzleWorldPos);
+            const raycaster = new THREE.Raycaster();
+            const muzzlePos = new THREE.Vector3();
+            playerTank.meshObj.muzzlePoint.getWorldPosition(muzzlePos);
 
             const dir = new THREE.Vector3(0, 0, 1);
             dir.applyQuaternion(playerTank.meshObj.barrel.getWorldQuaternion(new THREE.Quaternion()));
 
-            // Spawn projectile & realistic muzzle flash illumination
-            projectiles.push(new ShellProjectile(muzzleWorldPos, dir, currentShell, playerTank));
-            createMuzzleFlashLight(muzzleWorldPos);
+            raycaster.set(muzzlePos, dir);
+            const intersects = raycaster.intersectObjects(scene.children, true);
 
-            soundEngine.playCannonFire();
+            if (intersects.length > 0) {
+                const dist = Math.round(intersects[0].distance);
+                document.getElementById('target-dist').innerText = `${dist} m`;
 
-            // Trigger Reload Cycle
-            reloadTimer = RELOAD_DURATION;
+        function toggleOrStartRepair() {
+            if (!playerTank || playerTank.isDestroyed) return;
+
+            if (playerTank.isRepairing) {
+                playerTank.cancelRepair();
+                checkRepairPromptStatus();
+            } else if (playerTank.needsRepair()) {
+                playerTank.startRepair();
+            }
+        }
+
+        function checkRepairPromptStatus() {
+            const promptEl = document.getElementById('repair-prompt');
+            const promptTextEl = document.getElementById('repair-prompt-text');
+            const timerEl = document.getElementById('repair-timer');
+
+            if (!playerTank || playerTank.isDestroyed || !playerTank.needsRepair()) {
+                promptEl.classList.add('hidden');
+                return;
+            }
+
+            promptEl.classList.remove('hidden');
+            if (playerTank.isRepairing) {
+                const remaining = Math.max(0, playerTank.repairDuration - playerTank.repairProgress).toFixed(1);
+                promptTextEl.innerText = "Repairing Tank...";
+                timerEl.innerText = `${remaining}`;
+            } else {
+                promptTextEl.innerText = "Press F to Repair Tank";
+                timerEl.innerText = `${playerTank.repairDuration.toFixed(1)}`;
+            }
+        }
+
+        function updatePaperdoll() {
+            if (!playerTank) return;
+
+            const getModuleColor = (status) => status === 'ok' ? '#22c55e' : (status === 'damaged' ? '#eab308' : '#ef4444');
+            const getHpColor = (hpRatio) => hpRatio > 0.65 ? '#22c55e' : (hpRatio > 0.35 ? '#eab308' : '#ef4444');
+
+            const hpRatio = playerTank.hp / playerTank.maxHp;
+            const hpColor = getHpColor(hpRatio);
+
+            const hpInd = document.getElementById('hp-indicator');
+            if (hpInd) {
+                hpInd.innerText = `${Math.max(0, Math.round(hpRatio * 100))}%`;
+                hpInd.className = hpRatio > 0.65 ? "text-emerald-400" : (hpRatio > 0.35 ? "text-amber-400" : "text-rose-500");
+            }
+
+            document.getElementById('pd-hull').setAttribute('fill', hpColor);
+            document.getElementById('pd-track-l').setAttribute('fill', getModuleColor(playerTank.modules.tracks));
+            document.getElementById('pd-track-r').setAttribute('fill', getModuleColor(playerTank.modules.tracks));
+            document.getElementById('pd-engine').setAttribute('fill', getModuleColor(playerTank.modules.engine));
+            document.getElementById('pd-turret').setAttribute('fill', getModuleColor(playerTank.modules.turret));
+            document.getElementById('pd-barrel').setAttribute('fill', getModuleColor(playerTank.modules.barrel));
+            document.getElementById('pd-ammo').setAttribute('fill', getModuleColor(playerTank.modules.ammo));
         }
 
         function addKillFeedEntry(killer, victim, weapon) {
@@ -1166,15 +1374,8 @@
             setTimeout(() => entry.remove(), 5000);
         }
 
-        function updatePaperdollHUD(tank) {
-            const engineEl = document.getElementById('pd-engine');
-            const ammoEl = document.getElementById('pd-ammo');
-            if (tank.modules.engine.status === 'damaged') engineEl.setAttribute('fill', '#f59e0b');
-            if (tank.modules.ammoRack.status === 'destroyed') ammoEl.setAttribute('fill', '#ef4444');
-        }
-
         // ============================================================================
-        // 10. GAME LOOP & RENDERING
+        // 9. GAME LOOP & RENDERING
         // ============================================================================
         let lastTime = performance.now();
 
@@ -1184,48 +1385,76 @@
             const dt = Math.min((now - lastTime) / 1000, 0.1);
             lastTime = now;
 
+            // Handle Active Tank Field Repair
+            if (playerTank && playerTank.isRepairing) {
+                // Halve player movement speed or lock tank during field repair
+                playerTank.speed *= 0.5;
+                playerTank.repairProgress += dt;
+
+                checkRepairPromptStatus();
+
+                if (playerTank.repairProgress >= playerTank.repairDuration) {
+                    playerTank.completeRepair();
+                    addKillFeedEntry("FIELD REPAIR", "Tank Fully Repaired!", "100% HP");
+                }
+            }
+
+            // Roof Machine Gun Firing Logic
+            if (keys.space && mgCooldown <= 0 && !playerTank.isDestroyed) {
+                mgCooldown = 0.09; // Rapid rate of fire
+                const mgPos = new THREE.Vector3();
+                playerTank.meshObj.mgMuzzlePoint.getWorldPosition(mgPos);
+
+                const dir = new THREE.Vector3(0, 0, 1);
+                dir.applyQuaternion(playerTank.meshObj.barrel.getWorldQuaternion(new THREE.Quaternion()));
+
+                projectiles.push(new MachineGunBullet(mgPos, dir));
+                soundEngine.playMachineGun();
+            }
+            if (mgCooldown > 0) mgCooldown -= dt;
+
             if (playerTank && !playerTank.isDestroyed) {
-                // Driving Physics
-                if (keys.w) playerTank.speed = Math.min(playerTank.speed + 12 * dt, playerTank.maxSpeed);
-                else if (keys.s) playerTank.speed = Math.max(playerTank.speed - 12 * dt, -playerTank.maxSpeed * 0.5);
-                else playerTank.speed *= 0.94; // Friction damping
+                // Impair movement speed if engine or tracks are damaged
+                let maxSpeedMultiplier = 1.0;
+                if (playerTank.modules.engine === 'damaged') maxSpeedMultiplier *= 0.45;
+                if (playerTank.modules.tracks === 'damaged') maxSpeedMultiplier *= 0.30;
 
-                if (keys.a) playerTank.rotation += 1.2 * dt;
-                if (keys.d) playerTank.rotation -= 1.2 * dt;
+                const curMaxSpeed = playerTank.maxSpeed * maxSpeedMultiplier;
 
-                // Move Hull along facing angle
+                if (keys.w) playerTank.speed = Math.min(playerTank.speed + 14 * dt, curMaxSpeed);
+                else if (keys.s) playerTank.speed = Math.max(playerTank.speed - 14 * dt, -curMaxSpeed * 0.5);
+                else playerTank.speed *= 0.93;
+
+                if (keys.a) playerTank.rotation += 1.3 * dt;
+                if (keys.d) playerTank.rotation -= 1.3 * dt;
+
                 playerTank.position.x += Math.sin(playerTank.rotation) * playerTank.speed * dt;
                 playerTank.position.z += Math.cos(playerTank.rotation) * playerTank.speed * dt;
 
-                // Smooth Turret Rotation Lag
-                playerTank.turretYaw += (turretTargetYaw - playerTank.turretYaw) * 4.0 * dt;
-                playerTank.barrelPitch += (turretTargetPitch - playerTank.barrelPitch) * 4.0 * dt;
+                playerTank.turretYaw += (turretTargetYaw - playerTank.turretYaw) * 4.5 * dt;
+                playerTank.barrelPitch += (turretTargetPitch - playerTank.barrelPitch) * 4.5 * dt;
 
                 playerTank.update(dt);
-
-                // Engine audio & HUD Speedometer
                 soundEngine.updateEngine(playerTank.speed, playerTank.maxSpeed);
                 document.getElementById('speed-indicator').innerText = Math.abs(Math.round(playerTank.speed * 3.6));
 
-                // Camera Follow Position
+                // Third Person or Scope Camera Pos
                 if (isScopeActive) {
-                    // Camera fixed inside optic sight
                     const sightPos = new THREE.Vector3();
                     playerTank.meshObj.muzzlePoint.getWorldPosition(sightPos);
                     camera.position.copy(sightPos);
                     camera.rotation.set(playerTank.barrelPitch, playerTank.turretYaw + Math.PI, 0, 'YXZ');
                 } else {
-                    // 3rd Person Orbit Camera
-                    const camDist = 12;
+                    const camDist = 12.5;
                     const cx = playerTank.position.x - Math.sin(cameraYaw) * Math.cos(cameraPitch) * camDist;
-                    const cy = playerTank.position.y + Math.sin(cameraPitch) * camDist + 3.5;
+                    const cy = playerTank.position.y + Math.sin(cameraPitch) * camDist + 3.6;
                     const cz = playerTank.position.z - Math.cos(cameraYaw) * Math.cos(cameraPitch) * camDist;
 
                     camera.position.set(cx, cy, cz);
                     camera.lookAt(playerTank.position.x, playerTank.position.y + 2.0, playerTank.position.z);
                 }
 
-                // Reload Progress Timer
+                // Cannon Reload UI
                 if (reloadTimer > 0) {
                     reloadTimer -= dt;
                     const progress = Math.max(0, 100 - (reloadTimer / RELOAD_DURATION) * 100);
@@ -1237,62 +1466,70 @@
                 }
             }
 
-            // Update AI Enemy Tanks logic
+            // Update 3X Enemy AI Tanks with Advanced Target Leading
             aiTanks.forEach(ai => {
                 if (ai.isDestroyed) return;
-                // Simple AI patrol & target player
+
                 const distToPlayer = ai.position.distanceTo(playerTank.position);
-                if (distToPlayer < 250) {
-                    // Turn turret towards player
-                    const angleToPlayer = Math.atan2(playerTank.position.x - ai.position.x, playerTank.position.z - ai.position.z);
+                if (distToPlayer < 350) {
+                    // Lead target position based on player velocity vector
+                    const leadTime = distToPlayer / 1650;
+                    const predictedPlayerPos = playerTank.position.clone().add(
+                        new THREE.Vector3(
+                            Math.sin(playerTank.rotation) * playerTank.speed * leadTime,
+                            0,
+                            Math.cos(playerTank.rotation) * playerTank.speed * leadTime
+                        )
+                    );
+
+                    const angleToPlayer = Math.atan2(predictedPlayerPos.x - ai.position.x, predictedPlayerPos.z - ai.position.z);
                     ai.turretYaw = angleToPlayer;
 
-                    // AI Firing Logic
-                    if (Math.random() < 0.005 && distToPlayer < 180) {
+                    // AI Fire Shell
+                    if (Math.random() < 0.006 && distToPlayer < 280) {
                         const muzzlePos = new THREE.Vector3();
                         ai.meshObj.muzzlePoint.getWorldPosition(muzzlePos);
-                        const dir = playerTank.position.clone().sub(ai.position).normalize();
+                        const dir = predictedPlayerPos.sub(ai.position).normalize();
                         projectiles.push(new ShellProjectile(muzzlePos, dir, SHELL_TYPES[0], ai));
                     }
                 }
                 ai.update(dt);
             });
 
-            // Update Active Shell Projectiles
+            // CAS Aircraft Airstrike Spawner Probability
+            if (Math.random() < 0.0008 && planes.length < 2) {
+                planes.push(new AircraftEntity());
+            }
+            planes = planes.filter(plane => plane.update(dt));
+
+            // Update Projectiles
             projectiles.forEach(p => p.update(dt));
             projectiles = projectiles.filter(p => p.alive);
 
-            // Render Minimap
             drawMinimap();
-
-            // Render 3D Scene
             renderer.render(scene, camera);
         }
 
-        // ============================================================================
-        // 11. TACTICAL MINIMAP RADAR
-        // ============================================================================
+        // Tactical Radar Minimap
         function drawMinimap() {
             const canvas = document.getElementById('minimap-canvas');
             const ctx = canvas.getContext('2d');
-            ctx.clearRect(0, 0, 160, 160);
+            ctx.clearRect(0, 0, 176, 176);
 
-            // Map Background
-            ctx.fillStyle = '#0f172a';
-            ctx.fillRect(0, 0, 160, 160);
+            ctx.fillStyle = '#0b1329';
+            ctx.fillRect(0, 0, 176, 176);
 
-            // Grid Lines
-            ctx.strokeStyle = '#334155';
+            ctx.strokeStyle = '#2d3748';
             ctx.lineWidth = 1;
-            for (let i = 0; i < 160; i += 32) {
-                ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 160); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(160, i); ctx.stroke();
+            for (let i = 0; i < 176; i += 22) {
+                ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 176); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(176, i); ctx.stroke();
             }
 
-            const scale = 160 / MAP_SIZE;
-            const center = 80;
+            const scale = 176 / MAP_SIZE;
+            const center = 88;
 
-            // Draw Capture Points A, B, C
+            // Draw Capture Zones
             controlPoints.forEach(cp => {
                 const mx = center + cp.pos.x * scale;
                 const my = center + cp.pos.z * scale;
@@ -1300,12 +1537,9 @@
                 ctx.beginPath();
                 ctx.arc(mx, my, 5, 0, Math.PI * 2);
                 ctx.fill();
-                ctx.fillStyle = '#ffffff';
-                ctx.font = 'bold 8px sans-serif';
-                ctx.fillText(cp.id, mx - 3, my + 3);
             });
 
-            // Draw Enemies on Minimap
+            // Draw 3X Enemies on Minimap
             aiTanks.forEach(ai => {
                 if (ai.isDestroyed) return;
                 const mx = center + ai.position.x * scale;
@@ -1314,16 +1548,23 @@
                 ctx.fillRect(mx - 3, my - 3, 6, 6);
             });
 
-            // Draw Player Marker & Direction Cone
+            // Draw CAS Aircraft Icons
+            planes.forEach(plane => {
+                const px = center + plane.position.x * scale;
+                const py = center + plane.position.z * scale;
+                ctx.fillStyle = '#f59e0b';
+                ctx.beginPath();
+                ctx.arc(px, py, 3, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // Draw Player Icon
             if (playerTank) {
                 const px = center + playerTank.position.x * scale;
                 const py = center + playerTank.position.z * scale;
-
                 ctx.save();
                 ctx.translate(px, py);
                 ctx.rotate(-playerTank.rotation);
-
-                // Player Icon Triangle
                 ctx.fillStyle = '#60a5fa';
                 ctx.beginPath();
                 ctx.moveTo(0, -6);
@@ -1331,38 +1572,40 @@
                 ctx.lineTo(4, 5);
                 ctx.closePath();
                 ctx.fill();
-
                 ctx.restore();
             }
         }
 
         // ============================================================================
-        // 12. GAME INITIALIZATION
+        // 10. GAME INITIALIZATION & MULTI-ENEMY SPAWNER
         // ============================================================================
         function initAndStartGame() {
             document.getElementById('start-modal').classList.add('hidden');
-
             soundEngine.init();
 
             setupThreeScene();
             setupInputListeners();
 
-            // Spawn Player Tank at Base
-            playerTank = new TankEntity(0, -180, false, "M1A2 Abrams");
+            // Spawn Player Tank
+            playerTank = new TankEntity(0, -220, false, "M1A2 SEPv3 Abrams");
 
-            // Spawn AI Enemy Tanks
-            aiTanks.push(new TankEntity(-80, 80, true, "T-72B3"));
-            aiTanks.push(new TankEntity(80, 120, true, "T-90M"));
-            aiTanks.push(new TankEntity(0, 160, true, "Leopard 2A6"));
+            // SPAWN 3X MORE ENEMIES (9 Enemy Tanks across key defense lines)
+            const enemyTypes = ["T-90M Breakout", "T-72B3M", "Leopard 2A7", "Challenger 2 TES", "BMP-3M", "Type 99A", "T-80BVM", "ZTZ-96A", "VT-4 Main Battle Tank"];
+            const spawnPositions = [
+                [-180, 120], [0, 180], [180, 120],
+                [-250, 40], [250, 60], [-90, 260],
+                [110, 280], [-200, -80], [220, -60]
+            ];
 
-            // Request Pointer Lock for FPS Mouse Control
+            for (let i = 0; i < spawnPositions.length; i++) {
+                const pos = spawnPositions[i];
+                aiTanks.push(new TankEntity(pos[0], pos[1], true, enemyTypes[i % enemyTypes.length]));
+            }
+
             document.body.requestPointerLock();
-
-            // Start Animation Loop
             requestAnimationFrame(gameLoop);
         }
 
-        // Handle Window Resizing
         window.addEventListener('resize', () => {
             if (camera && renderer) {
                 camera.aspect = window.innerWidth / window.innerHeight;
