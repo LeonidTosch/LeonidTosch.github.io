@@ -58,9 +58,10 @@
 
         <!-- Keyboard Controls Helper -->
         <div class="hidden md:block bg-slate-900/85 backdrop-blur-md border border-slate-700/60 p-4 rounded-2xl text-xs text-slate-300 space-y-1.5 shadow-xl">
-            <div class="font-bold text-slate-100 mb-2 border-b border-slate-800 pb-1">Controls:</div>
-            <div class="flex justify-between gap-3"><span><kbd class="bg-slate-800 border border-slate-700 px-1.5 py-0.5 rounded text-cyan-400 font-mono">W</kbd> <kbd class="bg-slate-800 border border-slate-700 px-1.5 py-0.5 rounded text-emerald-400 font-mono">A</kbd> <kbd class="bg-slate-800 border border-slate-700 px-1.5 py-0.5 rounded text-cyan-400 font-mono">S</kbd> <kbd class="bg-slate-800 border border-slate-700 px-1.5 py-0.5 rounded text-emerald-400 font-mono">D</kbd></span> <span class="text-slate-400">2D Plane Movement</span></div>
-            <div class="flex justify-between gap-3"><span><kbd class="bg-slate-800 border border-slate-700 px-1.5 py-0.5 rounded text-purple-400 font-mono">Q</kbd> / <kbd class="bg-slate-800 border border-slate-700 px-1.5 py-0.5 rounded text-purple-400 font-mono">E</kbd></span> <span class="text-slate-400">Altitude (Up / Down)</span></div>
+            <div class="font-bold text-slate-100 mb-2 border-b border-slate-800 pb-1">Controls (QWEASD):</div>
+            <div class="flex justify-between gap-3"><span><kbd class="bg-slate-800 border border-slate-700 px-1.5 py-0.5 rounded text-cyan-400 font-mono">W</kbd> / <kbd class="bg-slate-800 border border-slate-700 px-1.5 py-0.5 rounded text-cyan-400 font-mono">S</kbd></span> <span class="text-slate-400">Forward / Backward (Z)</span></div>
+            <div class="flex justify-between gap-3"><span><kbd class="bg-slate-800 border border-slate-700 px-1.5 py-0.5 rounded text-emerald-400 font-mono">A</kbd> / <kbd class="bg-slate-800 border border-slate-700 px-1.5 py-0.5 rounded text-emerald-400 font-mono">D</kbd></span> <span class="text-slate-400">Left / Right (X)</span></div>
+            <div class="flex justify-between gap-3"><span><kbd class="bg-slate-800 border border-slate-700 px-1.5 py-0.5 rounded text-purple-400 font-mono">Q</kbd> / <kbd class="bg-slate-800 border border-slate-700 px-1.5 py-0.5 rounded text-purple-400 font-mono">E</kbd></span> <span class="text-slate-400">Up / Down (Y)</span></div>
             <div class="text-[11px] text-slate-400 pt-1 border-t border-slate-800">Drag mouse/touch to rotate camera view</div>
         </div>
     </div>
@@ -82,21 +83,21 @@
     </div>
 
     <!-- On-Screen Touch / Button Controls -->
-    <div id="touch-controls" class="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-6 pointer-events-auto z-10 scale-90 sm:scale-100">
-        <!-- 2D Directional Pad (WASD) -->
+    <div id="touch-controls" class="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-4 pointer-events-auto z-10 scale-90 sm:scale-100">
+        <!-- Horizontal & Depth Pad -->
         <div class="grid grid-cols-3 gap-2 w-36 h-36">
             <div></div>
             <button id="btn-w" class="control-btn rounded-xl flex items-center justify-center font-bold text-lg text-cyan-400 shadow-md">W</button>
             <div></div>
             <button id="btn-a" class="control-btn rounded-xl flex items-center justify-center font-bold text-lg text-emerald-400 shadow-md">A</button>
-            <div></div>
+            <button id="btn-s" class="control-btn rounded-xl flex items-center justify-center font-bold text-lg text-cyan-400 shadow-md">S</button>
             <button id="btn-d" class="control-btn rounded-xl flex items-center justify-center font-bold text-lg text-emerald-400 shadow-md">D</button>
             <div></div>
-            <button id="btn-s" class="control-btn rounded-xl flex items-center justify-center font-bold text-lg text-cyan-400 shadow-md">S</button>
+            <div></div>
             <div></div>
         </div>
 
-        <!-- Vertical Elevation Pad (Q/E) -->
+        <!-- Vertical (Up/Down) Pad -->
         <div class="flex flex-col justify-between w-16 h-36">
             <button id="btn-q" class="control-btn h-16 rounded-xl flex flex-col items-center justify-center font-bold text-lg text-purple-400 shadow-md">Q<span class="text-[9px] text-purple-300 font-normal">UP</span></button>
             <button id="btn-e" class="control-btn h-16 rounded-xl flex flex-col items-center justify-center font-bold text-lg text-purple-400 shadow-md">E<span class="text-[9px] text-purple-300 font-normal">DOWN</span></button>
@@ -291,23 +292,23 @@
 
             function handleDirectionInput(key) {
                 switch(key) {
-                    case 'w': // 2D Plane: Forward (-Z)
-                        if (direction.z === 0) nextDirection = { x: 0, y: 0, z: -1 };
-                        break;
-                    case 's': // 2D Plane: Backward (+Z)
-                        if (direction.z === 0) nextDirection = { x: 0, y: 0, z: 1 };
-                        break;
-                    case 'a': // 2D Plane: Left (-X)
+                    case 'a': // Left (-X)
                         if (direction.x === 0) nextDirection = { x: -1, y: 0, z: 0 };
                         break;
-                    case 'd': // 2D Plane: Right (+X)
+                    case 'd': // Right (+X)
                         if (direction.x === 0) nextDirection = { x: 1, y: 0, z: 0 };
                         break;
-                    case 'q': // Altitude: Up (+Y)
+                    case 'q': // Up (+Y)
                         if (direction.y === 0) nextDirection = { x: 0, y: 1, z: 0 };
                         break;
-                    case 'e': // Altitude: Down (-Y)
+                    case 'e': // Down (-Y)
                         if (direction.y === 0) nextDirection = { x: 0, y: -1, z: 0 };
+                        break;
+                    case 'w': // Forward (-Z)
+                        if (direction.z === 0) nextDirection = { x: 0, y: 0, z: -1 };
+                        break;
+                    case 's': // Backward (+Z)
+                        if (direction.z === 0) nextDirection = { x: 0, y: 0, z: 1 };
                         break;
                 }
             }
