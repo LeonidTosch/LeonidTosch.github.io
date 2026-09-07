@@ -3,9 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>3D Kikoriki Chase - First Person Hunter</title>
+    <title>3D Kikoriki Chase - First Person</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body, html {
             margin: 0;
@@ -15,1286 +19,1252 @@
             overflow: hidden;
             user-select: none;
             -webkit-user-select: none;
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            background-color: #1a1a1a;
+            touch-action: none;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-
-        #canvas-container {
+        #game-canvas {
             width: 100%;
             height: 100%;
-            position: absolute;
-            top: 0;
-            left: 0;
-            z-index: 1;
+            display: block;
         }
-
-        /* FPS Reticle Crosshair */
-        #crosshair {
+        .crosshair {
             position: absolute;
             top: 50%;
             left: 50%;
+            width: 16px;
+            height: 16px;
             transform: translate(-50%, -50%);
-            width: 20px;
-            height: 20px;
             pointer-events: none;
-            z-index: 10;
+            z-index: 20;
         }
-        #crosshair::before, #crosshair::after {
+        .crosshair::before, .crosshair::after {
             content: '';
             position: absolute;
-            background-color: rgba(255, 255, 255, 0.85);
-            box-shadow: 0 0 4px rgba(0,0,0,0.6);
+            background: rgba(255, 255, 255, 0.85);
+            box-shadow: 0 0 4px rgba(0,0,0,0.8);
         }
-        #crosshair::before {
-            top: 9px;
-            left: 0;
-            width: 20px;
-            height: 2px;
+        .crosshair::before {
+            top: 7px; left: 0; width: 16px; height: 2px;
         }
-        #crosshair::after {
-            top: 0;
-            left: 9px;
-            width: 2px;
-            height: 20px;
+        .crosshair::after {
+            top: 0; left: 7px; width: 2px; height: 16px;
         }
-
-        /* Target HUD Indicator */
-        #target-hud {
-            transition: opacity 0.2s ease, transform 0.2s ease;
+        .hit-marker {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 24px;
+            height: 24px;
+            transform: translate(-50%, -50%) rotate(45deg);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.1s ease-out;
+            z-index: 21;
         }
-
-        /* Minimap canvas */
-        #minimap {
-            border: 3px solid rgba(255, 255, 255, 0.4);
+        .hit-marker::before, .hit-marker::after {
+            content: '';
+            position: absolute;
+            background: #ff3333;
+        }
+        .hit-marker::before { top: 10px; left: 0; width: 24px; height: 4px; }
+        .hit-marker::after { top: 0; left: 10px; width: 4px; height: 24px; }
+        
+        /* Minimap styling */
+        #minimap-container {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            width: 140px;
+            height: 140px;
             border-radius: 50%;
+            border: 4px solid rgba(255, 255, 255, 0.8);
             background: rgba(0, 40, 10, 0.65);
             box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            overflow: hidden;
+            z-index: 30;
         }
-
-        /* Touch controls overlay */
-        .touch-btn {
-            background: rgba(255, 255, 255, 0.25);
-            border: 2px solid rgba(255, 255, 255, 0.5);
-            backdrop-filter: blur(4px);
-            active: background rgba(255, 255, 255, 0.5);
+        #minimap-canvas {
+            width: 100%;
+            height: 100%;
         }
-
-        /* Red flash damage screen vignette */
-        #damage-vignette {
+        
+        /* Vignette flash on attack/kill */
+        #flash-overlay {
+            position: absolute;
+            inset: 0;
             pointer-events: none;
-            transition: opacity 0.3s ease-out;
+            opacity: 0;
+            transition: opacity 0.15s ease-out;
+            z-index: 15;
         }
     </style>
 </head>
-<body>
+<body class="bg-slate-900 text-white select-none">
 
-    <!-- 3D WebGL Canvas Container -->
-    <div id="canvas-container"></div>
+    <!-- Game Canvas -->
+    <canvas id="game-canvas"></canvas>
 
-    <!-- Center Screen Crosshair -->
-    <div id="crosshair"></div>
-
-    <!-- Red Vignette Flash on Action/Damage -->
-    <div id="damage-vignette" class="absolute inset-0 bg-red-600/20 opacity-0 z-5 pointer-events-none"></div>
+    <!-- Crosshair & Hit Marker -->
+    <div class="crosshair"></div>
+    <div id="hit-marker" class="hit-marker"></div>
+    
+    <!-- Red/Gold Flash overlay -->
+    <div id="flash-overlay"></div>
 
     <!-- HUD Overlay -->
-    <div id="hud" class="absolute inset-0 pointer-events-none z-10 flex flex-col justify-between p-4 md:p-6">
-        
-        <!-- Top Row HUD: Kill Counter & Minimap -->
-        <div class="flex justify-between items-start w-full">
-            <!-- Player Stats Box -->
-            <div class="bg-black/60 backdrop-blur-md p-4 rounded-2xl border border-white/20 text-white shadow-xl flex flex-col gap-2 min-w-[200px]">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-full bg-amber-700 border-2 border-amber-300 flex items-center justify-center font-extrabold text-xl shadow">🐻</div>
-                    <div>
-                        <div class="text-xs uppercase tracking-wider text-amber-300 font-bold">Player</div>
-                        <div class="text-lg font-black tracking-wide">KOPATYCH</div>
-                    </div>
-                </div>
-                <!-- Target Progress Bar -->
-                <div>
-                    <div class="flex justify-between text-xs font-semibold mb-1">
-                        <span class="text-gray-300">Target Smeshariki</span>
-                        <span id="kill-count" class="text-amber-400 font-bold">0 / 8</span>
-                    </div>
-                    <div class="w-full bg-gray-800 rounded-full h-3 overflow-hidden border border-white/10">
-                        <div id="kill-bar" class="bg-gradient-to-r from-amber-500 to-yellow-400 h-full w-0 transition-all duration-300"></div>
-                    </div>
-                </div>
+    <div class="absolute top-4 left-4 z-30 flex flex-col gap-2 pointer-events-none">
+        <!-- Main Info Box -->
+        <div class="bg-black/60 backdrop-blur-md border border-white/20 p-3 rounded-xl shadow-lg flex items-center gap-4">
+            <div class="flex items-center justify-center w-12 h-12 rounded-full bg-amber-600 text-2xl border-2 border-amber-300 shadow">
+                🐻
             </div>
-
-            <!-- Target Locked Inspector (Shows when looking at character) -->
-            <div id="target-hud" class="opacity-0 transform -translate-y-2 bg-black/70 backdrop-blur-md px-6 py-3 rounded-2xl border border-red-500/50 text-white flex items-center gap-4 shadow-2xl">
-                <div id="target-icon" class="text-3xl">🐰</div>
-                <div class="flex flex-col">
-                    <div id="target-name" class="font-extrabold text-base tracking-wider text-red-400 uppercase">KROSH</div>
-                    <div class="w-36 bg-gray-800 rounded-full h-3 border border-white/20 overflow-hidden mt-1">
-                        <div id="target-hp-bar" class="bg-red-500 h-full w-full transition-all duration-150"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Minimap -->
-            <div class="relative">
-                <canvas id="minimap" width="130" height="130"></canvas>
-                <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <div class="w-2 h-2 bg-amber-400 rounded-full border border-black"></div>
-                </div>
+            <div>
+                <h1 class="font-bold text-lg text-amber-300 leading-none">Kopatych (Bear)</h1>
+                <p class="text-xs text-slate-300 mt-1">Village Cleansing Mission</p>
             </div>
         </div>
 
-        <!-- Bottom Row HUD: Controls Hint & Mobile Buttons -->
-        <div class="flex justify-between items-end w-full">
-            <div class="hidden md:flex bg-black/60 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 text-xs text-gray-300 gap-4">
-                <span><kbd class="bg-white/20 px-1.5 py-0.5 rounded text-white font-mono">WASD</kbd> Move</span>
-                <span><kbd class="bg-white/20 px-1.5 py-0.5 rounded text-white font-mono">Mouse</kbd> Look around</span>
-                <span><kbd class="bg-white/20 px-1.5 py-0.5 rounded text-white font-mono">L-Click / Space</kbd> Attack Pitchfork</span>
-                <span><kbd class="bg-white/20 px-1.5 py-0.5 rounded text-white font-mono">Shift</kbd> Run</span>
-            </div>
+        <!-- Target Counter -->
+        <div class="bg-black/60 backdrop-blur-md border border-white/20 px-4 py-2 rounded-xl shadow-lg flex items-center justify-between min-w-[200px]">
+            <span class="text-xs font-semibold uppercase tracking-wider text-slate-300"><i class="fa-solid fa-bullseye text-red-400 mr-2"></i>Targets Left:</span>
+            <span id="targets-count" class="text-2xl font-black text-red-500">8 / 8</span>
+        </div>
 
-            <!-- Touch Controls for Mobile Devices -->
-            <div id="mobile-controls" class="flex md:hidden justify-between w-full pointer-events-auto">
-                <div id="touch-joystick-zone" class="w-32 h-32 bg-white/10 rounded-full border-2 border-white/20 relative flex items-center justify-center touch-none">
-                    <div id="touch-joystick-knob" class="w-12 h-12 bg-white/40 rounded-full border border-white"></div>
-                </div>
-                <button id="touch-attack-btn" class="w-20 h-20 rounded-full bg-red-600/80 border-2 border-red-300 text-white font-black text-sm active:bg-red-700 shadow-lg flex items-center justify-center">
-                    STAB!
-                </button>
+        <!-- Target Info Hover Box -->
+        <div id="target-info" class="bg-black/75 backdrop-blur-md border border-red-500/40 px-4 py-2 rounded-xl shadow-lg transition-opacity duration-200 opacity-0 min-w-[220px]">
+            <div class="flex justify-between items-center mb-1">
+                <span id="target-name" class="font-bold text-sm text-yellow-300">Target</span>
+                <span id="target-hp-text" class="text-xs text-slate-300 font-mono">100/100</span>
+            </div>
+            <div class="w-full bg-gray-700 h-2.5 rounded-full overflow-hidden border border-white/10">
+                <div id="target-hp-bar" class="bg-gradient-to-r from-red-600 to-amber-500 h-full w-full transition-all duration-150"></div>
             </div>
         </div>
     </div>
 
-    <!-- Start / Lock Mouse Overlay Modal -->
-    <div id="start-overlay" class="absolute inset-0 bg-black/80 backdrop-blur-lg z-50 flex flex-col items-center justify-center text-white p-6 text-center">
-        <div class="max-w-md bg-gray-900/90 border border-amber-500/40 p-8 rounded-3xl shadow-2xl flex flex-col items-center">
-            <div class="text-6xl mb-3 animate-bounce">🍯🐻</div>
-            <h1 class="text-3xl font-black tracking-wide text-amber-400 mb-2">3D KIKORIKI CHASE</h1>
-            <p class="text-gray-300 text-sm mb-6 leading-relaxed">
-                You play as <strong class="text-amber-300">Kopatych the Bear</strong>! Armed with your trusty pitchfork, hunt down all 8 Smeshariki wandering in the Kikoriki Valley.
+    <!-- Minimap -->
+    <div id="minimap-container">
+        <canvas id="minimap-canvas" width="140" height="140"></canvas>
+    </div>
+
+    <!-- Controls Overlay / Instructions -->
+    <div id="controls-hint" class="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 bg-black/70 backdrop-blur-sm border border-white/10 px-6 py-2 rounded-full text-xs text-slate-200 shadow-xl flex items-center gap-6 pointer-events-none">
+        <div><span class="bg-white/20 px-2 py-0.5 rounded font-mono font-bold text-white">WASD</span> Move</div>
+        <div><span class="bg-white/20 px-2 py-0.5 rounded font-mono font-bold text-white">MOUSE</span> Look</div>
+        <div><span class="bg-white/20 px-2 py-0.5 rounded font-mono font-bold text-white">L-CLICK</span> Attack with Pitchfork</div>
+        <div><span class="bg-white/20 px-2 py-0.5 rounded font-mono font-bold text-white">SHIFT</span> Run</div>
+    </div>
+
+    <!-- Mobile Touch Controls -->
+    <div id="touch-controls" class="absolute bottom-6 left-6 z-40 md:hidden flex gap-4">
+        <div id="joystick-zone" class="w-32 h-32 bg-white/10 border-2 border-white/30 rounded-full relative touch-none flex items-center justify-center">
+            <div id="joystick-knob" class="w-12 h-12 bg-amber-500/80 rounded-full shadow-lg border border-amber-300"></div>
+        </div>
+    </div>
+    <div class="absolute bottom-6 right-6 z-40 md:hidden flex gap-3">
+        <button id="mobile-attack-btn" class="w-20 h-20 bg-gradient-to-tr from-red-600 to-amber-500 border-2 border-amber-300 text-white rounded-full shadow-2xl flex flex-col items-center justify-center active:scale-95 transition-transform">
+            <i class="fa-solid fa-hand-fist text-2xl"></i>
+            <span class="text-[10px] font-bold uppercase mt-1">Attack</span>
+        </button>
+    </div>
+
+    <!-- Start / Lock Pointer Screen -->
+    <div id="start-screen" class="absolute inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex flex-col items-center justify-center text-center p-6">
+        <div class="max-w-md bg-slate-900 border border-amber-500/30 p-8 rounded-3xl shadow-2xl relative overflow-hidden">
+            <div class="absolute -top-12 -right-12 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl"></div>
+            <div class="text-6xl mb-4">🌾🐻 pitchfork</div>
+            <h1 class="text-3xl font-black text-amber-400 mb-2 tracking-tight">KIKORIKI VILLAGE CHASE</h1>
+            <p class="text-sm text-slate-300 mb-6 leading-relaxed">
+                You are <span class="text-amber-400 font-semibold">Kopatych the Bear</span>. Armed with your trusty pitchfork, explore the village and eliminate all 8 Smeshariki neighbors!
             </p>
-            <button id="start-btn" class="w-full py-4 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-black font-black text-lg rounded-2xl shadow-xl transform active:scale-95 transition cursor-pointer">
-                START HUNTING
+            <button id="start-btn" class="w-full py-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-lg rounded-2xl shadow-xl hover:shadow-amber-500/25 transition duration-200 cursor-pointer uppercase tracking-wider">
+                Start Hunt
             </button>
-            <p class="text-xs text-gray-400 mt-4">Clicking will lock your mouse for FPS look control.</p>
         </div>
     </div>
 
-    <!-- Victory Overlay Modal -->
-    <div id="victory-overlay" class="hidden absolute inset-0 bg-black/90 backdrop-blur-xl z-50 flex flex-col items-center justify-center text-white p-6 text-center">
-        <div class="max-w-md bg-gray-900/95 border border-yellow-400/50 p-8 rounded-3xl shadow-2xl flex flex-col items-center animate-fade-in">
-            <div class="text-7xl mb-4">🏆🌾</div>
-            <h2 class="text-4xl font-black text-yellow-400 mb-2">VALLEY CLEARED!</h2>
-            <p class="text-gray-200 text-base mb-6">
-                Kopatych eliminated all other Smeshariki and now owns the whole pumpkin patch!
+    <!-- Win Screen -->
+    <div id="win-screen" class="hidden absolute inset-0 z-50 bg-slate-950/90 backdrop-blur-lg flex flex-col items-center justify-center text-center p-6">
+        <div class="max-w-md bg-slate-900 border border-red-500/40 p-8 rounded-3xl shadow-2xl">
+            <div class="text-6xl mb-4">👑🏆</div>
+            <h1 class="text-3xl font-black text-amber-400 mb-2">VILLAGE CLEARED!</h1>
+            <p class="text-sm text-slate-300 mb-6">
+                Kopatych stands supreme! All Smeshariki have been defeated and the village is now peaceful and quiet.
             </p>
-            <button id="restart-btn" class="w-full py-4 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-black text-lg rounded-2xl shadow-xl transform active:scale-95 transition cursor-pointer">
-                PLAY AGAIN
+            <button id="restart-btn" class="w-full py-4 bg-gradient-to-r from-red-600 to-amber-500 hover:from-red-500 hover:to-amber-400 text-white font-black text-lg rounded-2xl shadow-xl transition cursor-pointer uppercase tracking-wider">
+                Play Again
             </button>
         </div>
     </div>
 
     <script>
-        // ==========================================
-        // 1. SOUND EFFECTS SYSTEM (Web Audio API)
-        // ==========================================
-        const AudioCtx = window.AudioContext || window.webkitAudioContext;
-        let audioCtx = null;
-
-        function initAudio() {
-            if (!audioCtx) audioCtx = new AudioCtx();
-        }
-
-        function playSwingSound() {
-            if (!audioCtx) return;
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(150, audioCtx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.15);
-            gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            osc.start();
-            osc.stop(audioCtx.currentTime + 0.15);
-        }
-
-        function playHitSound() {
-            if (!audioCtx) return;
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.type = 'triangle';
-            osc.frequency.setValueAtTime(350, audioCtx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(80, audioCtx.currentTime + 0.2);
-            gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            osc.start();
-            osc.stop(audioCtx.currentTime + 0.2);
-        }
-
-        function playPanicScreamSound() {
-            if (!audioCtx) return;
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.type = 'sawtooth';
-            const startFreq = 400 + Math.random() * 300;
-            osc.frequency.setValueAtTime(startFreq, audioCtx.currentTime);
-            osc.frequency.linearRampToValueAtTime(startFreq + 200, audioCtx.currentTime + 0.1);
-            osc.frequency.linearRampToValueAtTime(startFreq - 100, audioCtx.currentTime + 0.25);
-            gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.25);
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            osc.start();
-            osc.stop(audioCtx.currentTime + 0.25);
-        }
-
-        function playVictorySound() {
-            if (!audioCtx) return;
-            const now = audioCtx.currentTime;
-            [261.63, 329.63, 392.00, 523.25].forEach((freq, idx) => {
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                osc.type = 'triangle';
-                osc.frequency.value = freq;
-                gain.gain.setValueAtTime(0.3, now + idx * 0.12);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.12 + 0.4);
+        // Sound FX Generator using Web Audio API
+        class SoundEngine {
+            constructor() {
+                this.ctx = null;
+            }
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+            playSwing() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(40, this.ctx.currentTime + 0.15);
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
                 osc.connect(gain);
-                gain.connect(audioCtx.destination);
-                osc.start(now + idx * 0.12);
-                osc.stop(now + idx * 0.12 + 0.4);
-            });
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.15);
+            }
+            playHit() {
+                if (!this.ctx) return;
+                // Thump sound
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(220, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(60, this.ctx.currentTime + 0.2);
+                gain.gain.setValueAtTime(0.6, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.2);
+
+                // High squeak
+                setTimeout(() => {
+                    if (!this.ctx) return;
+                    const sq = this.ctx.createOscillator();
+                    const sg = this.ctx.createGain();
+                    sq.type = 'sine';
+                    sq.frequency.setValueAtTime(600, this.ctx.currentTime);
+                    sq.frequency.linearRampToValueAtTime(900, this.ctx.currentTime + 0.15);
+                    sg.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                    sg.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+                    sq.connect(sg);
+                    sg.connect(this.ctx.destination);
+                    sq.start();
+                    sq.stop(this.ctx.currentTime + 0.15);
+                }, 40);
+            }
+            playVictory() {
+                if (!this.ctx) return;
+                const notes = [261.63, 329.63, 392.00, 523.25];
+                notes.forEach((freq, idx) => {
+                    setTimeout(() => {
+                        const osc = this.ctx.createOscillator();
+                        const gain = this.ctx.createGain();
+                        osc.type = 'triangle';
+                        osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                        gain.gain.setValueAtTime(0.4, this.ctx.currentTime);
+                        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.4);
+                        osc.connect(gain);
+                        gain.connect(this.ctx.destination);
+                        osc.start();
+                        osc.stop(this.ctx.currentTime + 0.4);
+                    }, idx * 150);
+                });
+            }
         }
 
-        // ==========================================
-        // 2. PROCEDURAL CANVAS TEXTURE GENERATOR
-        // ==========================================
+        const audioFX = new SoundEngine();
+
+        // Function to produce custom 2D face textures for each distinct Smesharik character
         function createCharacterFaceTexture(type) {
             const canvas = document.createElement('canvas');
             canvas.width = 512;
             canvas.height = 512;
             const ctx = canvas.getContext('2d');
 
-            // Transparent background
-            ctx.clearRect(0, 0, 512, 512);
+            // Fill background with base color matching character
+            let baseColor = '#ffffff';
+            if (type === 'krosh') baseColor = '#50b4ff';
+            else if (type === 'chiko') baseColor = '#b440a0';
+            else if (type === 'nyusha') baseColor = '#ff78b4';
+            else if (type === 'barash') baseColor = '#c8a0e0';
+            else if (type === 'losyash') baseColor = '#ff9620';
+            else if (type === 'pin') baseColor = '#1e2430';
+            else if (type === 'karych') baseColor = '#1e3264';
+            else if (type === 'sovunya') baseColor = '#8040a0';
 
-            // Draw Face Features based on Character
-            switch(type) {
-                case 'krosh': // Rabbit: Big eyes, pink nose, 2 teeth, smile
-                    // Eyes
-                    drawEye(ctx, 180, 220, 45, 55);
-                    drawEye(ctx, 332, 220, 45, 55);
-                    // Nose
-                    ctx.fillStyle = '#ff6b81';
-                    ctx.beginPath();
-                    ctx.arc(256, 280, 18, 0, Math.PI*2);
-                    ctx.fill();
-                    // Mouth & Teeth
-                    ctx.strokeStyle = '#222';
-                    ctx.lineWidth = 6;
-                    ctx.beginPath();
-                    ctx.arc(256, 300, 50, 0.1, Math.PI - 0.1);
-                    ctx.stroke();
-                    // Two Buck Teeth
-                    ctx.fillStyle = '#ffffff';
-                    ctx.strokeStyle = '#333';
-                    ctx.lineWidth = 3;
-                    ctx.fillRect(238, 340, 16, 24);
-                    ctx.strokeRect(238, 340, 16, 24);
-                    ctx.fillRect(258, 340, 16, 24);
-                    ctx.strokeRect(258, 340, 16, 24);
-                    break;
+            ctx.fillStyle = baseColor;
+            ctx.fillRect(0, 0, 512, 512);
 
-                case 'chiko': // Hedgehog: Thick glasses, small nose
-                    // Glasses frames
-                    ctx.strokeStyle = '#4a0e4e';
-                    ctx.lineWidth = 14;
-                    ctx.beginPath();
-                    ctx.arc(170, 230, 65, 0, Math.PI*2);
-                    ctx.arc(342, 230, 65, 0, Math.PI*2);
-                    ctx.stroke();
-                    // Bridge
-                    ctx.beginPath();
-                    ctx.moveTo(235, 230);
-                    ctx.lineTo(277, 230);
-                    ctx.stroke();
-                    // Eyes inside glasses
-                    drawEye(ctx, 170, 230, 25, 30);
-                    drawEye(ctx, 342, 230, 25, 30);
-                    // Nose
-                    ctx.fillStyle = '#3a0038';
-                    ctx.beginPath();
-                    ctx.arc(256, 310, 14, 0, Math.PI*2);
-                    ctx.fill();
-                    // Smile
-                    ctx.strokeStyle = '#3a0038';
-                    ctx.lineWidth = 5;
-                    ctx.beginPath();
-                    ctx.arc(256, 325, 30, 0.2, Math.PI - 0.2);
-                    ctx.stroke();
-                    break;
+            // Front face region centered around (256, 256)
+            ctx.save();
 
-                case 'nyusha': // Pig: Eyelashes, blush, mouth
-                    // Eyelashes & Eyes
-                    drawEye(ctx, 180, 210, 35, 45, true);
-                    drawEye(ctx, 332, 210, 35, 45, true);
-                    // Cheeks Blush
-                    ctx.fillStyle = 'rgba(255, 100, 120, 0.4)';
-                    ctx.beginPath();
-                    ctx.arc(120, 280, 35, 0, Math.PI*2);
-                    ctx.arc(392, 280, 35, 0, Math.PI*2);
-                    ctx.fill();
-                    // Smile
-                    ctx.strokeStyle = '#d63031';
-                    ctx.lineWidth = 6;
-                    ctx.beginPath();
-                    ctx.arc(256, 330, 45, 0.1, Math.PI - 0.1);
-                    ctx.stroke();
-                    break;
-
-                case 'losyash': // Moose: Intellectual eyebrows & sleepy eyes
-                    // Big bushy brown eyebrows
-                    ctx.fillStyle = '#6d4c41';
-                    ctx.fillRect(130, 160, 90, 20);
-                    ctx.fillRect(292, 160, 90, 20);
-                    // Eyes
-                    drawEye(ctx, 175, 220, 35, 40);
-                    drawEye(ctx, 337, 220, 35, 40);
-                    // Smile
-                    ctx.strokeStyle = '#4e342e';
-                    ctx.lineWidth = 6;
-                    ctx.beginPath();
-                    ctx.arc(256, 330, 40, 0.2, Math.PI - 0.2);
-                    ctx.stroke();
-                    break;
-
-                case 'pin': // Penguin: Big eyes, white belly face
-                    drawEye(ctx, 190, 210, 40, 50);
-                    drawEye(ctx, 322, 210, 40, 50);
-                    break;
-
-                case 'karkarych': // Crow: White eyes & classy expression
-                    drawEye(ctx, 185, 210, 42, 50);
-                    drawEye(ctx, 327, 210, 42, 50);
-                    break;
-
-                case 'sovunya': // Owl: Big owl eyes
-                    drawEye(ctx, 170, 220, 55, 55);
-                    drawEye(ctx, 342, 220, 55, 55);
-                    break;
-
-                case 'barash': // Ram: Sad/poetic droopy eyes
-                    // Droopy eyelids
-                    drawEye(ctx, 180, 230, 38, 42);
-                    drawEye(ctx, 332, 230, 38, 42);
-                    // Sad mouth
-                    ctx.strokeStyle = '#4a154b';
-                    ctx.lineWidth = 5;
-                    ctx.beginPath();
-                    ctx.arc(256, 350, 30, Math.PI + 0.3, Math.PI * 2 - 0.3);
-                    ctx.stroke();
-                    break;
+            if (type === 'krosh') {
+                // Krosh: Huge wide cartoon eyes, black pupils, happy open mouth with two front bunny teeth
+                // White eye bases
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath(); ctx.ellipse(190, 210, 45, 55, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.ellipse(322, 210, 45, 55, 0, 0, Math.PI * 2); ctx.fill();
+                // Pupils
+                ctx.fillStyle = '#000000';
+                ctx.beginPath(); ctx.arc(205, 210, 18, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(307, 210, 18, 0, Math.PI * 2); ctx.fill();
+                // Highlights
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath(); ctx.arc(210, 205, 6, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(312, 205, 6, 0, Math.PI * 2); ctx.fill();
+                // Mouth
+                ctx.fillStyle = '#800010';
+                ctx.beginPath(); ctx.arc(256, 290, 50, 0, Math.PI); ctx.fill();
+                // Teeth
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(238, 290, 16, 22);
+                ctx.fillRect(258, 290, 16, 22);
+                ctx.strokeStyle = '#cccccc'; ctx.lineWidth = 2;
+                ctx.strokeRect(238, 290, 16, 22);
+                ctx.strokeRect(258, 290, 16, 22);
+            } 
+            else if (type === 'chiko') {
+                // Chiko (Hedgehog): Big round black-rimmed glasses framing eyes, timid smile
+                // Glasses rims
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath(); ctx.arc(180, 230, 50, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(332, 230, 50, 0, Math.PI * 2); ctx.fill();
+                // Pupils
+                ctx.fillStyle = '#000000';
+                ctx.beginPath(); ctx.arc(190, 230, 16, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(322, 230, 16, 0, Math.PI * 2); ctx.fill();
+                // Glasses frames
+                ctx.lineWidth = 14;
+                ctx.strokeStyle = '#111111';
+                ctx.beginPath(); ctx.arc(180, 230, 54, 0, Math.PI * 2); ctx.stroke();
+                ctx.beginPath(); ctx.arc(332, 230, 54, 0, Math.PI * 2); ctx.stroke();
+                // Bridge
+                ctx.beginPath(); ctx.moveTo(234, 230); ctx.lineTo(278, 230); ctx.stroke();
+                // Small nose
+                ctx.fillStyle = '#401030';
+                ctx.beginPath(); ctx.arc(256, 300, 12, 0, Math.PI * 2); ctx.fill();
+                // Smile line
+                ctx.strokeStyle = '#222222'; ctx.lineWidth = 6;
+                ctx.beginPath(); ctx.arc(256, 320, 25, 0.2, Math.PI - 0.2); ctx.stroke();
+            }
+            else if (type === 'nyusha') {
+                // Nyusha (Pig): Glamorous eyes with lashes, pink pig snout with 2 nostrils, cheeks
+                // Eyes
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath(); ctx.ellipse(190, 210, 40, 48, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.ellipse(322, 210, 40, 48, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#221100';
+                ctx.beginPath(); ctx.arc(200, 210, 16, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(312, 210, 16, 0, Math.PI * 2); ctx.fill();
+                // Eyelashes
+                ctx.strokeStyle = '#000000'; ctx.lineWidth = 5;
+                ctx.beginPath(); ctx.moveTo(160, 180); ctx.lineTo(145, 165); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(180, 170); ctx.lineTo(175, 150); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(352, 180); ctx.lineTo(367, 165); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(332, 170); ctx.lineTo(337, 150); ctx.stroke();
+                // Pig Snout
+                ctx.fillStyle = '#ff4090';
+                ctx.beginPath(); ctx.ellipse(256, 285, 42, 32, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#a01050';
+                ctx.beginPath(); ctx.ellipse(240, 285, 10, 14, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.ellipse(272, 285, 10, 14, 0, 0, Math.PI * 2); ctx.fill();
+                // Blush
+                ctx.fillStyle = 'rgba(255, 50, 120, 0.35)';
+                ctx.beginPath(); ctx.arc(130, 270, 30, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(382, 270, 30, 0, Math.PI * 2); ctx.fill();
+            }
+            else if (type === 'barash') {
+                // Barash (Ram): Sleepy/poetic eyes, small nose, pink cheeks
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath(); ctx.ellipse(195, 220, 38, 45, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.ellipse(317, 220, 38, 45, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#331133';
+                ctx.beginPath(); ctx.arc(205, 225, 15, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(307, 225, 15, 0, Math.PI * 2); ctx.fill();
+                // Half-closed sleepy eyelids
+                ctx.fillStyle = '#c8a0e0';
+                ctx.beginPath(); ctx.rect(150, 170, 90, 35); ctx.fill();
+                ctx.beginPath(); ctx.rect(272, 170, 90, 35); ctx.fill();
+                // Nose/mouth
+                ctx.fillStyle = '#603060';
+                ctx.beginPath(); ctx.arc(256, 285, 10, 0, Math.PI * 2); ctx.fill();
+                ctx.strokeStyle = '#603060'; ctx.lineWidth = 4;
+                ctx.beginPath(); ctx.moveTo(256, 295); ctx.lineTo(256, 310); ctx.stroke();
+            }
+            else if (type === 'losyash') {
+                // Losyash (Elk): Large intelligent eyes, dark brown oval muzzle
+                // Muzzle patch
+                ctx.fillStyle = '#d07010';
+                ctx.beginPath(); ctx.ellipse(256, 310, 75, 55, 0, 0, Math.PI * 2); ctx.fill();
+                // Eyes
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath(); ctx.ellipse(190, 210, 42, 50, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.ellipse(322, 210, 42, 50, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#111111';
+                ctx.beginPath(); ctx.arc(200, 210, 16, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(312, 210, 16, 0, Math.PI * 2); ctx.fill();
+                // Nose
+                ctx.fillStyle = '#3a1a00';
+                ctx.beginPath(); ctx.ellipse(256, 290, 22, 15, 0, 0, Math.PI * 2); ctx.fill();
+            }
+            else if (type === 'pin') {
+                // Pin (Penguin): White tummy & face mask, eyes
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath(); ctx.ellipse(256, 270, 110, 130, 0, 0, Math.PI * 2); ctx.fill();
+                // Eyes
+                ctx.beginPath(); ctx.ellipse(215, 210, 28, 35, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.ellipse(297, 210, 28, 35, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#000000';
+                ctx.beginPath(); ctx.arc(220, 210, 12, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(292, 210, 12, 0, Math.PI * 2); ctx.fill();
+            }
+            else if (type === 'karych') {
+                // Kar-Karych: Refined eyes, white chest patch
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath(); ctx.ellipse(256, 330, 80, 90, 0, 0, Math.PI * 2); ctx.fill();
+                // Eyes
+                ctx.beginPath(); ctx.ellipse(195, 210, 36, 44, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.ellipse(317, 210, 36, 44, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#111111';
+                ctx.beginPath(); ctx.arc(205, 210, 14, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(307, 210, 14, 0, Math.PI * 2); ctx.fill();
+            }
+            else if (type === 'sovunya') {
+                // Sovunya: Owl face ring, big expressive eyes
+                ctx.fillStyle = '#f0d0ff';
+                ctx.beginPath(); ctx.ellipse(256, 260, 120, 100, 0, 0, Math.PI * 2); ctx.fill();
+                // Eyes
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath(); ctx.arc(185, 220, 48, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(327, 220, 48, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#220033';
+                ctx.beginPath(); ctx.arc(195, 220, 18, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(317, 220, 18, 0, Math.PI * 2); ctx.fill();
             }
 
-            return new THREE.CanvasTexture(canvas);
+            ctx.restore();
+
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.needsUpdate = true;
+            return texture;
         }
 
-        function drawEye(ctx, x, y, rx, ry, lashes = false) {
-            // White sclera
-            ctx.fillStyle = '#ffffff';
-            ctx.beginPath();
-            ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI*2);
-            ctx.fill();
-            ctx.strokeStyle = '#222';
-            ctx.lineWidth = 4;
-            ctx.stroke();
+        // Game Engine Variables
+        let scene, camera, renderer;
+        let clock = new THREE.Clock();
+        let targets = [];
+        let hitParticles = [];
+        let villageObjects = [];
 
-            // Pupil
-            ctx.fillStyle = '#111';
-            ctx.beginPath();
-            ctx.ellipse(x + (x > 256 ? -8 : 8), y + 5, rx * 0.45, ry * 0.5, 0, 0, Math.PI*2);
-            ctx.fill();
-
-            // Reflection dot
-            ctx.fillStyle = '#ffffff';
-            ctx.beginPath();
-            ctx.arc(x + (x > 256 ? -12 : 4), y - 10, rx * 0.18, 0, Math.PI*2);
-            ctx.fill();
-
-            if (lashes) {
-                ctx.strokeStyle = '#222';
-                ctx.lineWidth = 5;
-                for(let i = -1; i <= 1; i++) {
-                    ctx.beginPath();
-                    ctx.moveTo(x + i*15, y - ry);
-                    ctx.lineTo(x + i*22, y - ry - 18);
-                    ctx.stroke();
-                }
-            }
-        }
-
-        // ==========================================
-        // 3. 3D CHARACTER BUILDER WITH ACCESSORIES
-        // ==========================================
-        const CHARACTERS_DATA = {
-            krosh: { name: 'Krosh', color: 0x42a5f5, icon: '🐰', hp: 100 },
-            chiko: { name: 'Chiko', color: 0xab47bc, icon: '🦔', hp: 90 },
-            nyusha: { name: 'Nyusha', color: 0xf48fb1, icon: '🐷', hp: 85 },
-            barash: { name: 'Barash', color: 0xe1bee7, icon: '🐏', hp: 80 },
-            losyash: { name: 'Losyash', color: 0xffca28, icon: '🫎', hp: 110 },
-            pin: { name: 'Pin', color: 0x37474f, icon: '🐧', hp: 95 },
-            karkarych: { name: 'Kar-Karych', color: 0x1a237e, icon: '🦅', hp: 90 },
-            sovunya: { name: 'Sovunya', color: 0x7b1fa2, icon: '🦉', hp: 100 }
+        // Player / First Person View Variables
+        let player = {
+            position: new THREE.Vector3(0, 1.5, 0),
+            velocity: new THREE.Vector3(),
+            yaw: 0,
+            pitch: 0,
+            speed: 9.0,
+            isAttacking: false,
+            attackTimer: 0
         };
 
-        function createSmesharikModel(type) {
-            const group = new THREE.Group();
-            const data = CHARACTERS_DATA[type] || { color: 0xaaaaaa };
+        // Inputs
+        const keys = { w: false, a: false, s: false, d: false, shift: false };
+        let joystickVector = { x: 0, y: 0 };
+        let isPointerLocked = false;
 
-            // Base Body Sphere
-            const bodyGeo = new THREE.SphereGeometry(1.2, 32, 32);
-            const bodyMat = new THREE.MeshStandardMaterial({
-                color: data.color,
-                roughness: 0.4,
-                metalness: 0.1
-            });
+        // View Model (First Person Pitchfork & Bear Arms)
+        let viewModelGroup, pitchforkMesh, leftArmMesh, rightArmMesh;
 
-            // Face texture overlay on body
-            const faceTex = createCharacterFaceTexture(type);
-            const faceMat = new THREE.MeshBasicMaterial({
-                map: faceTex,
-                transparent: true,
-                depthWrite: false
-            });
+        // Init Game
+        function initEngine() {
+            const canvas = document.getElementById('game-canvas');
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x87ceeb); // Bright sky blue
+            scene.fog = new THREE.FogExp2(0x87ceeb, 0.012);
 
-            const bodyMesh = new THREE.Mesh(bodyGeo, bodyMat);
-            bodyMesh.castShadow = true;
-            bodyMesh.receiveShadow = true;
-            group.add(bodyMesh);
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 300);
+            
+            renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-            // Overlay Face Mesh (slightly larger sphere slice or decal)
-            const faceGeo = new THREE.SphereGeometry(1.21, 32, 32);
-            const faceMesh = new THREE.Mesh(faceGeo, faceMat);
-            group.add(faceMesh);
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.65);
+            scene.add(ambientLight);
 
-            // Adding Unique Accessories per character for 100% recognition
-            switch(type) {
-                case 'krosh': // Long Rabbit Ears
-                    const earGeo = new THREE.CylinderGeometry(0.15, 0.25, 1.6, 16);
-                    const earMat = new THREE.MeshStandardMaterial({ color: 0x42a5f5 });
-                    const leftEar = new THREE.Mesh(earGeo, earMat);
-                    leftEar.position.set(-0.4, 1.8, 0);
-                    leftEar.rotation.z = 0.2;
-                    leftEar.rotation.x = -0.1;
-                    const rightEar = new THREE.Mesh(earGeo, earMat);
-                    rightEar.position.set(0.4, 1.8, 0);
-                    rightEar.rotation.z = -0.2;
-                    rightEar.rotation.x = -0.1;
-                    group.add(leftEar, rightEar);
-                    break;
+            const sunLight = new THREE.DirectionalLight(0xfff5ea, 0.9);
+            sunLight.position.set(60, 100, 40);
+            sunLight.castShadow = true;
+            sunLight.shadow.mapSize.width = 2048;
+            sunLight.shadow.mapSize.height = 2048;
+            sunLight.shadow.camera.near = 0.5;
+            sunLight.shadow.camera.far = 250;
+            const d = 80;
+            sunLight.shadow.camera.left = -d;
+            sunLight.shadow.camera.right = d;
+            sunLight.shadow.camera.top = d;
+            sunLight.shadow.camera.bottom = -d;
+            scene.add(sunLight);
 
-                case 'chiko': // Hedgehog Quills Back
-                    const quillMat = new THREE.MeshStandardMaterial({ color: 0x4a148c });
-                    for(let i = 0; i < 22; i++) {
-                        const quill = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.7, 8), quillMat);
-                        const phi = (Math.random() - 0.5) * 1.8;
-                        const theta = Math.PI + (Math.random() - 0.5) * 2.0;
-                        quill.position.setFromSphericalCoords(1.2, phi + Math.PI/2, theta);
-                        quill.lookAt(group.position);
-                        quill.rotation.x += Math.PI;
-                        group.add(quill);
-                    }
-                    break;
+            // Construct 3D World Environment
+            buildVillageEnvironment();
 
-                case 'nyusha': // Pig Snout & Red Braid Flower
-                    const snoutGeo = new THREE.CylinderGeometry(0.3, 0.32, 0.2, 16);
-                    const snoutMat = new THREE.MeshStandardMaterial({ color: 0xff80ab });
-                    const snout = new THREE.Mesh(snoutGeo, snoutMat);
-                    snout.rotation.x = Math.PI / 2;
-                    snout.position.set(0, -0.05, 1.15);
-                    // Nostrils
-                    const nostrilMat = new THREE.MeshBasicMaterial({ color: 0xd81b60 });
-                    const n1 = new THREE.Mesh(new THREE.CircleGeometry(0.06, 8), nostrilMat);
-                    n1.position.set(-0.1, -0.05, 1.26);
-                    const n2 = new THREE.Mesh(new THREE.CircleGeometry(0.06, 8), nostrilMat);
-                    n2.position.set(0.1, -0.05, 1.26);
-                    // Red Flower on Top
-                    const flower = new THREE.Mesh(new THREE.DodecahedronGeometry(0.25), new THREE.MeshStandardMaterial({ color: 0xff1744 }));
-                    flower.position.set(0, 1.25, 0);
-                    group.add(snout, n1, n2, flower);
-                    break;
+            // Construct First Person View Model (Arms & Pitchfork attached to camera)
+            buildFirstPersonViewModel();
 
-                case 'losyash': // Large Branching Antlers & Snout
-                    const antlerMat = new THREE.MeshStandardMaterial({ color: 0x5d4037 });
-                    const createAntler = (side) => {
-                        const antler = new THREE.Group();
-                        const b1 = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.12, 1.0), antlerMat);
-                        b1.position.y = 0.5;
-                        antler.add(b1);
-                        const b2 = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.08, 0.6), antlerMat);
-                        b2.position.set(side * 0.2, 0.7, 0);
-                        b2.rotation.z = -side * 0.8;
-                        antler.add(b2);
-                        antler.position.set(side * 0.6, 1.0, 0);
-                        antler.rotation.z = side * 0.3;
-                        return antler;
-                    };
-                    group.add(createAntler(-1), createAntler(1));
-                    // Big Moose Nose
-                    const mooseNose = new THREE.Mesh(new THREE.SphereGeometry(0.35, 16, 16), new THREE.MeshStandardMaterial({ color: 0x8d6e63 }));
-                    mooseNose.position.set(0, -0.1, 1.1);
-                    group.add(mooseNose);
-                    break;
+            // Spawn 8 Authentic Smeshariki Targets
+            spawnSmesharikiTargets();
 
-                case 'pin': // Penguin Beak & Aviator Helmet
-                    const beakGeo = new THREE.ConeGeometry(0.25, 0.6, 16);
-                    const beakMat = new THREE.MeshStandardMaterial({ color: 0xff9100 });
-                    const beak = new THREE.Mesh(beakGeo, beakMat);
-                    beak.rotation.x = Math.PI / 2;
-                    beak.position.set(0, -0.1, 1.3);
-                    // Helmet
-                    const helmetGeo = new THREE.SphereGeometry(1.23, 32, 16, 0, Math.PI*2, 0, Math.PI*0.55);
-                    const helmetMat = new THREE.MeshStandardMaterial({ color: 0x4e342e });
-                    const helmet = new THREE.Mesh(helmetGeo, helmetMat);
-                    // Goggles
-                    const goggleMat = new THREE.MeshStandardMaterial({ color: 0x81d4fa, metalness: 0.8, roughness: 0.2 });
-                    const g1 = new THREE.Mesh(new THREE.TorusGeometry(0.18, 0.05, 8, 16), goggleMat);
-                    g1.position.set(-0.35, 0.8, 0.9);
-                    const g2 = new THREE.Mesh(new THREE.TorusGeometry(0.18, 0.05, 8, 16), goggleMat);
-                    g2.position.set(0.35, 0.8, 0.9);
-                    group.add(beak, helmet, g1, g2);
-                    break;
+            // Setup Listeners
+            setupInputListeners();
 
-                case 'karkarych': // Top Hat & Crow Beak
-                    const crowBeak = new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.8, 16), new THREE.MeshStandardMaterial({ color: 0xffab00 }));
-                    crowBeak.rotation.x = Math.PI / 2;
-                    crowBeak.position.set(0, -0.15, 1.35);
-                    // Top Hat
-                    const hatGroup = new THREE.Group();
-                    const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 0.05, 24), new THREE.MeshStandardMaterial({ color: 0x111111 }));
-                    const crown = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.8, 24), new THREE.MeshStandardMaterial({ color: 0x111111 }));
-                    crown.position.y = 0.4;
-                    hatGroup.add(brim, crown);
-                    hatGroup.position.set(0, 1.15, 0);
-                    group.add(crowBeak, hatGroup);
-                    break;
+            // Window Resize
+            window.addEventListener('resize', onWindowResize);
 
-                case 'sovunya': // Owl Ear Tufts & Striped Cap
-                    const capGeo = new THREE.ConeGeometry(0.6, 0.9, 16);
-                    const capMat = new THREE.MeshStandardMaterial({ color: 0xd50000 });
-                    const cap = new THREE.Mesh(capGeo, capMat);
-                    cap.position.set(0, 1.35, -0.1);
-                    cap.rotation.x = -0.2;
-                    const pompom = new THREE.Mesh(new THREE.SphereGeometry(0.2, 12, 12), new THREE.MeshStandardMaterial({ color: 0xffffff }));
-                    pompom.position.set(0, 1.8, -0.3);
-                    const owlBeak = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.4, 16), new THREE.MeshStandardMaterial({ color: 0xff6d00 }));
-                    owlBeak.rotation.x = Math.PI / 2;
-                    owlBeak.position.set(0, -0.1, 1.2);
-                    group.add(cap, pompom, owlBeak);
-                    break;
-
-                case 'barash': // Ram Horns & Fluffy Wool Texture
-                    const hornMat = new THREE.MeshStandardMaterial({ color: 0x5d4037 });
-                    const h1 = new THREE.Mesh(new THREE.TorusGeometry(0.35, 0.1, 12, 24, Math.PI * 1.4), hornMat);
-                    h1.position.set(-1.0, 0.5, 0.2);
-                    h1.rotation.y = Math.PI / 3;
-                    const h2 = new THREE.Mesh(new THREE.TorusGeometry(0.35, 0.1, 12, 24, Math.PI * 1.4), hornMat);
-                    h2.position.set(1.0, 0.5, 0.2);
-                    h2.rotation.y = -Math.PI / 3;
-                    group.add(h1, h2);
-                    break;
-            }
-
-            // Small Spherical Hands & Feet
-            const limbMat = new THREE.MeshStandardMaterial({ color: data.color });
-            const handL = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 16), limbMat);
-            handL.position.set(-1.25, -0.2, 0.3);
-            const handR = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 16), limbMat);
-            handR.position.set(1.25, -0.2, 0.3);
-            const footL = new THREE.Mesh(new THREE.SphereGeometry(0.32, 16, 16), limbMat);
-            footL.position.set(-0.5, -1.1, 0.3);
-            const footR = new THREE.Mesh(new THREE.SphereGeometry(0.32, 16, 16), limbMat);
-            footR.position.set(0.5, -1.1, 0.3);
-            group.add(handL, handR, footL, footR);
-
-            return group;
+            // Start Main Game Loop
+            animate();
         }
 
-        // ==========================================
-        // 4. FIRST PERSON PITCHFORK WEAPON BUILDER
-        // ==========================================
-        function createPitchforkMesh() {
-            const pitchforkGroup = new THREE.Group();
+        function buildFirstPersonViewModel() {
+            viewModelGroup = new THREE.Group();
+            camera.add(viewModelGroup);
+            scene.add(camera);
 
-            // Long Wooden Handle
-            const handleGeo = new THREE.CylinderGeometry(0.045, 0.045, 3.4, 12);
-            const handleMat = new THREE.MeshStandardMaterial({ color: 0x5d4037, roughness: 0.85 });
-            const handle = new THREE.Mesh(handleGeo, handleMat);
-            handle.position.y = -0.4;
-            pitchforkGroup.add(handle);
+            // Fur Material for Kopatych Bear Paws
+            const furMaterial = new THREE.MeshLambertMaterial({ color: 0x7a431d });
+            const clawMaterial = new THREE.MeshLambertMaterial({ color: 0x221105 });
+            const metalMaterial = new THREE.MeshStandardMaterial({ color: 0xc0c5ce, roughness: 0.3, metalness: 0.8 });
+            const woodMaterial = new THREE.MeshLambertMaterial({ color: 0x5c3a21 });
 
-            // Metal Fork Connector Base Bar
-            const metalMat = new THREE.MeshStandardMaterial({ color: 0xc0ca33, metalness: 0.9, roughness: 0.1 });
-            const baseBar = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.07, 0.07), metalMat);
-            baseBar.position.y = 1.25;
-            pitchforkGroup.add(baseBar);
+            // Right Arm / Paw holding pitchfork
+            const rightPawGroup = new THREE.Group();
+            const armGeo = new THREE.CylinderGeometry(0.12, 0.16, 0.9, 12);
+            const armMesh = new THREE.Mesh(armGeo, furMaterial);
+            armMesh.rotation.x = Math.PI / 3;
+            rightPawGroup.add(armMesh);
 
-            // 3 Sharp Pitchfork Prongs
-            for (let i = -1; i <= 1; i++) {
-                const prong = new THREE.Mesh(new THREE.ConeGeometry(0.035, 0.9, 12), metalMat);
-                prong.position.set(i * 0.3, 1.7, 0);
-                pitchforkGroup.add(prong);
-            }
+            // Paw sphere
+            const handGeo = new THREE.SphereGeometry(0.18, 12, 12);
+            const handMesh = new THREE.Mesh(handGeo, furMaterial);
+            handMesh.position.set(0, 0.35, -0.2);
+            rightPawGroup.add(handMesh);
 
-            // BEAR ARMS & PAWS HOLDING WEAPON (First-Person Arms)
-            const furMat = new THREE.MeshStandardMaterial({ color: 0x6d4c41, roughness: 0.9 }); // Kopatych Brown Fur
-            const clawMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.3 });
-
-            // Right Paw (Upper Grip)
-            const rightPaw = new THREE.Mesh(new THREE.SphereGeometry(0.22, 16, 16), furMat);
-            rightPaw.scale.set(1.2, 0.9, 1.4);
-            rightPaw.position.set(-0.05, 0.2, 0.08);
-            pitchforkGroup.add(rightPaw);
-
-            // Left Paw (Lower Grip)
-            const leftPaw = new THREE.Mesh(new THREE.SphereGeometry(0.24, 16, 16), furMat);
-            leftPaw.scale.set(1.3, 0.9, 1.3);
-            leftPaw.position.set(0.12, -0.6, 0.1);
-            pitchforkGroup.add(leftPaw);
-
-            // Claws on Right Paw
-            for (let c = -2; c <= 2; c++) {
-                const claw = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.15, 8), clawMat);
+            // Claws
+            for (let i = -2; i <= 2; i++) {
+                const clawGeo = new THREE.ConeGeometry(0.025, 0.12, 8);
+                const claw = new THREE.Mesh(clawGeo, clawMaterial);
                 claw.rotation.x = Math.PI / 2;
-                claw.position.set(-0.05 + c * 0.06, 0.22, 0.28);
-                pitchforkGroup.add(claw);
+                claw.position.set(i * 0.05, 0.42, -0.35);
+                rightPawGroup.add(claw);
             }
 
-            return pitchforkGroup;
+            rightPawGroup.position.set(0.35, -0.35, -0.5);
+            rightPawGroup.rotation.y = -0.2;
+            viewModelGroup.add(rightPawGroup);
+
+            // Pitchfork Weapon
+            pitchforkMesh = new THREE.Group();
+
+            // Long wooden handle
+            const handleGeo = new THREE.CylinderGeometry(0.03, 0.03, 2.2, 10);
+            const handle = new THREE.Mesh(handleGeo, woodMaterial);
+            handle.rotation.x = Math.PI / 2;
+            pitchforkMesh.add(handle);
+
+            // Metallic Head Connector
+            const headBaseGeo = new THREE.BoxGeometry(0.32, 0.04, 0.08);
+            const headBase = new THREE.Mesh(headBaseGeo, metalMaterial);
+            headBase.position.set(0, 0, -1.1);
+            pitchforkMesh.add(headBase);
+
+            // 3 Sharp Tines
+            for (let i = -1; i <= 1; i++) {
+                const tineGeo = new THREE.ConeGeometry(0.02, 0.5, 8);
+                const tine = new THREE.Mesh(tineGeo, metalMaterial);
+                tine.rotation.x = -Math.PI / 2;
+                tine.position.set(i * 0.12, 0, -1.35);
+                pitchforkMesh.add(tine);
+            }
+
+            pitchforkMesh.position.set(0.32, -0.25, -0.4);
+            pitchforkMesh.rotation.set(-0.1, -0.15, 0.05);
+            viewModelGroup.add(pitchforkMesh);
         }
 
-        // ==========================================
-        // 5. 3D VILLAGE WORLD GENERATOR
-        // ==========================================
-        function buildKikorikiVillage(scene) {
-            // Ground Grass
-            const groundGeo = new THREE.PlaneGeometry(250, 250);
-            const groundMat = new THREE.MeshStandardMaterial({ color: 0x558b2f, roughness: 0.9 });
+        function buildVillageEnvironment() {
+            // Ground
+            const groundGeo = new THREE.PlaneGeometry(240, 240);
+            const groundMat = new THREE.MeshLambertMaterial({ color: 0x5e9e45 });
             const ground = new THREE.Mesh(groundGeo, groundMat);
             ground.rotation.x = -Math.PI / 2;
             ground.receiveShadow = true;
             scene.add(ground);
 
-            // Circular Dirt Paths
-            const roadGeo = new THREE.RingGeometry(15, 38, 32);
-            const roadMat = new THREE.MeshStandardMaterial({ color: 0x8d6e63, roughness: 1.0 });
-            const road = new THREE.Mesh(roadGeo, roadMat);
-            road.rotation.x = -Math.PI / 2;
-            road.position.y = 0.02;
-            scene.add(road);
+            // Dirt Crossroad Paths
+            const pathMat = new THREE.MeshLambertMaterial({ color: 0xa67c52 });
+            const mainPath1 = new THREE.Mesh(new THREE.PlaneGeometry(16, 200), pathMat);
+            mainPath1.rotation.x = -Math.PI / 2;
+            mainPath1.position.y = 0.02;
+            mainPath1.receiveShadow = true;
+            scene.add(mainPath1);
 
-            // Surround Mountains
-            const mountainMat = new THREE.MeshStandardMaterial({ color: 0x33691e, roughness: 1.0 });
-            for(let a = 0; a < Math.PI * 2; a += 0.3) {
-                const r = 110 + Math.random() * 15;
-                const mHeight = 25 + Math.random() * 20;
-                const mountain = new THREE.Mesh(new THREE.ConeGeometry(20 + Math.random()*10, mHeight, 7), mountainMat);
-                mountain.position.set(Math.cos(a)*r, mHeight/2 - 2, Math.sin(a)*r);
+            const mainPath2 = new THREE.Mesh(new THREE.PlaneGeometry(200, 16), pathMat);
+            mainPath2.rotation.x = -Math.PI / 2;
+            mainPath2.position.y = 0.02;
+            mainPath2.receiveShadow = true;
+            scene.add(mainPath2);
+
+            // Mountain Boundary Ring
+            const mountainMat = new THREE.MeshLambertMaterial({ color: 0x4a5d4e, flatShading: true });
+            for (let i = 0; i < 32; i++) {
+                const angle = (i / 32) * Math.PI * 2;
+                const dist = 110 + Math.random() * 10;
+                const height = 25 + Math.random() * 20;
+                const mountain = new THREE.Mesh(
+                    new THREE.ConeGeometry(22 + Math.random() * 10, height, 5),
+                    mountainMat
+                );
+                mountain.position.set(Math.cos(angle) * dist, height / 2, Math.sin(angle) * dist);
                 scene.add(mountain);
             }
 
-            // Kopatych's House & Pumpkin Farm (Center-West)
-            createLogHouse(scene, -28, 0, -10, 0x795548);
-            createPumpkinPatch(scene, -38, 0, -12);
+            // Create Character Themed Houses
+            createHouse(0x8b5a2b, -35, 30, 'Kopatych Farmhouse'); // Kopatych Log Cabin
+            createHouse(0x4090ff, 35, 35, 'Krosh Ear House');     // Krosh House
+            createHouse(0xffd700, -40, -35, 'Losyash Tower');    // Losyash Observatory
+            createHouse(0x708090, 40, -30, 'Pin Workshop');      // Pin Workshop
 
-            // Krosh's Blue Carrot House (North)
-            createCartoonHouse(scene, 0, 0, -42, 0x29b6f6, 'carrot');
-
-            // Pin's Workshop Tower (East)
-            createWorkshopHouse(scene, 42, 0, 0);
-
-            // Losyash's Yellow Observatory (South-East)
-            createCartoonHouse(scene, 28, 0, 32, 0xffca28, 'observatory');
-
-            // Trees & Fences
-            for(let i = 0; i < 45; i++) {
-                const angle = Math.random() * Math.PI * 2;
-                const dist = 18 + Math.random() * 70;
-                const tx = Math.cos(angle) * dist;
-                const tz = Math.sin(angle) * dist;
-                if (Math.hypot(tx - (-28), tz - (-10)) > 12) { // don't overlap house
-                    createCartoonTree(scene, tx, tz);
+            // Add Kopatych's Pumpkin Patch
+            for (let x = -48; x <= -38; x += 3.5) {
+                for (let z = 20; z <= 28; z += 3.5) {
+                    const pumpkin = new THREE.Mesh(
+                        new THREE.SphereGeometry(0.7, 10, 8),
+                        new THREE.MeshLambertMaterial({ color: 0xff6600 })
+                    );
+                    pumpkin.scale.set(1.2, 0.9, 1.2);
+                    pumpkin.position.set(x + (Math.random() - 0.5), 0.5, z + (Math.random() - 0.5));
+                    pumpkin.castShadow = true;
+                    scene.add(pumpkin);
+                    villageObjects.push(pumpkin);
                 }
             }
+
+            // Fences along paths
+            const fenceMat = new THREE.MeshLambertMaterial({ color: 0x6e4a27 });
+            for (let z = -80; z <= 80; z += 10) {
+                if (Math.abs(z) < 12) continue;
+                const post1 = new THREE.Mesh(new THREE.BoxGeometry(0.3, 1.2, 0.3), fenceMat);
+                post1.position.set(-10, 0.6, z);
+                scene.add(post1);
+                const post2 = new THREE.Mesh(new THREE.BoxGeometry(0.3, 1.2, 0.3), fenceMat);
+                post2.position.set(10, 0.6, z);
+                scene.add(post2);
+            }
+
+            // Trees scattered around village
+            for (let i = 0; i < 70; i++) {
+                const rx = (Math.random() - 0.5) * 180;
+                const rz = (Math.random() - 0.5) * 180;
+                // Don't place on center road
+                if (Math.abs(rx) < 12 || Math.abs(rz) < 12) continue;
+                spawnTree(rx, rz);
+            }
         }
 
-        function createLogHouse(scene, x, y, z, color) {
+        function createHouse(color, x, z, type) {
             const group = new THREE.Group();
-            const houseMat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.7 });
-            const body = new THREE.Mesh(new THREE.BoxGeometry(8, 5, 8), houseMat);
-            body.position.y = 2.5;
+            
+            // Base walls
+            const wallMat = new THREE.MeshLambertMaterial({ color: color });
+            const body = new THREE.Mesh(new THREE.BoxGeometry(10, 7, 10), wallMat);
+            body.position.y = 3.5;
             body.castShadow = true;
             body.receiveShadow = true;
+            group.add(body);
 
-            const roofGeo = new THREE.ConeGeometry(6.5, 4, 4);
-            const roofMat = new THREE.MeshStandardMaterial({ color: 0xb71c1c });
-            const roof = new THREE.Mesh(roofGeo, roofMat);
-            roof.position.y = 7;
+            // Roof
+            const roofMat = new THREE.MeshLambertMaterial({ color: 0x8b0000 });
+            const roof = new THREE.Mesh(new THREE.ConeGeometry(8.5, 5, 4), roofMat);
+            roof.position.y = 9.5;
             roof.rotation.y = Math.PI / 4;
+            roof.castShadow = true;
+            group.add(roof);
 
             // Door
-            const door = new THREE.Mesh(new THREE.BoxGeometry(1.6, 2.8, 0.2), new THREE.MeshStandardMaterial({ color: 0x3e2723 }));
-            door.position.set(0, 1.4, 4.05);
+            const doorMat = new THREE.MeshLambertMaterial({ color: 0x3d2314 });
+            const door = new THREE.Mesh(new THREE.BoxGeometry(2.2, 4, 0.2), doorMat);
+            door.position.set(0, 2, 5.05);
+            group.add(door);
 
-            group.add(body, roof, door);
-            group.position.set(x, y, z);
-            scene.add(group);
-        }
-
-        function createCartoonHouse(scene, x, y, z, color, theme) {
-            const group = new THREE.Group();
-            const wallMat = new THREE.MeshStandardMaterial({ color: color });
-            const body = new THREE.Mesh(new THREE.CylinderGeometry(4, 4.5, 6, 16), wallMat);
-            body.position.y = 3;
-
-            const roofMat = new THREE.MeshStandardMaterial({ color: 0x263238 });
-            const roof = new THREE.Mesh(new THREE.ConeGeometry(5.5, 4, 16), roofMat);
-            roof.position.y = 7.5;
-
-            if (theme === 'carrot') {
-                const carrotRoof = new THREE.Mesh(new THREE.ConeGeometry(0.4, 2.5, 8), new THREE.MeshStandardMaterial({ color: 0xff6d00 }));
-                carrotRoof.position.set(0, 9.8, 0);
-                group.add(carrotRoof);
-            }
-
-            group.add(body, roof);
-            group.position.set(x, y, z);
-            scene.add(group);
-        }
-
-        function createWorkshopHouse(scene, x, y, z) {
-            const group = new THREE.Group();
-            const body = new THREE.Mesh(new THREE.BoxGeometry(7, 8, 7), new THREE.MeshStandardMaterial({ color: 0x455a64 }));
-            body.position.y = 4;
-            // Metal chimney
-            const chimney = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 3, 12), new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.8 }));
-            chimney.position.set(2, 9, 1);
-            group.add(body, chimney);
-            group.position.set(x, y, z);
-            scene.add(group);
-        }
-
-        function createPumpkinPatch(scene, cx, cy, cz) {
-            const pumpkinMat = new THREE.MeshStandardMaterial({ color: 0xff6d00, roughness: 0.5 });
-            const stemMat = new THREE.MeshStandardMaterial({ color: 0x33691e });
-            for(let i = 0; i < 12; i++) {
-                const px = cx + (Math.random() - 0.5) * 8;
-                const pz = cz + (Math.random() - 0.5) * 8;
-                const p = new THREE.Mesh(new THREE.SphereGeometry(0.6 + Math.random()*0.3, 12, 12), pumpkinMat);
-                p.scale.set(1.2, 0.8, 1.2);
-                p.position.set(px, 0.4, pz);
-                const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.3), stemMat);
-                stem.position.set(px, 0.8, pz);
-                scene.add(p, stem);
-            }
-        }
-
-        function createCartoonTree(scene, x, z) {
-            const group = new THREE.Group();
-            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.6, 3, 8), new THREE.MeshStandardMaterial({ color: 0x4e342e }));
-            trunk.position.y = 1.5;
-
-            const leavesMat = new THREE.MeshStandardMaterial({ color: 0x2e7d32, roughness: 0.8 });
-            const leaves = new THREE.Mesh(new THREE.DodecahedronGeometry(2.2), leavesMat);
-            leaves.position.y = 4.0;
-
-            group.add(trunk, leaves);
             group.position.set(x, 0, z);
             scene.add(group);
+            villageObjects.push(body);
         }
 
-        // ==========================================
-        // 6. MAIN GAME ENGINE & LOGIC
-        // ==========================================
-        let scene, camera, renderer;
-        let pitchfork;
-        let player = {
-            position: new THREE.Vector3(-20, 1.6, -5), // Spawn near Kopatych's house
-            rotation: new THREE.Vector2(0, 0), // Pitch, Yaw
-            speed: 0.18,
-            isAttacking: false,
-            attackTimer: 0
-        };
+        function spawnTree(x, z) {
+            const group = new THREE.Group();
+            const trunkMat = new THREE.MeshLambertMaterial({ color: 0x4a2e18 });
+            const foliageMat = new THREE.MeshLambertMaterial({ color: 0x2e7d32, flatShading: true });
 
-        let smesharikiEnemies = [];
-        let particles = [];
-        let kills = 0;
-        const TOTAL_ENEMIES = 8;
-        let isPointerLocked = false;
-        let gameActive = false;
+            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.7, 4, 8), trunkMat);
+            trunk.position.y = 2;
+            trunk.castShadow = true;
+            group.add(trunk);
 
-        // Input Keyboard State
-        const keys = { w: false, a: false, s: false, d: false, shift: false };
+            const foliage = new THREE.Mesh(new THREE.DodecahedronGeometry(2.8 + Math.random()), foliageMat);
+            foliage.position.y = 5.2;
+            foliage.castShadow = true;
+            group.add(foliage);
 
-        function initEngine() {
-            const container = document.getElementById('canvas-container');
-
-            // Scene setup
-            scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x81d4fa); // Sky Blue
-            scene.fog = new THREE.FogExp2(0x81d4fa, 0.008);
-
-            // Camera setup (First Person Eye Level)
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 300);
-            camera.position.copy(player.position);
-
-            // Lighting setup
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-            scene.add(ambientLight);
-
-            const sunLight = new THREE.DirectionalLight(0xfff59d, 0.9);
-            sunLight.position.set(50, 80, 40);
-            sunLight.castShadow = true;
-            sunLight.shadow.mapSize.width = 2048;
-            sunLight.shadow.mapSize.height = 2048;
-            scene.add(sunLight);
-
-            // Renderer setup
-            renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-            renderer.shadowMap.enabled = true;
-            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-            container.appendChild(renderer.domElement);
-
-            // Attach First Person Pitchfork & Bear Arms directly to FPS Camera
-            pitchfork = createPitchforkMesh();
-            pitchfork.position.set(0.32, -0.42, -0.65);
-            pitchfork.rotation.set(0.12, -0.25, -0.1);
-            camera.add(pitchfork);
-            scene.add(camera);
-
-            // Build Village Environment
-            buildKikorikiVillage(scene);
-
-            // Spawn 8 Smeshariki Targets around the roads
-            spawnSmesharikiEnemies();
-
-            // Setup Event Listeners
-            setupEventListeners();
-
-            // Resize listener
-            window.addEventListener('resize', onWindowResize);
-
-            // Game Loop
-            animate();
+            group.position.set(x, 0, z);
+            scene.add(group);
+            villageObjects.push(trunk);
         }
 
-        function spawnSmesharikiEnemies() {
-            // Clear existing
-            smesharikiEnemies.forEach(e => scene.remove(e.mesh));
-            smesharikiEnemies = [];
-            kills = 0;
-            updateKillHUD();
+        function spawnSmesharikiTargets() {
+            const characterConfigs = [
+                { id: 'krosh', name: 'Krosh (Rabbit)', color: 0x50b4ff, hp: 80, speed: 7.5, pos: [20, 15] },
+                { id: 'chiko', name: 'Chiko (Hedgehog)', color: 0xb440a0, hp: 75, speed: 6.2, pos: [-25, 20] },
+                { id: 'nyusha', name: 'Nyusha (Pig)', color: 0xff78b4, hp: 85, speed: 6.8, pos: [30, -25] },
+                { id: 'barash', name: 'Barash (Ram)', color: 0xc8a0e0, hp: 70, speed: 5.8, pos: [-30, -30] },
+                { id: 'losyash', name: 'Losyash (Elk)', color: 0xff9620, hp: 95, speed: 6.5, pos: [-40, -10] },
+                { id: 'pin', name: 'Pin (Penguin)', color: 0x1e2430, hp: 90, speed: 7.0, pos: [45, 10] },
+                { id: 'karych', name: 'Kar-Karych (Crow)', color: 0x1e3264, hp: 80, speed: 6.0, pos: [15, -45] },
+                { id: 'sovunya', name: 'Sovunya (Owl)', color: 0x8040a0, hp: 85, speed: 6.4, pos: [-15, 45] }
+            ];
 
-            const types = Object.keys(CHARACTERS_DATA);
-            const radius = 30;
+            characterConfigs.forEach(cfg => {
+                const characterGroup = new THREE.Group();
 
-            types.forEach((type, idx) => {
-                const angle = (idx / types.length) * Math.PI * 2;
-                const px = Math.cos(angle) * radius + (Math.random()-0.5)*10;
-                const pz = Math.sin(angle) * radius + (Math.random()-0.5)*10;
+                // 1. Core Sphere Body
+                const bodyGeo = new THREE.SphereGeometry(1.4, 32, 32);
+                const faceTex = createCharacterFaceTexture(cfg.id);
+                const bodyMat = new THREE.MeshLambertMaterial({
+                    map: faceTex,
+                    color: cfg.color
+                });
+                const bodyMesh = new THREE.Mesh(bodyGeo, bodyMat);
+                bodyMesh.rotation.y = -Math.PI / 2; // Orient texture facing forward
+                bodyMesh.castShadow = true;
+                characterGroup.add(bodyMesh);
 
-                const mesh = createSmesharikModel(type);
-                mesh.position.set(px, 1.2, pz);
-                scene.add(mesh);
+                // 2. Character-Specific 3D Accessories
+                const accMat = new THREE.MeshLambertMaterial({ color: 0x222222 });
 
-                smesharikiEnemies.push({
-                    id: type,
-                    data: CHARACTERS_DATA[type],
-                    mesh: mesh,
-                    hp: CHARACTERS_DATA[type].hp,
-                    maxHp: CHARACTERS_DATA[type].hp,
-                    velocity: new THREE.Vector3(),
-                    state: 'WANDER',
-                    wanderAngle: Math.random() * Math.PI * 2,
-                    isAlive: true
+                if (cfg.id === 'krosh') {
+                    // Long Bunny Ears
+                    const earMat = new THREE.MeshLambertMaterial({ color: 0x50b4ff });
+                    const leftEar = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 2.2, 12), earMat);
+                    leftEar.position.set(-0.5, 2.2, 0);
+                    leftEar.rotation.z = 0.25;
+                    characterGroup.add(leftEar);
+
+                    const rightEar = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 2.2, 12), earMat);
+                    rightEar.position.set(0.5, 2.2, 0);
+                    rightEar.rotation.z = -0.25;
+                    characterGroup.add(rightEar);
+                }
+                else if (cfg.id === 'chiko') {
+                    // Quill Spikes on Back
+                    const quillMat = new THREE.MeshLambertMaterial({ color: 0x4a1040 });
+                    for (let i = 0; i < 16; i++) {
+                        const quill = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.8, 8), quillMat);
+                        const phi = (Math.random() * 0.5 + 0.25) * Math.PI;
+                        const theta = (Math.random() - 0.5) * Math.PI;
+                        quill.position.setFromSphericalCoords(1.4, phi, theta);
+                        quill.lookAt(characterGroup.position);
+                        quill.rotation.x += Math.PI;
+                        characterGroup.add(quill);
+                    }
+                }
+                else if (cfg.id === 'nyusha') {
+                    // Braid / Flower on top
+                    const flowerMat = new THREE.MeshLambertMaterial({ color: 0xff0055 });
+                    const flower = new THREE.Mesh(new THREE.DodecahedronGeometry(0.35), flowerMat);
+                    flower.position.set(0, 1.5, 0);
+                    characterGroup.add(flower);
+                }
+                else if (cfg.id === 'barash') {
+                    // Curly Ram Horns
+                    const hornMat = new THREE.MeshLambertMaterial({ color: 0xddccaa });
+                    const leftHorn = new THREE.Mesh(new THREE.TorusGeometry(0.4, 0.12, 8, 16, Math.PI * 1.3), hornMat);
+                    leftHorn.position.set(-1.3, 0.6, 0);
+                    leftHorn.rotation.y = Math.PI / 2;
+                    characterGroup.add(leftHorn);
+
+                    const rightHorn = new THREE.Mesh(new THREE.TorusGeometry(0.4, 0.12, 8, 16, Math.PI * 1.3), hornMat);
+                    rightHorn.position.set(1.3, 0.6, 0);
+                    rightHorn.rotation.y = -Math.PI / 2;
+                    characterGroup.add(rightHorn);
+                }
+                else if (cfg.id === 'losyash') {
+                    // Branching Antlers
+                    const antlerMat = new THREE.MeshLambertMaterial({ color: 0x5c3a21 });
+                    const leftAntler = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 1.4, 8), antlerMat);
+                    leftAntler.position.set(-0.7, 1.8, 0);
+                    leftAntler.rotation.z = 0.5;
+                    characterGroup.add(leftAntler);
+
+                    const rightAntler = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 1.4, 8), antlerMat);
+                    rightAntler.position.set(0.7, 1.8, 0);
+                    rightAntler.rotation.z = -0.5;
+                    characterGroup.add(rightAntler);
+                }
+                else if (cfg.id === 'pin') {
+                    // Aviator Helmet & Beak
+                    const helmetMat = new THREE.MeshLambertMaterial({ color: 0x553311 });
+                    const helmet = new THREE.Mesh(new THREE.SphereGeometry(1.42, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2.2), helmetMat);
+                    characterGroup.add(helmet);
+
+                    const beakMat = new THREE.MeshLambertMaterial({ color: 0xffaa00 });
+                    const beak = new THREE.Mesh(new THREE.ConeGeometry(0.25, 0.6, 8), beakMat);
+                    beak.rotation.x = Math.PI / 2;
+                    beak.position.set(0, -0.1, 1.5);
+                    characterGroup.add(beak);
+                }
+                else if (cfg.id === 'karych') {
+                    // Top Hat & Beak
+                    const hatMat = new THREE.MeshLambertMaterial({ color: 0x111111 });
+                    const hatBrim = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.9, 0.08, 16), hatMat);
+                    hatBrim.position.set(0, 1.42, 0);
+                    characterGroup.add(hatBrim);
+
+                    const hatTop = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 0.9, 16), hatMat);
+                    hatTop.position.set(0, 1.9, 0);
+                    characterGroup.add(hatTop);
+
+                    const beakMat = new THREE.MeshLambertMaterial({ color: 0xffbb00 });
+                    const beak = new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.7, 8), beakMat);
+                    beak.rotation.x = Math.PI / 2;
+                    beak.position.set(0, 0, 1.55);
+                    characterGroup.add(beak);
+                }
+                else if (cfg.id === 'sovunya') {
+                    // Winter Pom-Pom Cap
+                    const capMat = new THREE.MeshLambertMaterial({ color: 0xdd2266 });
+                    const cap = new THREE.Mesh(new THREE.ConeGeometry(1.2, 1.2, 16), capMat);
+                    cap.position.set(0, 1.8, 0);
+                    characterGroup.add(cap);
+
+                    const pom = new THREE.Mesh(new THREE.SphereGeometry(0.3, 12, 12), new THREE.MeshLambertMaterial({ color: 0xffffff }));
+                    pom.position.set(0, 2.5, 0);
+                    characterGroup.add(pom);
+                }
+
+                // Place target in world
+                characterGroup.position.set(cfg.pos[0], 1.4, cfg.pos[1]);
+                scene.add(characterGroup);
+
+                // Add to internal target tracking array
+                targets.push({
+                    id: cfg.id,
+                    name: cfg.name,
+                    mesh: characterGroup,
+                    bodyMesh: bodyMesh,
+                    hp: cfg.hp,
+                    maxHp: cfg.hp,
+                    speed: cfg.speed,
+                    alive: true,
+                    isPanicking: false,
+                    changeDirTimer: 0,
+                    moveAngle: Math.random() * Math.PI * 2
                 });
             });
+
+            updateTargetsCountUI();
         }
 
-        // ==========================================
-        // 7. INPUT & POINTER LOCK HANDLING
-        // ==========================================
-        function setupEventListeners() {
-            const startBtn = document.getElementById('start-btn');
-            const restartBtn = document.getElementById('restart-btn');
-            const startOverlay = document.getElementById('start-overlay');
-
-            startBtn.addEventListener('click', () => {
-                initAudio();
-                document.body.requestPointerLock();
-                startOverlay.classList.add('hidden');
-                gameActive = true;
+        function setupInputListeners() {
+            // Keyboard WASD
+            window.addEventListener('keydown', (e) => {
+                const k = e.key.toLowerCase();
+                if (k === 'w') keys.w = true;
+                if (k === 'a') keys.a = true;
+                if (k === 's') keys.s = true;
+                if (k === 'd') keys.d = true;
+                if (e.key === 'Shift') keys.shift = true;
             });
 
-            restartBtn.addEventListener('click', () => {
-                document.getElementById('victory-overlay').classList.add('hidden');
-                spawnSmesharikiEnemies();
-                document.body.requestPointerLock();
-                gameActive = true;
+            window.addEventListener('keyup', (e) => {
+                const k = e.key.toLowerCase();
+                if (k === 'w') keys.w = false;
+                if (k === 'a') keys.a = false;
+                if (k === 's') keys.s = false;
+                if (k === 'd') keys.d = false;
+                if (e.key === 'Shift') keys.shift = false;
+            });
+
+            // Start & Pointer Lock
+            const startBtn = document.getElementById('start-btn');
+            startBtn.addEventListener('click', () => {
+                audioFX.init();
+                document.getElementById('start-screen').classList.add('hidden');
+                requestPointerLock();
+            });
+
+            document.getElementById('restart-btn').addEventListener('click', () => {
+                location.reload();
+            });
+
+            document.body.addEventListener('click', (e) => {
+                if (e.target.closest('#start-screen') || e.target.closest('#win-screen') || e.target.closest('#mobile-attack-btn')) return;
+                
+                if (!isPointerLocked) {
+                    requestPointerLock();
+                } else {
+                    performPitchforkAttack();
+                }
             });
 
             document.addEventListener('pointerlockchange', () => {
                 isPointerLocked = (document.pointerLockElement === document.body);
             });
 
-            // Mouse Look Controls
-            document.addEventListener('mousemove', (e) => {
-                if (!isPointerLocked || !gameActive) return;
+            // Mouse Look
+            window.addEventListener('mousemove', (e) => {
+                if (!isPointerLocked) return;
                 const sensitivity = 0.0022;
-                player.rotation.y -= e.movementX * sensitivity; // Yaw
-                player.rotation.x -= e.movementY * sensitivity; // Pitch
-
-                // Clamp pitch so camera doesn't flip
-                player.rotation.x = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, player.rotation.x));
+                player.yaw -= e.movementX * sensitivity;
+                player.pitch -= e.movementY * sensitivity;
+                player.pitch = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, player.pitch));
             });
 
-            // Mouse Click Attack
-            document.addEventListener('mousedown', (e) => {
-                if (e.button === 0 && isPointerLocked && gameActive) {
-                    triggerAttack();
-                }
-            });
-
-            // Keyboard Movement
-            window.addEventListener('keydown', (e) => {
-                switch(e.code) {
-                    case 'KeyW': keys.w = true; break;
-                    case 'KeyS': keys.s = true; break;
-                    case 'KeyA': keys.a = true; break;
-                    case 'KeyD': keys.d = true; break;
-                    case 'ShiftLeft': keys.shift = true; break;
-                    case 'Space': triggerAttack(); break;
-                }
-            });
-
-            window.addEventListener('keyup', (e) => {
-                switch(e.code) {
-                    case 'KeyW': keys.w = false; break;
-                    case 'KeyS': keys.s = false; break;
-                    case 'KeyA': keys.a = false; break;
-                    case 'KeyD': keys.d = false; break;
-                    case 'ShiftLeft': keys.shift = false; break;
-                }
-            });
-
-            // Touch Attack Mobile Button
-            document.getElementById('touch-attack-btn').addEventListener('touchstart', (e) => {
+            // Mobile Attack Button
+            document.getElementById('mobile-attack-btn').addEventListener('touchstart', (e) => {
                 e.preventDefault();
-                triggerAttack();
+                audioFX.init();
+                performPitchforkAttack();
             });
+
+            // Mobile Joystick Logic
+            const joystickZone = document.getElementById('joystick-zone');
+            const joystickKnob = document.getElementById('joystick-knob');
+            let joystickActive = false;
+
+            joystickZone.addEventListener('touchstart', (e) => {
+                joystickActive = true;
+            });
+            joystickZone.addEventListener('touchmove', (e) => {
+                if (!joystickActive) return;
+                const rect = joystickZone.getBoundingClientRect();
+                const touch = e.touches[0];
+                const dx = touch.clientX - (rect.left + rect.width / 2);
+                const dy = touch.clientY - (rect.top + rect.height / 2);
+                const maxLen = rect.width / 2;
+                const dist = Math.min(Math.hypot(dx, dy), maxLen);
+                const angle = Math.atan2(dy, dx);
+
+                const knobX = Math.cos(angle) * dist;
+                const knobY = Math.sin(angle) * dist;
+                joystickKnob.style.transform = `translate(${knobX}px, ${knobY}px)`;
+
+                joystickVector.x = knobX / maxLen;
+                joystickVector.y = knobY / maxLen;
+            });
+            const resetJoystick = () => {
+                joystickActive = false;
+                joystickKnob.style.transform = `translate(0px, 0px)`;
+                joystickVector = { x: 0, y: 0 };
+            };
+            joystickZone.addEventListener('touchend', resetJoystick);
+            joystickZone.addEventListener('touchcancel', resetJoystick);
         }
 
-        function triggerAttack() {
+        function requestPointerLock() {
+            document.body.requestPointerLock();
+        }
+
+        function performPitchforkAttack() {
             if (player.isAttacking) return;
             player.isAttacking = true;
             player.attackTimer = 0;
-            playSwingSound();
+            audioFX.playSwing();
 
-            // Raycast forward from camera center to check for hit
+            // Check hit against targets using raycaster from camera
             const raycaster = new THREE.Raycaster();
             raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
 
-            // Find hits among alive Smeshariki
-            const aliveMeshes = smesharikiEnemies.filter(e => e.isAlive).map(e => e.mesh);
-            const intersects = raycaster.intersectObjects(aliveMeshes, true);
+            const aliveMeshes = targets.filter(t => t.alive).map(t => t.bodyMesh);
+            const intersects = raycaster.intersectObjects(aliveMeshes);
 
             if (intersects.length > 0 && intersects[0].distance < 4.2) {
-                // Find parent enemy object
-                let hitMesh = intersects[0].object;
-                while (hitMesh.parent && !hitMesh.userData.isEnemyRoot) {
-                    if (hitMesh.parent === scene) break;
-                    hitMesh = hitMesh.parent;
-                }
+                const hitMesh = intersects[0].object;
+                const target = targets.find(t => t.bodyMesh === hitMesh);
 
-                const enemy = smesharikiEnemies.find(e => e.mesh === hitMesh);
-                if (enemy && enemy.isAlive) {
-                    damageEnemy(enemy, intersects[0].point);
-                }
-            }
-        }
+                if (target && target.alive) {
+                    audioFX.playHit();
+                    target.hp -= 35;
+                    target.isPanicking = true;
 
-        function damageEnemy(enemy, hitPoint) {
-            enemy.hp -= 35;
-            playHitSound();
-            playPanicScreamSound();
+                    // Show Red Hit Marker & Flash Overlay
+                    showHitMarker();
+                    triggerFlashOverlay('rgba(255, 0, 0, 0.2)');
 
-            // Spawn Particles
-            createHitParticles(hitPoint, enemy.data.color);
+                    // Spawn impact blood/star particles
+                    spawnHitParticles(intersects[0].point, target.mesh.position);
 
-            // Vignette flash
-            const vig = document.getElementById('damage-vignette');
-            vig.style.opacity = '0.6';
-            setTimeout(() => vig.style.opacity = '0', 200);
+                    // Update HUD Target HP Bar
+                    showTargetHUDInfo(target);
 
-            // Knockback away from player
-            const kbDir = new THREE.Vector3().subVectors(enemy.mesh.position, player.position).normalize();
-            enemy.mesh.position.addScaledVector(kbDir, 1.5);
+                    if (target.hp <= 0) {
+                        target.alive = false;
+                        scene.remove(target.mesh);
+                        updateTargetsCountUI();
+                        triggerFlashOverlay('rgba(255, 215, 0, 0.35)');
 
-            if (enemy.hp <= 0) {
-                enemy.isAlive = false;
-                scene.remove(enemy.mesh);
-                createDeathBurst(enemy.mesh.position, enemy.data.color);
-                kills++;
-                updateKillHUD();
-
-                if (kills >= TOTAL_ENEMIES) {
-                    setTimeout(showVictory, 600);
+                        if (targets.every(t => !t.alive)) {
+                            audioFX.playVictory();
+                            document.getElementById('win-screen').classList.remove('hidden');
+                            document.exitPointerLock();
+                        }
+                    }
                 }
             }
         }
 
-        function createHitParticles(pos, color) {
-            for(let i = 0; i < 15; i++) {
+        function showHitMarker() {
+            const marker = document.getElementById('hit-marker');
+            marker.style.opacity = '1';
+            setTimeout(() => { marker.style.opacity = '0'; }, 150);
+        }
+
+        function triggerFlashOverlay(color) {
+            const flash = document.getElementById('flash-overlay');
+            flash.style.background = color;
+            flash.style.opacity = '1';
+            setTimeout(() => { flash.style.opacity = '0'; }, 200);
+        }
+
+        function spawnHitParticles(pos) {
+            for (let i = 0; i < 15; i++) {
                 const p = new THREE.Mesh(
-                    new THREE.SphereGeometry(0.12, 8, 8),
-                    new THREE.MeshBasicMaterial({ color: color })
+                    new THREE.DodecahedronGeometry(0.12),
+                    new THREE.MeshBasicMaterial({ color: 0xff3333 })
                 );
                 p.position.copy(pos);
                 p.userData = {
                     vel: new THREE.Vector3(
-                        (Math.random()-0.5)*0.3,
-                        Math.random()*0.3 + 0.1,
-                        (Math.random()-0.5)*0.3
+                        (Math.random() - 0.5) * 6,
+                        Math.random() * 6 + 2,
+                        (Math.random() - 0.5) * 6
                     ),
-                    life: 1.0
+                    life: 0.5
                 };
                 scene.add(p);
-                particles.push(p);
+                hitParticles.push(p);
             }
         }
 
-        function createDeathBurst(pos, color) {
-            for(let i = 0; i < 40; i++) {
-                const p = new THREE.Mesh(
-                    new THREE.DodecahedronGeometry(0.2),
-                    new THREE.MeshBasicMaterial({ color: color })
-                );
-                p.position.copy(pos);
-                p.userData = {
-                    vel: new THREE.Vector3(
-                        (Math.random()-0.5)*0.6,
-                        Math.random()*0.5 + 0.2,
-                        (Math.random()-0.5)*0.6
-                    ),
-                    life: 1.5
-                };
-                scene.add(p);
-                particles.push(p);
-            }
+        function showTargetHUDInfo(target) {
+            const infoBox = document.getElementById('target-info');
+            const nameEl = document.getElementById('target-name');
+            const hpTextEl = document.getElementById('target-hp-text');
+            const hpBarEl = document.getElementById('target-hp-bar');
+
+            nameEl.innerText = target.name;
+            hpTextEl.innerText = `${Math.max(0, target.hp)} / ${target.maxHp}`;
+            hpBarEl.style.width = `${Math.max(0, (target.hp / target.maxHp) * 100)}%`;
+            infoBox.style.opacity = '1';
+
+            clearTimeout(infoBox.hideTimeout);
+            infoBox.hideTimeout = setTimeout(() => {
+                infoBox.style.opacity = '0';
+            }, 3000);
         }
 
-        function updateKillHUD() {
-            document.getElementById('kill-count').innerText = `${kills} / ${TOTAL_ENEMIES}`;
-            document.getElementById('kill-bar').style.width = `${(kills / TOTAL_ENEMIES) * 100}%`;
+        function updateTargetsCountUI() {
+            const remaining = targets.filter(t => t.alive).length;
+            document.getElementById('targets-count').innerText = `${remaining} / 8`;
         }
 
-        function showVictory() {
-            gameActive = false;
-            document.exitPointerLock();
-            playVictorySound();
-            document.getElementById('victory-overlay').classList.remove('hidden');
-        }
-
-        // ==========================================
-        // 8. UPDATE LOOP & RENDERER
-        // ==========================================
         function animate() {
             requestAnimationFrame(animate);
 
-            if (gameActive) {
-                updatePlayerMovement();
-                updatePitchforkAnimation();
-                updateSmesharikiAI();
-                updateTargetHUD();
-                updateParticles();
-            }
+            const delta = Math.min(clock.getDelta(), 0.1);
+            const time = clock.getElapsedTime();
 
-            drawMinimap();
+            // 1. Update Player First-Person Movement
+            updatePlayerMovement(delta, time);
 
+            // 2. Update Smeshariki AI Behavior & Panic Movement
+            updateSmesharikiAI(delta);
+
+            // 3. Update Hit Particles
+            updateParticles(delta);
+
+            // 4. Render 3D World Scene
             renderer.render(scene, camera);
+
+            // 5. Draw Top-Right Radar Minimap
+            drawMinimap();
         }
 
-        function updatePlayerMovement() {
-            // Apply camera orientation
+        function updatePlayerMovement(delta, time) {
+            // Apply Camera Orientation (Yaw & Pitch)
             camera.rotation.order = 'YXZ';
-            camera.rotation.y = player.rotation.y;
-            camera.rotation.x = player.rotation.x;
+            camera.rotation.y = player.yaw;
+            camera.rotation.x = player.pitch;
 
-            const moveSpeed = keys.shift ? player.speed * 1.6 : player.speed;
+            // Calculate movement direction relative to camera yaw
             const moveDir = new THREE.Vector3();
-
             if (keys.w) moveDir.z -= 1;
             if (keys.s) moveDir.z += 1;
             if (keys.a) moveDir.x -= 1;
             if (keys.d) moveDir.x += 1;
 
-            moveDir.normalize();
-            moveDir.applyAxisAngle(new THREE.Vector3(0, 1, 0), player.rotation.y);
-
-            player.position.addScaledVector(moveDir, moveSpeed);
-
-            // Keep inside map bounds
-            const distFromCenter = Math.hypot(player.position.x, player.position.z);
-            if (distFromCenter > 95) {
-                player.position.setLength(95);
+            if (joystickVector.x !== 0 || joystickVector.y !== 0) {
+                moveDir.x = joystickVector.x;
+                moveDir.z = joystickVector.y;
             }
 
-            camera.position.copy(player.position);
-        }
+            if (moveDir.lengthSq() > 0) {
+                moveDir.normalize();
+                const currentSpeed = keys.shift ? player.speed * 1.5 : player.speed;
 
-        function updatePitchforkAnimation() {
-            if (!player.isAttacking) {
-                // Natural FPS View weapon bobbing when walking
-                if (keys.w || keys.a || keys.s || keys.d) {
-                    pitchfork.position.y = -0.42 + Math.sin(Date.now() * 0.012) * 0.035;
-                    pitchfork.position.x = 0.32 + Math.cos(Date.now() * 0.006) * 0.025;
-                } else {
-                    // Idle breathing motion
-                    pitchfork.position.y = -0.42 + Math.sin(Date.now() * 0.003) * 0.008;
-                }
-                return;
-            }
+                // Rotate movement vector by player yaw
+                const forward = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), player.yaw);
+                const right = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), player.yaw);
 
-            player.attackTimer += 0.22;
+                const finalVelocity = forward.multiplyScalar(-moveDir.z).add(right.multiplyScalar(moveDir.x)).multiplyScalar(currentSpeed);
+                player.position.addScaledVector(finalVelocity, delta);
 
-            if (player.attackTimer < Math.PI) {
-                // Powerful FPS forward pitchfork thrusting attack
-                const thrust = Math.sin(player.attackTimer) * 0.65;
-                pitchfork.position.z = -0.65 - thrust;
-                pitchfork.position.y = -0.42 + thrust * 0.15;
-                pitchfork.rotation.x = 0.12 - thrust * 0.35;
+                // View Bobbing effect
+                viewModelGroup.position.y = Math.sin(time * 12) * 0.03;
+                viewModelGroup.position.x = Math.cos(time * 6) * 0.02;
             } else {
-                // Reset to default FPS position
-                player.isAttacking = false;
-                pitchfork.position.set(0.32, -0.42, -0.65);
-                pitchfork.rotation.set(0.12, -0.25, -0.1);
+                // Subtle breathing sway
+                viewModelGroup.position.y = Math.sin(time * 2) * 0.01;
+                viewModelGroup.position.x = 0;
+            }
+
+            // World Map Boundaries (-110 to 110)
+            player.position.x = Math.max(-105, Math.min(105, player.position.x));
+            player.position.z = Math.max(-105, Math.min(105, player.position.z));
+
+            // Position FPS Camera at Kopatych's Eye Height (1.6m)
+            camera.position.copy(player.position);
+            camera.position.y = 1.6;
+
+            // Attack Pitchfork Thrust Animation
+            if (player.isAttacking) {
+                player.attackTimer += delta * 7;
+                if (player.attackTimer < Math.PI) {
+                    const thrust = Math.sin(player.attackTimer) * 0.55;
+                    pitchforkMesh.position.z = -0.4 - thrust;
+                    pitchforkMesh.rotation.x = -0.1 - thrust * 0.4;
+                } else {
+                    player.isAttacking = false;
+                    pitchforkMesh.position.z = -0.4;
+                    pitchforkMesh.rotation.x = -0.1;
+                }
             }
         }
 
-        function updateSmesharikiAI() {
-            smesharikiEnemies.forEach(enemy => {
-                if (!enemy.isAlive) return;
+        function updateSmesharikiAI(delta) {
+            targets.forEach(t => {
+                if (!t.alive) return;
 
-                const distToPlayer = enemy.mesh.position.distanceTo(player.position);
+                const distToPlayer = t.mesh.position.distanceTo(player.position);
 
+                // Trigger panic when player gets close (< 14 meters)
                 if (distToPlayer < 14) {
-                    // PANIC & FLEE away from Kopatych
-                    enemy.state = 'FLEE';
-                    const fleeDir = new THREE.Vector3().subVectors(enemy.mesh.position, player.position).normalize();
-                    enemy.mesh.position.addScaledVector(fleeDir, 0.12);
-
-                    // Face away direction
-                    enemy.mesh.rotation.y = Math.atan2(fleeDir.x, fleeDir.z);
-
-                    // Panic Bounce Animation
-                    enemy.mesh.position.y = 1.2 + Math.abs(Math.sin(Date.now() * 0.015)) * 0.4;
-                } else {
-                    // Casual Wander
-                    enemy.state = 'WANDER';
-                    enemy.wanderAngle += (Math.random() - 0.5) * 0.1;
-                    enemy.mesh.position.x += Math.cos(enemy.wanderAngle) * 0.03;
-                    enemy.mesh.position.z += Math.sin(enemy.wanderAngle) * 0.03;
-                    enemy.mesh.rotation.y = enemy.wanderAngle;
-                    enemy.mesh.position.y = 1.2;
+                    t.isPanicking = true;
                 }
+
+                if (t.isPanicking) {
+                    // Flee directly away from player location
+                    const fleeDir = new THREE.Vector3().subVectors(t.mesh.position, player.position).normalize();
+                    fleeDir.y = 0;
+                    t.mesh.position.addScaledVector(fleeDir, t.speed * 1.4 * delta);
+                    t.mesh.rotation.y = Math.atan2(fleeDir.x, fleeDir.z) + Math.PI / 2;
+
+                    // Hop up and down in panic
+                    t.mesh.position.y = 1.4 + Math.abs(Math.sin(clock.getElapsedTime() * 14)) * 0.5;
+
+                    if (distToPlayer > 30) {
+                        t.isPanicking = false;
+                    }
+                } else {
+                    // Casual village wandering AI
+                    t.changeDirTimer -= delta;
+                    if (t.changeDirTimer <= 0) {
+                        t.changeDirTimer = 3 + Math.random() * 4;
+                        t.moveAngle = Math.random() * Math.PI * 2;
+                    }
+
+                    const moveDir = new THREE.Vector3(Math.cos(t.moveAngle), 0, Math.sin(t.moveAngle));
+                    t.mesh.position.addScaledVector(moveDir, t.speed * 0.4 * delta);
+                    t.mesh.rotation.y = Math.atan2(moveDir.x, moveDir.z) + Math.PI / 2;
+                    t.mesh.position.y = 1.4 + Math.abs(Math.sin(clock.getElapsedTime() * 5)) * 0.15;
+                }
+
+                // Map bounds for AI
+                t.mesh.position.x = Math.max(-100, Math.min(100, t.mesh.position.x));
+                t.mesh.position.z = Math.max(-100, Math.min(100, t.mesh.position.z));
             });
         }
 
-        function updateTargetHUD() {
-            const raycaster = new THREE.Raycaster();
-            raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
-
-            const aliveMeshes = smesharikiEnemies.filter(e => e.isAlive).map(e => e.mesh);
-            const intersects = raycaster.intersectObjects(aliveMeshes, true);
-
-            const targetHud = document.getElementById('target-hud');
-
-            if (intersects.length > 0 && intersects[0].distance < 25) {
-                let hitObj = intersects[0].object;
-                while (hitObj.parent && hitObj.parent !== scene) {
-                    hitObj = hitObj.parent;
-                }
-                const enemy = smesharikiEnemies.find(e => e.mesh === hitObj);
-                if (enemy && enemy.isAlive) {
-                    document.getElementById('target-icon').innerText = enemy.data.icon;
-                    document.getElementById('target-name').innerText = enemy.data.name;
-                    document.getElementById('target-hp-bar').style.width = `${(enemy.hp / enemy.maxHp) * 100}%`;
-                    targetHud.classList.remove('opacity-0', '-translate-y-2');
-                    return;
-                }
-            }
-
-            targetHud.classList.add('opacity-0', '-translate-y-2');
-        }
-
-        function updateParticles() {
-            for(let i = particles.length - 1; i >= 0; i--) {
-                const p = particles[i];
-                p.position.add(p.userData.vel);
-                p.userData.life -= 0.03;
-                p.scale.multiplyScalar(0.95);
+        function updateParticles(delta) {
+            for (let i = hitParticles.length - 1; i >= 0; i--) {
+                const p = hitParticles[i];
+                p.userData.life -= delta;
+                p.position.addScaledVector(p.userData.vel, delta);
+                p.userData.vel.y -= 15 * delta; // Gravity
 
                 if (p.userData.life <= 0) {
                     scene.remove(p);
-                    particles.splice(i, 1);
+                    hitParticles.splice(i, 1);
                 }
             }
         }
 
-        // Minimap Radar Drawing
         function drawMinimap() {
-            const canvas = document.getElementById('minimap');
+            const canvas = document.getElementById('minimap-canvas');
             const ctx = canvas.getContext('2d');
-            const cx = canvas.width / 2;
-            const cy = canvas.height / 2;
+            const cx = 70, cy = 70, scale = 0.65;
 
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.clearRect(0, 0, 140, 140);
 
-            // Draw Radar Grid Rings
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
-            ctx.lineWidth = 1;
+            // Draw Village Boundaries
+            ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+            ctx.lineWidth = 2;
             ctx.beginPath();
-            ctx.arc(cx, cy, 25, 0, Math.PI * 2);
-            ctx.arc(cx, cy, 50, 0, Math.PI * 2);
+            ctx.arc(cx, cy, 65, 0, Math.PI * 2);
             ctx.stroke();
 
-            // Draw Enemy Red Dots
-            const scale = 0.8;
-            smesharikiEnemies.forEach(enemy => {
-                if (!enemy.isAlive) return;
+            // Draw Targets as Red Pulsing Dots
+            targets.forEach(t => {
+                if (!t.alive) return;
+                const dx = (t.mesh.position.x - player.position.x) * scale;
+                const dz = (t.mesh.position.z - player.position.z) * scale;
 
-                const dx = (enemy.mesh.position.x - player.position.x) * scale;
-                const dz = (enemy.mesh.position.z - player.position.z) * scale;
+                // Don't draw if outside minimap radius
+                if (Math.hypot(dx, dz) > 62) return;
 
-                // Rotate relative to camera facing yaw
-                const mapX = cx + (dx * Math.cos(-player.rotation.y) - dz * Math.sin(-player.rotation.y));
-                const mapY = cy + (dx * Math.sin(-player.rotation.y) + dz * Math.cos(-player.rotation.y));
-
-                // Clip inside circular minimap
-                if (Math.hypot(mapX - cx, mapY - cy) < cx - 4) {
-                    ctx.fillStyle = '#ff1744';
-                    ctx.beginPath();
-                    ctx.arc(mapX, mapY, 4, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.strokeStyle = '#ffffff';
-                    ctx.lineWidth = 1;
-                    ctx.stroke();
-                }
+                ctx.fillStyle = '#ff3333';
+                ctx.beginPath();
+                ctx.arc(cx + dx, cy + dz, 4, 0, Math.PI * 2);
+                ctx.fill();
             });
+
+            // Draw Kopatych Player Pointer (Center)
+            ctx.fillStyle = '#f59e0b';
+            ctx.beginPath();
+            ctx.arc(cx, cy, 5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Direction Cone
+            ctx.strokeStyle = 'rgba(245, 158, 11, 0.5)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(cx + Math.sin(-player.yaw - 0.4) * 16, cy - Math.cos(-player.yaw - 0.4) * 16);
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(cx + Math.sin(-player.yaw + 0.4) * 16, cy - Math.cos(-player.yaw + 0.4) * 16);
+            ctx.stroke();
         }
 
         function onWindowResize() {
@@ -1303,8 +1273,10 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
 
-        // Initialize App on window load
-        window.onload = initEngine;
+        // Initialize when window finishes loading
+        window.onload = function() {
+            initEngine();
+        };
     </script>
 </body>
 </html>
