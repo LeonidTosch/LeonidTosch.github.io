@@ -3,266 +3,211 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Geometry Dash - Neon Edition</title>
+    <title>Geometry Dash Deluxe</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Outfit:wght@400;600;800;900&display=swap');
-        
-        * {
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Pusab&family=Rubik:wght@700;900&display=swap');
+
+        body {
+            font-family: 'Rubik', sans-serif;
+            background-color: #0d0e15;
+            color: #ffffff;
             user-select: none;
             -webkit-user-select: none;
+            overflow: hidden;
             touch-action: manipulation;
         }
 
-        body {
-            font-family: 'Outfit', sans-serif;
-            background-color: #0b0c10;
-            color: #ffffff;
-            overflow: hidden;
-            margin: 0;
-            padding: 0;
-            width: 100vw;
-            height: 100vh;
+        .font-gd {
+            font-family: 'Fredoka One', cursive, sans-serif;
+            letter-spacing: 1px;
+            text-shadow: 3px 3px 0px #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 0 4px 10px rgba(0,0,0,0.7);
         }
 
-        .font-game {
-            font-family: 'Fredoka One', cursive;
+        .gd-btn {
+            transition: transform 0.1s ease, filter 0.15s ease, box-shadow 0.15s ease;
+            box-shadow: 0 6px 0 rgba(0,0,0,0.4), inset 0 3px 0 rgba(255,255,255,0.4);
         }
 
-        .neon-glow-cyan {
-            text-shadow: 0 0 10px rgba(6, 182, 212, 0.8), 0 0 20px rgba(6, 182, 212, 0.5);
+        .gd-btn:hover {
+            transform: translateY(-2px) scale(1.03);
+            filter: brightness(1.15);
         }
 
-        .neon-glow-purple {
-            text-shadow: 0 0 10px rgba(168, 85, 247, 0.8), 0 0 20px rgba(168, 85, 247, 0.5);
+        .gd-btn:active {
+            transform: translateY(4px) scale(0.97);
+            box-shadow: 0 2px 0 rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.2);
         }
 
-        .neon-glow-yellow {
-            text-shadow: 0 0 10px rgba(234, 179, 8, 0.8), 0 0 20px rgba(234, 179, 8, 0.5);
+        /* Pulse glow for main menu title */
+        @keyframes pulseGlow {
+            0%, 100% { text-shadow: 0 0 20px #00f3ff, 3px 3px 0px #000, -2px -2px 0 #000; }
+            50% { text-shadow: 0 0 35px #ff00ea, 3px 3px 0px #000, -2px -2px 0 #000; }
         }
 
-        .glass-panel {
-            background: rgba(15, 23, 42, 0.75);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
-        }
-
-        .btn-action {
-            transition: all 0.15s ease;
-            box-shadow: 0 6px 0 rgba(0, 0, 0, 0.4);
-        }
-
-        .btn-action:active {
-            transform: translateY(4px);
-            box-shadow: 0 2px 0 rgba(0, 0, 0, 0.4);
-        }
-
-        /* Custom scrollbar for level select */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: rgba(0,0,0,0.2);
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: rgba(255,255,255,0.2);
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: rgba(255,255,255,0.4);
+        .animate-title {
+            animation: pulseGlow 3s infinite alternate ease-in-out;
         }
 
         canvas {
-            display: block;
-            width: 100%;
-            height: 100%;
+            image-rendering: pixelated;
+            touch-action: none;
         }
     </style>
 </head>
-<body class="relative flex flex-col justify-center items-center h-screen w-screen overflow-hidden">
+<body class="w-screen h-screen flex flex-col justify-center items-center relative bg-slate-950">
 
-    <!-- Main Game Canvas Container -->
-    <div id="gameContainer" class="relative w-full h-full flex justify-center items-center overflow-hidden">
-        <canvas id="gameCanvas"></canvas>
+    <!-- Main Game Container -->
+    <div id="game-container" class="relative w-full max-w-5xl aspect-video max-h-screen bg-black rounded-2xl overflow-hidden shadow-2xl border-4 border-slate-800 flex items-center justify-center">
 
-        <!-- Top In-Game Bar (Progress & Stats) -->
-        <div id="hudOverlay" class="absolute top-0 left-0 w-full p-4 pointer-events-none flex justify-between items-center z-10 transition-opacity duration-300 opacity-0">
-            <div class="flex items-center gap-3">
-                <button id="btnPause" class="pointer-events-auto bg-slate-800/80 hover:bg-slate-700 border border-slate-600 rounded-xl w-12 h-12 flex items-center justify-center text-white text-xl shadow-lg transition">
-                    <i class="fa-solid fa-pause"></i>
-                </button>
-                <div class="glass-panel px-4 py-2 rounded-xl text-sm font-bold text-slate-300 flex items-center gap-2">
-                    <span id="attemptText" class="text-yellow-400 font-game text-base">ATTEMPT 1</span>
-                </div>
+        <!-- Canvas -->
+        <canvas id="gameCanvas" class="w-full h-full block"></canvas>
+
+        <!-- TOP BAR HUD (In-game) -->
+        <div id="hud" class="absolute top-0 left-0 w-full p-4 flex justify-between items-center pointer-events-none opacity-0 transition-opacity duration-300">
+            <!-- Progress Bar Container -->
+            <div class="flex-1 max-w-md mx-auto bg-black/60 backdrop-blur border-2 border-white/20 rounded-full h-6 p-1 relative overflow-hidden shadow-lg flex items-center">
+                <div id="progress-bar" class="bg-gradient-to-r from-cyan-400 via-fuchsia-500 to-yellow-400 h-full rounded-full transition-all duration-75" style="width: 0%;"></div>
+                <span id="progress-text" class="absolute inset-0 flex items-center justify-center text-xs font-black text-white drop-shadow-[0_1.2px_1.2px_rgba(0,0,0,0.8)] font-gd tracking-wider">0%</span>
             </div>
 
-            <!-- Progress Bar -->
-            <div class="flex-1 max-w-md mx-6 flex flex-col items-center">
-                <div class="w-full bg-slate-900/80 border border-slate-700/60 rounded-full h-5 p-1 relative flex items-center overflow-hidden shadow-inner">
-                    <div id="progressBar" class="bg-gradient-to-r from-cyan-500 via-indigo-500 to-fuchsia-500 h-full rounded-full w-0 transition-all duration-75"></div>
-                </div>
-                <span id="progressText" class="text-xs font-game text-slate-200 mt-1 tracking-wider drop-shadow-md">0%</span>
-            </div>
-
-            <!-- Practice Mode Toggle & Checkpoint Actions -->
-            <div class="flex items-center gap-2">
-                <button id="btnPracticeMode" class="pointer-events-auto glass-panel hover:bg-slate-700/80 text-cyan-400 border border-cyan-500/40 rounded-xl px-3 py-2 text-xs font-bold flex items-center gap-2 transition">
-                    <i class="fa-solid fa-diamond"></i>
-                    <span class="hidden md:inline">PRACTICE</span>
+            <!-- Practice Mode Indicator / Pause Button -->
+            <div class="absolute right-4 top-4 flex gap-2 pointer-events-auto">
+                <button id="btn-practice-checkpoint" class="hidden gd-btn bg-green-500 hover:bg-green-400 text-white p-2.5 rounded-xl font-bold text-xs shadow-md flex items-center gap-1.5 border-2 border-green-300">
+                    <i class="fa-solid fa-plus text-sm"></i> <span class="hidden sm:inline">CHECKPOINT</span> (Z)
                 </button>
-                <button id="btnRemoveCheckpoint" class="pointer-events-auto hidden glass-panel hover:bg-red-900/50 text-red-400 border border-red-500/40 rounded-xl w-10 h-10 flex items-center justify-center text-sm transition">
-                    <i class="fa-solid fa-trash-can"></i>
+                <button id="btn-practice-remove" class="hidden gd-btn bg-red-500 hover:bg-red-400 text-white p-2.5 rounded-xl font-bold text-xs shadow-md flex items-center gap-1.5 border-2 border-red-300">
+                    <i class="fa-solid fa-minus text-sm"></i> <span class="hidden sm:inline">REMOVE</span> (X)
                 </button>
-                <button id="btnAddCheckpoint" class="pointer-events-auto hidden glass-panel hover:bg-emerald-900/50 text-emerald-400 border border-emerald-500/40 rounded-xl w-10 h-10 flex items-center justify-center text-sm transition">
-                    <i class="fa-solid fa-plus"></i>
+                <button id="btn-pause" class="gd-btn bg-slate-800 hover:bg-slate-700 border-2 border-slate-500 text-white p-2.5 rounded-xl">
+                    <i class="fa-solid fa-pause text-base"></i>
                 </button>
             </div>
         </div>
 
-        <!-- Main Menu Overlay -->
-        <div id="mainMenu" class="absolute inset-0 flex flex-col justify-between items-center p-6 z-20 bg-gradient-to-b from-slate-950/80 via-indigo-950/40 to-slate-950/90 backdrop-blur-md">
-            
-            <!-- Game Title Header -->
-            <div class="mt-8 text-center animate-bounce-slow">
-                <h1 class="text-5xl md:text-7xl font-game tracking-wider bg-gradient-to-r from-cyan-400 via-fuchsia-400 to-yellow-400 bg-clip-text text-transparent drop-shadow-2xl">
-                    GEOMETRY DASH
-                </h1>
-                <p class="text-sm md:text-base font-semibold tracking-widest text-cyan-300/80 uppercase mt-2">
-                    NEON DIMENSION
-                </p>
+        <!-- MENU OVERLAY: START SCREEN -->
+        <div id="menu-main" class="absolute inset-0 bg-slate-950/85 backdrop-blur-md flex flex-col justify-between items-center p-6 z-20">
+            <!-- Title Header -->
+            <div class="text-center mt-6">
+                <h1 class="text-5xl md:text-7xl font-black font-gd text-cyan-400 tracking-wider animate-title transform -rotate-1">GEOMETRY DASH</h1>
+                <p class="text-xs md:text-sm text-cyan-200/80 font-bold tracking-widest mt-2 uppercase">Neon Remastered Edition</p>
             </div>
 
-            <!-- Level Selector Slider Container -->
-            <div class="w-full max-w-4xl flex flex-col items-center">
-                <div id="levelCard" class="glass-panel w-full max-w-lg rounded-3xl p-6 border-2 border-cyan-500/40 flex flex-col items-center text-center relative overflow-hidden transition-all duration-300">
-                    <div id="levelBadge" class="px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 mb-3">
-                        EASY
-                    </div>
-                    <h2 id="levelTitle" class="text-3xl md:text-4xl font-game text-white tracking-wide mb-1 neon-glow-cyan">
-                        STEREO BUMP
-                    </h2>
-                    <p id="levelAuthor" class="text-xs text-slate-400 font-semibold mb-6">Level 1 • Beat: 125 BPM</p>
-
-                    <!-- Icon Preview Box -->
-                    <div class="relative w-28 h-28 my-2 flex justify-center items-center">
-                        <div id="levelPreviewBox" class="w-20 h-20 bg-gradient-to-tr from-cyan-500 to-blue-600 rounded-2xl border-4 border-white shadow-lg flex items-center justify-center text-3xl text-yellow-300 shadow-cyan-500/50">
-                            <i class="fa-solid fa-cube"></i>
-                        </div>
-                    </div>
-
-                    <!-- Level Stats -->
-                    <div class="w-full grid grid-cols-2 gap-3 mt-6 text-xs font-bold text-slate-300">
-                        <div class="bg-slate-900/60 p-3 rounded-2xl border border-slate-800 flex flex-col items-center">
-                            <span class="text-slate-400 text-[10px]">NORMAL MODE</span>
-                            <span id="statNormalProgress" class="text-cyan-400 font-game text-base mt-0.5">0%</span>
-                        </div>
-                        <div class="bg-slate-900/60 p-3 rounded-2xl border border-slate-800 flex flex-col items-center">
-                            <span class="text-slate-400 text-[10px]">PRACTICE MODE</span>
-                            <span id="statPracticeProgress" class="text-fuchsia-400 font-game text-base mt-0.5">0%</span>
-                        </div>
-                    </div>
-
-                    <!-- Level Selector Arrows -->
-                    <button id="btnPrevLevel" class="absolute left-3 top-1/2 -translate-y-1/2 w-12 h-12 glass-panel rounded-full flex items-center justify-center text-xl text-white hover:bg-cyan-500/30 transition">
+            <!-- Play / Select Level Controls -->
+            <div class="flex flex-col items-center gap-6 w-full max-w-xl">
+                <!-- Level Selector Carousel -->
+                <div class="flex items-center justify-between w-full bg-slate-900/90 border-2 border-cyan-500/40 p-4 rounded-3xl shadow-2xl relative">
+                    <button id="btn-prev-level" class="gd-btn bg-cyan-600 hover:bg-cyan-500 text-white p-3 md:p-4 rounded-2xl text-xl">
                         <i class="fa-solid fa-chevron-left"></i>
                     </button>
-                    <button id="btnNextLevel" class="absolute right-3 top-1/2 -translate-y-1/2 w-12 h-12 glass-panel rounded-full flex items-center justify-center text-xl text-white hover:bg-cyan-500/30 transition">
+                    
+                    <div class="text-center flex-1 px-4">
+                        <div id="level-difficulty-badge" class="inline-block px-3 py-1 rounded-full text-xs font-black uppercase mb-1 bg-yellow-500/20 text-yellow-400 border border-yellow-500/40">
+                            EASY ★
+                        </div>
+                        <h2 id="level-title" class="text-2xl md:text-4xl font-black font-gd text-white drop-shadow">1. STEREO MADNESS</h2>
+                        <p id="level-desc" class="text-xs text-slate-400 mt-1">Introductory spikes, pad jumps, and ship transformation!</p>
+                        
+                        <!-- Best Progress Bar -->
+                        <div class="mt-3 w-full bg-slate-950 rounded-full h-3 p-0.5 border border-slate-700 flex items-center relative">
+                            <div id="level-best-bar" class="bg-cyan-400 h-full rounded-full transition-all duration-300" style="width: 0%;"></div>
+                            <span id="level-best-text" class="absolute inset-0 text-[10px] font-black text-center text-slate-300">BEST: 0%</span>
+                        </div>
+                    </div>
+
+                    <button id="btn-next-level" class="gd-btn bg-cyan-600 hover:bg-cyan-500 text-white p-3 md:p-4 rounded-2xl text-xl">
                         <i class="fa-solid fa-chevron-right"></i>
                     </button>
                 </div>
 
-                <!-- Play Button -->
-                <button id="btnPlay" class="btn-action mt-6 bg-gradient-to-r from-emerald-400 via-teal-500 to-cyan-500 hover:from-emerald-300 hover:to-cyan-400 text-slate-950 font-game text-3xl px-12 py-5 rounded-3xl tracking-wider uppercase border-2 border-white/40 flex items-center gap-4 cursor-pointer shadow-xl shadow-emerald-500/20">
-                    <i class="fa-solid fa-play"></i>
-                    <span>PLAY</span>
-                </button>
-            </div>
-
-            <!-- Footer Toolbar / Settings -->
-            <div class="mb-4 flex items-center gap-4">
-                <button id="btnToggleSound" class="glass-panel w-12 h-12 rounded-2xl flex items-center justify-center text-cyan-400 hover:text-white transition text-lg">
-                    <i class="fa-solid fa-volume-high"></i>
-                </button>
-                <button id="btnCustomization" class="glass-panel px-5 h-12 rounded-2xl flex items-center gap-2 text-amber-400 font-bold hover:text-white transition text-sm">
-                    <i class="fa-solid fa-paint-brush"></i>
-                    <span>SKIN</span>
-                </button>
-                <button id="btnInfo" class="glass-panel w-12 h-12 rounded-2xl flex items-center justify-center text-cyan-400 hover:text-white transition text-lg">
-                    <i class="fa-solid fa-circle-info"></i>
-                </button>
-            </div>
-        </div>
-
-        <!-- Pause Menu Modal -->
-        <div id="pauseMenu" class="absolute inset-0 z-30 hidden flex-col justify-center items-center bg-slate-950/80 backdrop-blur-md">
-            <div class="glass-panel w-11/12 max-w-md p-8 rounded-3xl border border-slate-700/80 text-center flex flex-col items-center">
-                <h3 class="text-4xl font-game text-white mb-2 tracking-wide neon-glow-cyan">GAME PAUSED</h3>
-                <p id="pauseLevelTitle" class="text-slate-400 text-sm font-semibold mb-8">STEREO BUMP</p>
-
-                <div class="flex flex-col gap-4 w-full">
-                    <button id="btnResume" class="btn-action w-full py-4 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-game text-xl rounded-2xl border border-white/30 tracking-wider">
-                        RESUME
+                <!-- Play Buttons -->
+                <div class="flex gap-4 w-full justify-center">
+                    <button id="btn-play-normal" class="gd-btn bg-emerald-500 hover:bg-emerald-400 text-white text-xl md:text-2xl font-black font-gd px-8 py-4 rounded-2xl border-4 border-emerald-300 flex items-center gap-3 shadow-emerald-900/50 shadow-lg">
+                        <i class="fa-solid fa-play text-2xl"></i> PLAY
                     </button>
-                    <button id="btnRestart" class="btn-action w-full py-4 bg-amber-500 hover:bg-amber-400 text-slate-950 font-game text-xl rounded-2xl border border-white/30 tracking-wider">
-                        RESTART
-                    </button>
-                    <button id="btnQuit" class="btn-action w-full py-4 bg-rose-600 hover:bg-rose-500 text-white font-game text-xl rounded-2xl border border-white/30 tracking-wider">
-                        EXIT TO MENU
+                    <button id="btn-play-practice" class="gd-btn bg-amber-500 hover:bg-amber-400 text-white text-base md:text-lg font-black font-gd px-5 py-4 rounded-2xl border-4 border-amber-300 flex items-center gap-2 shadow-amber-900/50 shadow-lg">
+                        <i class="fa-solid fa-diamond text-lg"></i> PRACTICE
                     </button>
                 </div>
             </div>
-        </div>
 
-        <!-- Level Complete Modal -->
-        <div id="victoryMenu" class="absolute inset-0 z-30 hidden flex-col justify-center items-center bg-slate-950/85 backdrop-blur-lg">
-            <div class="glass-panel w-11/12 max-w-lg p-8 rounded-3xl border-2 border-yellow-400/50 text-center flex flex-col items-center shadow-2xl shadow-yellow-500/20 animate-scale-up">
-                <div class="text-6xl text-yellow-400 mb-4 animate-bounce">
-                    <i class="fa-solid fa-trophy"></i>
-                </div>
-                <h3 class="text-4xl md:text-5xl font-game text-yellow-300 tracking-wider neon-glow-yellow mb-2">LEVEL COMPLETE!</h3>
-                <p id="victoryAttempts" class="text-slate-300 font-bold mb-6 text-sm">TOTAL ATTEMPTS: 1</p>
+            <!-- Footer Buttons (Skins, Audio Toggle, Controls info) -->
+            <div class="flex items-center justify-between w-full max-w-2xl border-t border-slate-800 pt-4 mb-2">
+                <button id="btn-open-skins" class="gd-btn bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2.5 rounded-xl font-bold text-xs md:text-sm flex items-center gap-2 border border-indigo-400">
+                    <i class="fa-solid fa-paint-brush"></i> ICON KIT
+                </button>
 
-                <div class="flex gap-4 w-full">
-                    <button id="btnVictoryMenu" class="btn-action flex-1 py-4 bg-slate-800 hover:bg-slate-700 text-white font-game text-lg rounded-2xl border border-slate-600">
-                        MENU
-                    </button>
-                    <button id="btnVictoryReplay" class="btn-action flex-1 py-4 bg-gradient-to-r from-emerald-400 to-cyan-500 text-slate-950 font-game text-lg rounded-2xl border border-white/40">
-                        REPLAY
-                    </button>
+                <div class="text-slate-400 text-xs text-center hidden md:block font-medium">
+                    Press <span class="bg-slate-800 px-2 py-1 rounded border border-slate-700 text-cyan-300">SPACE</span>, <span class="bg-slate-800 px-2 py-1 rounded border border-slate-700 text-cyan-300">UP</span> or <span class="bg-slate-800 px-2 py-1 rounded border border-slate-700 text-cyan-300">CLICK</span> to jump / fly!
                 </div>
-            </div>
-        </div>
 
-        <!-- Character Skins Modal -->
-        <div id="skinMenu" class="absolute inset-0 z-30 hidden flex-col justify-center items-center bg-slate-950/85 backdrop-blur-md p-4">
-            <div class="glass-panel w-full max-w-md p-6 rounded-3xl border border-amber-500/40 text-center flex flex-col items-center">
-                <h3 class="text-3xl font-game text-amber-400 mb-4">CUSTOMIZE CUBE</h3>
-                <div id="skinGrid" class="grid grid-cols-4 gap-4 my-4 w-full">
-                    <!-- Skins populated dynamically in JS -->
-                </div>
-                <button id="btnCloseSkin" class="btn-action mt-4 w-full py-3 bg-slate-800 text-white font-game rounded-2xl border border-slate-600">
-                    CLOSE
+                <button id="btn-toggle-sound" class="gd-btn bg-slate-800 hover:bg-slate-700 text-white px-4 py-2.5 rounded-xl font-bold text-xs md:text-sm flex items-center gap-2 border border-slate-600">
+                    <i id="sound-icon" class="fa-solid fa-volume-high text-cyan-400"></i> SOUND ON
                 </button>
             </div>
         </div>
 
-        <!-- Info / Instructions Modal -->
-        <div id="infoMenu" class="absolute inset-0 z-30 hidden flex-col justify-center items-center bg-slate-950/85 backdrop-blur-md p-4">
-            <div class="glass-panel w-full max-w-md p-6 rounded-3xl border border-cyan-500/40 text-left">
-                <h3 class="text-3xl font-game text-cyan-400 text-center mb-4">HOW TO PLAY</h3>
-                <div class="space-y-3 text-sm text-slate-300 font-semibold leading-relaxed">
-                    <p class="flex items-center gap-3"><span class="w-8 h-8 rounded-lg bg-cyan-500/20 text-cyan-300 flex justify-center items-center text-xs font-black">SPACE</span> Press Space, Up Arrow, or Tap Screen to Jump/Fly.</p>
-                    <p class="flex items-center gap-3"><span class="w-8 h-8 rounded-lg bg-cyan-500/20 text-cyan-300 flex justify-center items-center text-xs font-black"><i class="fa-solid fa-cube"></i></span> <strong>Cube:</strong> Hold to continuously jump when landing.</p>
-                    <p class="flex items-center gap-3"><span class="w-8 h-8 rounded-lg bg-cyan-500/20 text-cyan-300 flex justify-center items-center text-xs font-black"><i class="fa-solid fa-plane"></i></span> <strong>Ship:</strong> Hold to ascend, release to fall smoothly.</p>
-                    <p class="flex items-center gap-3"><span class="w-8 h-8 rounded-lg bg-cyan-500/20 text-cyan-300 flex justify-center items-center text-xs font-black"><i class="fa-solid fa-water"></i></span> <strong>Wave:</strong> Hold to move diagonally up, release for down.</p>
-                    <p class="flex items-center gap-3"><span class="w-8 h-8 rounded-lg bg-yellow-500/20 text-yellow-300 flex justify-center items-center text-xs font-black"><i class="fa-solid fa-circle"></i></span> <strong>Orbs & Pads:</strong> Tap in mid-air near interactive rings!</p>
+        <!-- MENU OVERLAY: CUSTOMIZATION (ICON KIT) -->
+        <div id="menu-skins" class="absolute inset-0 bg-slate-950/95 backdrop-blur-lg flex flex-col items-center justify-center p-6 z-30 hidden">
+            <h2 class="text-3xl font-black font-gd text-indigo-400 mb-6">CUSTOMIZE ICON</h2>
+
+            <!-- Character Preview -->
+            <div class="relative w-28 h-28 bg-slate-900 border-4 border-indigo-500/50 rounded-2xl flex items-center justify-center mb-6 shadow-2xl">
+                <canvas id="skin-preview-canvas" width="80" height="80"></canvas>
+            </div>
+
+            <!-- Color Selectors -->
+            <div class="w-full max-w-md space-y-4 mb-8">
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Primary Color</label>
+                    <div id="primary-colors-grid" class="flex gap-2 justify-center"></div>
                 </div>
-                <button id="btnCloseInfo" class="btn-action mt-6 w-full py-3 bg-cyan-500 text-slate-950 font-game rounded-2xl border border-white/40">
-                    GOT IT
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Secondary Color</label>
+                    <div id="secondary-colors-grid" class="flex gap-2 justify-center"></div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Icon Face Style</label>
+                    <div id="face-styles-grid" class="flex gap-3 justify-center"></div>
+                </div>
+            </div>
+
+            <button id="btn-close-skins" class="gd-btn bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-8 py-3 rounded-2xl border-2 border-indigo-400">
+                SAVE & CLOSE
+            </button>
+        </div>
+
+        <!-- MENU OVERLAY: PAUSE -->
+        <div id="menu-pause" class="absolute inset-0 bg-slate-950/80 backdrop-blur-md flex flex-col items-center justify-center z-30 hidden">
+            <h2 class="text-4xl font-black font-gd text-white mb-6">GAME PAUSED</h2>
+            <div class="flex flex-col gap-4 w-48">
+                <button id="btn-resume" class="gd-btn bg-emerald-500 hover:bg-emerald-400 text-white font-black py-3 rounded-xl border-2 border-emerald-300">
+                    RESUME
+                </button>
+                <button id="btn-restart" class="gd-btn bg-amber-500 hover:bg-amber-400 text-white font-black py-3 rounded-xl border-2 border-amber-300">
+                    RESTART
+                </button>
+                <button id="btn-exit-main" class="gd-btn bg-rose-600 hover:bg-rose-500 text-white font-black py-3 rounded-xl border-2 border-rose-300">
+                    EXIT TO MENU
+                </button>
+            </div>
+        </div>
+
+        <!-- MENU OVERLAY: LEVEL COMPLETE -->
+        <div id="menu-complete" class="absolute inset-0 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center z-30 hidden">
+            <div class="text-yellow-400 text-6xl mb-2 animate-bounce"><i class="fa-solid fa-trophy"></i></div>
+            <h2 class="text-4xl md:text-5xl font-black font-gd text-cyan-300 mb-1">LEVEL COMPLETE!</h2>
+            <p id="complete-stats" class="text-slate-300 font-bold text-sm mb-6">Attempts: 1 | Mode: Normal</p>
+            
+            <div class="flex gap-4">
+                <button id="btn-complete-restart" class="gd-btn bg-slate-700 hover:bg-slate-600 text-white font-black px-6 py-3 rounded-xl border-2 border-slate-500">
+                    REPLAY
+                </button>
+                <button id="btn-complete-next" class="gd-btn bg-emerald-500 hover:bg-emerald-400 text-white font-black px-6 py-3 rounded-xl border-2 border-emerald-300">
+                    NEXT LEVEL
                 </button>
             </div>
         </div>
@@ -270,184 +215,181 @@
     </div>
 
     <script>
-        /* ===================================================================
-           1. AUDIO SYNTHESIZER SYSTEM (Web Audio API - Completely Self Contained)
-           =================================================================== */
-        class SoundEngine {
+        class AudioEngine {
             constructor() {
                 this.ctx = null;
-                this.isMuted = false;
+                this.muted = false;
                 this.isPlayingMusic = false;
                 this.musicTimer = null;
-                this.currentBpm = 125;
-                this.beatIndex = 0;
-                this.levelTrack = null;
+                this.tempo = 130;
             }
 
             init() {
                 if (!this.ctx) {
                     const AudioCtx = window.AudioContext || window.webkitAudioContext;
-                    this.ctx = new AudioCtx();
+                    if (AudioCtx) this.ctx = new AudioCtx();
                 }
-                if (this.ctx.state === 'suspended') {
+                if (this.ctx && this.ctx.state === 'suspended') {
                     this.ctx.resume();
                 }
             }
 
-            // Play procedural synth audio tone
-            playTone(freq, type = 'sine', duration = 0.1, vol = 0.2, fadeOut = true) {
-                if (this.isMuted || !this.ctx) return;
+            playJump() {
+                if (this.muted || !this.ctx) return;
                 try {
                     const osc = this.ctx.createOscillator();
                     const gain = this.ctx.createGain();
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(400, this.ctx.currentTime + 0.12);
                     
-                    osc.type = type;
-                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
-                    
-                    gain.gain.setValueAtTime(vol, this.ctx.currentTime);
-                    if (fadeOut) {
-                        gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + duration);
-                    }
+                    gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.12);
 
                     osc.connect(gain);
                     gain.connect(this.ctx.destination);
 
                     osc.start();
-                    osc.stop(this.ctx.currentTime + duration);
-                } catch (e) {
-                    console.error(e);
-                }
+                    osc.stop(this.ctx.currentTime + 0.12);
+                } catch(e) {}
             }
 
-            // Sound Effects
-            playJump() {
-                if (this.isMuted || !this.ctx) return;
-                const osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
-                osc.type = 'square';
-                osc.frequency.setValueAtTime(160, this.ctx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(480, this.ctx.currentTime + 0.12);
+            playOrbJump() {
+                if (this.muted || !this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(300, this.ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(800, this.ctx.currentTime + 0.15);
 
-                gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
-                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.12);
+                    gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
 
-                osc.connect(gain);
-                gain.connect(this.ctx.destination);
-                osc.start();
-                osc.stop(this.ctx.currentTime + 0.12);
-            }
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
 
-            playPad() {
-                if (this.isMuted || !this.ctx) return;
-                this.playTone(600, 'triangle', 0.2, 0.25);
-                setTimeout(() => this.playTone(900, 'sine', 0.2, 0.25), 50);
-            }
-
-            playOrb() {
-                if (this.isMuted || !this.ctx) return;
-                this.playTone(800, 'sine', 0.15, 0.3);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + 0.15);
+                } catch(e) {}
             }
 
             playPortal() {
-                if (this.isMuted || !this.ctx) return;
-                this.playTone(300, 'sawtooth', 0.3, 0.2);
-                setTimeout(() => this.playTone(600, 'sawtooth', 0.3, 0.2), 80);
+                if (this.muted || !this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(600, this.ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(200, this.ctx.currentTime + 0.25);
+
+                    gain.gain.setValueAtTime(0.18, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.25);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + 0.25);
+                } catch(e) {}
             }
 
             playDeath() {
-                if (this.isMuted || !this.ctx) return;
-                // Noise buffer generator for explosion
-                const bufferSize = this.ctx.sampleRate * 0.3;
-                const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-                const data = buffer.getChannelData(0);
-                for (let i = 0; i < bufferSize; i++) {
-                    data[i] = Math.random() * 2 - 1;
-                }
-                const noise = this.ctx.createBufferSource();
-                noise.buffer = buffer;
+                if (this.muted || !this.ctx) return;
+                try {
+                    const now = this.ctx.currentTime;
+                    // Explosion noise simulation
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(120, now);
+                    osc.frequency.exponentialRampToValueAtTime(30, now + 0.35);
 
-                const filter = this.ctx.createBiquadFilter();
-                filter.type = 'lowpass';
-                filter.frequency.setValueAtTime(800, this.ctx.currentTime);
-                filter.frequency.exponentialRampToValueAtTime(50, this.ctx.currentTime + 0.3);
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
 
-                const gain = this.ctx.createGain();
-                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
 
-                noise.connect(filter);
-                filter.connect(gain);
-                gain.connect(this.ctx.destination);
-
-                noise.start();
+                    osc.start();
+                    osc.stop(now + 0.35);
+                } catch(e) {}
             }
 
             playWin() {
-                if (this.isMuted || !this.ctx) return;
-                const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
-                notes.forEach((freq, idx) => {
-                    setTimeout(() => this.playTone(freq, 'triangle', 0.3, 0.25), idx * 100);
-                });
+                if (this.muted || !this.ctx) return;
+                try {
+                    const notes = [261.63, 329.63, 392.00, 523.25, 659.25, 783.99];
+                    notes.forEach((freq, idx) => {
+                        const osc = this.ctx.createOscillator();
+                        const gain = this.ctx.createGain();
+                        osc.type = 'triangle';
+                        osc.frequency.setValueAtTime(freq, this.ctx.currentTime + idx * 0.08);
+
+                        gain.gain.setValueAtTime(0.2, this.ctx.currentTime + idx * 0.08);
+                        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + idx * 0.08 + 0.2);
+
+                        osc.connect(gain);
+                        gain.connect(this.ctx.destination);
+
+                        osc.start(this.ctx.currentTime + idx * 0.08);
+                        osc.stop(this.ctx.currentTime + idx * 0.08 + 0.2);
+                    });
+                } catch(e) {}
             }
 
-            // Procedural Background Music Generator per Level
-            startMusic(levelIndex) {
-                this.init();
+            startMusic(levelIdx = 0) {
                 this.stopMusic();
+                if (this.muted || !this.ctx) return;
+
                 this.isPlayingMusic = true;
-                this.beatIndex = 0;
+                let step = 0;
 
-                const tracks = [
-                    // Level 1: Stereo Bump (Cyan/Upbeat 125 BPM)
-                    {
-                        bpm: 125,
-                        bass: [110, 0, 110, 0, 130, 0, 110, 0, 98, 0, 98, 0, 110, 0, 130, 0],
-                        lead: [220, 220, 330, 0, 220, 440, 0, 330, 220, 220, 330, 0, 293, 293, 220, 0]
-                    },
-                    // Level 2: Neon Rush (Purple/Fast 138 BPM)
-                    {
-                        bpm: 138,
-                        bass: [130, 130, 0, 130, 146, 146, 0, 146, 164, 164, 0, 164, 130, 0, 146, 0],
-                        lead: [329, 0, 392, 0, 440, 0, 523, 0, 440, 0, 392, 0, 329, 329, 392, 440]
-                    },
-                    // Level 3: Cyber Chaos (Green-Orange/Intense 148 BPM)
-                    {
-                        bpm: 148,
-                        bass: [87, 87, 87, 0, 103, 103, 103, 0, 116, 116, 116, 0, 98, 98, 98, 0],
-                        lead: [349, 440, 349, 523, 349, 440, 587, 0, 349, 440, 349, 523, 659, 587, 523, 440]
-                    }
-                ];
+                // Bassline frequencies for synth music
+                const scale1 = [110, 110, 130.81, 110, 146.83, 130.81, 110, 98.00];
+                const scale2 = [130.81, 130.81, 164.81, 130.81, 196.00, 164.81, 130.81, 110];
+                const scale3 = [146.83, 146.83, 174.61, 146.83, 220.00, 174.61, 146.83, 130.81];
+                const activeScale = levelIdx === 0 ? scale1 : (levelIdx === 1 ? scale2 : scale3);
 
-                this.levelTrack = tracks[levelIndex] || tracks[0];
-                const interval = (60 / this.levelTrack.bpm / 4) * 1000;
+                const interval = (60 / this.tempo / 2) * 1000;
 
                 this.musicTimer = setInterval(() => {
-                    if (this.isMuted || !this.isPlayingMusic) return;
+                    if (!this.isPlayingMusic || !this.ctx) return;
+                    try {
+                        const now = this.ctx.currentTime;
+                        const freq = activeScale[step % activeScale.length];
 
-                    const idx = this.beatIndex % 16;
-                    
-                    // Bassline
-                    const bassFreq = this.levelTrack.bass[idx];
-                    if (bassFreq > 0) {
-                        this.playTone(bassFreq, 'sawtooth', 0.12, 0.15);
-                    }
+                        // Bass Synth Note
+                        const osc = this.ctx.createOscillator();
+                        const gain = this.ctx.createGain();
+                        osc.type = step % 4 === 0 ? 'sawtooth' : 'square';
+                        osc.frequency.setValueAtTime(freq, now);
 
-                    // Lead Melody
-                    const leadFreq = this.levelTrack.lead[idx];
-                    if (leadFreq > 0) {
-                        this.playTone(leadFreq, 'square', 0.1, 0.1);
-                    }
+                        gain.gain.setValueAtTime(0.08, now);
+                        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
 
-                    // Kick & Snare Beat
-                    if (idx % 4 === 0) {
-                        // Kick drum
-                        this.playTone(120, 'sine', 0.08, 0.3);
-                    } else if (idx % 4 === 2) {
-                        // Snare drum
-                        this.playTone(250, 'triangle', 0.05, 0.15);
-                    }
+                        osc.connect(gain);
+                        gain.connect(this.ctx.destination);
 
-                    this.beatIndex++;
+                        osc.start(now);
+                        osc.stop(now + 0.18);
+
+                        // Hi-hat pulse on offbeats
+                        if (step % 2 === 1) {
+                            const hatOsc = this.ctx.createOscillator();
+                            const hatGain = this.ctx.createGain();
+                            hatOsc.type = 'square';
+                            hatOsc.frequency.setValueAtTime(8000, now);
+                            hatGain.gain.setValueAtTime(0.02, now);
+                            hatGain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+                            hatOsc.connect(hatGain);
+                            hatGain.connect(this.ctx.destination);
+                            hatOsc.start(now);
+                            hatOsc.stop(now + 0.04);
+                        }
+
+                        step++;
+                    } catch(e) {}
                 }, interval);
             }
 
@@ -460,947 +402,982 @@
             }
         }
 
-        const sound = new SoundEngine();
+        const audio = new AudioEngine();
 
-        /* ===================================================================
-           2. LEVEL DESIGN & MAP DATA
-           =================================================================== */
-        const BLOCK_SIZE = 40;
-
-        const SKINS = [
-            { id: 0, name: "Cyan Spark", primary: "#06b6d4", secondary: "#e0f2fe", icon: "fa-cube" },
-            { id: 1, name: "Purple Neon", primary: "#a855f7", secondary: "#f3e8ff", icon: "fa-shapes" },
-            { id: 2, name: "Golden Sun", primary: "#eab308", secondary: "#fef9c3", icon: "fa-sun" },
-            { id: 3, name: "Emerald Blaze", primary: "#10b981", secondary: "#d1fae5", icon: "fa-bolt" }
-        ];
-
-        let selectedSkin = 0;
+        // Tile size is 40 units.
+        // NOTE: FIRST SPIKE IS PLACED FAR DOWN THE TRACK (at x >= 1000) so player has 3-4 seconds to get ready!
+        const TILE = 40;
 
         const LEVELS = [
             {
                 id: 0,
-                title: "STEREO BUMP",
-                author: "RobTop Inspired",
-                badge: "EASY",
-                badgeColor: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40",
-                bgGradient: ["#0284c7", "#090d16"],
-                accentColor: "#38bdf8",
-                map: generateLevel1()
+                name: "1. STEREO MADNESS",
+                difficulty: "EASY ★",
+                color: "#00f3ff",
+                bgGradient: ["#091026", "#040714"],
+                floorColor: "#00f3ff",
+                objects: [
+                    // Safe starting runway: 0 to 1000 units (25 tiles of flat ground)
+                    
+                    // First obstacle far from start
+                    { type: 'spike', x: 1000, y: 0 },
+                    
+                    { type: 'block', x: 1200, y: 0 },
+                    { type: 'spike', x: 1300, y: 0 },
+                    { type: 'spike', x: 1340, y: 0 },
+
+                    { type: 'block', x: 1500, y: 0 },
+                    { type: 'block', x: 1540, y: 0 },
+                    { type: 'block', x: 1580, y: 0 },
+                    { type: 'pad_yellow', x: 1540, y: 40 },
+
+                    { type: 'spike', x: 1800, y: 0 },
+                    { type: 'orb_yellow', x: 1950, y: 80 },
+                    { type: 'spike', x: 2000, y: 0 },
+                    { type: 'spike', x: 2040, y: 0 },
+
+                    // Ship Portal transformation
+                    { type: 'portal_ship', x: 2300, y: 100 },
+                    
+                    // Ship flight ceiling and floor obstacles
+                    { type: 'block', x: 2500, y: 0 },
+                    { type: 'block', x: 2500, y: 40 },
+                    { type: 'block', x: 2700, y: 200 },
+                    { type: 'block', x: 2700, y: 240 },
+                    { type: 'block', x: 2900, y: 0 },
+                    { type: 'block', x: 2900, y: 40 },
+                    { type: 'block', x: 3100, y: 160 },
+
+                    // Back to Cube Portal
+                    { type: 'portal_cube', x: 3400, y: 100 },
+
+                    { type: 'block', x: 3600, y: 0 },
+                    { type: 'block', x: 3640, y: 0 },
+                    { type: 'block', x: 3640, y: 40 },
+                    { type: 'spike', x: 3800, y: 0 },
+                    { type: 'orb_yellow', x: 3920, y: 80 },
+                    { type: 'spike', x: 4000, y: 0 },
+
+                    // Finish line portal
+                    { type: 'finish', x: 4300, y: 0 }
+                ]
             },
             {
                 id: 1,
-                title: "NEON RUSH",
-                author: "Cyber City",
-                badge: "MEDIUM",
-                badgeColor: "bg-purple-500/20 text-purple-300 border-purple-500/40",
-                bgGradient: ["#7e22ce", "#090d16"],
-                accentColor: "#c084fc",
-                map: generateLevel2()
+                name: "2. BACK ON TRACK",
+                difficulty: "MEDIUM ★★",
+                color: "#ff00ea",
+                bgGradient: ["#260921", "#120310"],
+                floorColor: "#ff00ea",
+                objects: [
+                    // Runway up to 1100 units
+                    { type: 'spike', x: 1100, y: 0 },
+                    { type: 'pad_yellow', x: 1300, y: 0 },
+                    { type: 'block', x: 1450, y: 120 },
+                    { type: 'block', x: 1490, y: 120 },
+                    { type: 'spike', x: 1490, y: 160 },
+
+                    { type: 'orb_yellow', x: 1700, y: 80 },
+                    { type: 'spike', x: 1800, y: 0 },
+                    { type: 'spike', x: 1840, y: 0 },
+
+                    // Wave Mode Portal
+                    { type: 'portal_wave', x: 2100, y: 100 },
+                    { type: 'block', x: 2300, y: 0 },
+                    { type: 'block', x: 2300, y: 40 },
+                    { type: 'block', x: 2500, y: 180 },
+                    { type: 'block', x: 2500, y: 220 },
+                    { type: 'block', x: 2700, y: 40 },
+                    { type: 'block', x: 2900, y: 200 },
+
+                    // Cube Portal
+                    { type: 'portal_cube', x: 3200, y: 100 },
+                    { type: 'pad_yellow', x: 3400, y: 0 },
+                    { type: 'block', x: 3550, y: 100 },
+                    { type: 'spike', x: 3700, y: 0 },
+
+                    { type: 'finish', x: 4100, y: 0 }
+                ]
             },
             {
                 id: 2,
-                title: "CYBER CHAOS",
-                author: "Hardcore Mode",
-                badge: "DEMON",
-                badgeColor: "bg-rose-500/20 text-rose-300 border-rose-500/40",
-                bgGradient: ["#b91c1c", "#090d16"],
-                accentColor: "#f87171",
-                map: generateLevel3()
+                name: "3. POLARGEIST",
+                difficulty: "HARD ★★★",
+                color: "#00ff66",
+                bgGradient: ["#041f12", "#020f09"],
+                floorColor: "#00ff66",
+                objects: [
+                    // Safe start to 1050 units
+                    { type: 'spike', x: 1050, y: 0 },
+                    { type: 'orb_yellow', x: 1200, y: 60 },
+                    { type: 'orb_yellow', x: 1380, y: 100 },
+                    
+                    { type: 'block', x: 1550, y: 0 },
+                    { type: 'block', x: 1550, y: 40 },
+                    { type: 'spike', x: 1550, y: 80 },
+
+                    { type: 'portal_ship', x: 1800, y: 100 },
+                    { type: 'block', x: 2000, y: 0 },
+                    { type: 'block', x: 2000, y: 240 },
+                    { type: 'block', x: 2200, y: 120 },
+                    { type: 'block', x: 2400, y: 40 },
+
+                    { type: 'portal_wave', x: 2700, y: 100 },
+                    { type: 'block', x: 2900, y: 0 },
+                    { type: 'block', x: 3100, y: 200 },
+                    { type: 'block', x: 3300, y: 60 },
+
+                    { type: 'portal_cube', x: 3600, y: 100 },
+                    { type: 'pad_yellow', x: 3800, y: 0 },
+                    { type: 'spike', x: 3950, y: 0 },
+                    { type: 'spike', x: 3990, y: 0 },
+
+                    { type: 'finish', x: 4300, y: 0 }
+                ]
             }
         ];
 
-        /* Map helper builders */
-        function generateLevel1() {
-            // Level 1: Cube focus with jump pads & rings
-            let objects = [];
-            
-            // Initial run
-            for (let i = 0; i < 15; i++) {
-                if (i === 10) objects.push({ x: i, y: 1, type: 'spike' });
-            }
-            // First jump obstacle
-            objects.push({ x: 18, y: 1, type: 'spike' });
-            objects.push({ x: 19, y: 1, type: 'spike' });
+        class GeometryDashGame {
+            constructor() {
+                this.canvas = document.getElementById('gameCanvas');
+                this.ctx = this.canvas.getContext('2d');
 
-            // Block step
-            objects.push({ x: 24, y: 1, type: 'block' });
-            objects.push({ x: 25, y: 1, type: 'block' });
-            objects.push({ x: 25, y: 2, type: 'block' });
-            objects.push({ x: 26, y: 1, type: 'spike' });
+                this.currentLevelIdx = 0;
+                this.practiceMode = false;
+                this.attempts = 1;
+                this.bestProgress = [0, 0, 0];
 
-            // Jump Pad
-            objects.push({ x: 30, y: 1, type: 'pad_yellow' });
-            objects.push({ x: 34, y: 4, type: 'block' });
-            objects.push({ x: 35, y: 4, type: 'block' });
-            objects.push({ x: 36, y: 4, type: 'block' });
+                // Player Skins & Customization
+                this.primaryColors = ['#00f3ff', '#ff00ea', '#00ff66', '#ffaa00', '#ff0044', '#ffffff'];
+                this.secondaryColors = ['#ffff00', '#00ffff', '#ff0055', '#00ffaa', '#111111', '#9900ff'];
+                this.selectedPrimary = '#00f3ff';
+                this.selectedSecondary = '#ffff00';
+                this.selectedFace = 0; // 0: Normal, 1: Happy, 2: Angry
 
-            // Jump Ring / Orb
-            objects.push({ x: 42, y: 3, type: 'orb_yellow' });
-            objects.push({ x: 44, y: 1, type: 'spike' });
-            objects.push({ x: 45, y: 1, type: 'spike' });
+                // State
+                this.gameState = 'MENU'; // MENU, PLAYING, PAUSED, DEAD, WIN
+                this.checkpoints = [];
 
-            // Ship Portal Transition!
-            objects.push({ x: 52, y: 2, type: 'portal_ship' });
-            
-            // Ship cavern obstacles
-            for (let x = 56; x <= 85; x += 6) {
-                objects.push({ x: x, y: 1, type: 'block' });
-                objects.push({ x: x, y: 2, type: 'block' });
-                objects.push({ x: x + 2, y: 7, type: 'block' });
-                objects.push({ x: x + 2, y: 8, type: 'block' });
-            }
+                // Player physics parameters
+                this.resetPlayer();
 
-            // Return to Cube Portal
-            objects.push({ x: 90, y: 3, type: 'portal_cube' });
+                // Camera & Particles
+                this.cameraX = 0;
+                this.particles = [];
+                this.deathParticles = [];
 
-            // Final gauntlet
-            objects.push({ x: 96, y: 1, type: 'pad_yellow' });
-            objects.push({ x: 100, y: 5, type: 'block' });
-            objects.push({ x: 101, y: 5, type: 'block' });
-            objects.push({ x: 102, y: 5, type: 'spike' });
-            objects.push({ x: 103, y: 5, type: 'block' });
-            
-            objects.push({ x: 112, y: 1, type: 'spike' });
-            objects.push({ x: 113, y: 1, type: 'spike' });
-            objects.push({ x: 114, y: 1, type: 'spike' });
+                // Input handling
+                this.isJumpPressed = false;
 
-            // Level Finish
-            objects.push({ x: 125, y: 1, type: 'finish' });
+                this.setupCanvas();
+                this.bindEvents();
+                this.loadSavedData();
+                this.renderSkinPreview();
 
-            return objects;
-        }
-
-        function generateLevel2() {
-            // Level 2: Gravity flips & Wave Mode
-            let objects = [];
-
-            // Intro jump
-            objects.push({ x: 12, y: 1, type: 'spike' });
-            objects.push({ x: 16, y: 1, type: 'pad_yellow' });
-            objects.push({ x: 20, y: 4, type: 'block' });
-            objects.push({ x: 21, y: 4, type: 'orb_yellow' });
-
-            // Wave Portal
-            objects.push({ x: 28, y: 2, type: 'portal_wave' });
-
-            // Wave corridor
-            for (let x = 32; x <= 65; x += 4) {
-                let py = (x % 8 === 0) ? 2 : 6;
-                objects.push({ x: x, y: py, type: 'block' });
-                objects.push({ x: x, y: py + 1, type: 'block' });
+                // Loop
+                this.lastTime = performance.now();
+                requestAnimationFrame((t) => this.loop(t));
             }
 
-            // Back to Cube
-            objects.push({ x: 72, y: 3, type: 'portal_cube' });
-
-            // Blue pad (Gravity Flip Pad)
-            objects.push({ x: 78, y: 1, type: 'pad_blue' });
-            objects.push({ x: 84, y: 8, type: 'spike_ceiling' });
-            objects.push({ x: 88, y: 8, type: 'spike_ceiling' });
-
-            // Gravity flip orb back down
-            objects.push({ x: 94, y: 6, type: 'orb_blue' });
-            objects.push({ x: 102, y: 1, type: 'spike' });
-            objects.push({ x: 103, y: 1, type: 'spike' });
-
-            // Finish
-            objects.push({ x: 115, y: 1, type: 'finish' });
-            return objects;
-        }
-
-        function generateLevel3() {
-            // Level 3: Extreme fast-paced mix
-            let objects = [];
-            objects.push({ x: 10, y: 1, type: 'spike' });
-            objects.push({ x: 13, y: 1, type: 'pad_yellow' });
-            objects.push({ x: 17, y: 5, type: 'orb_yellow' });
-            
-            // Ship mode
-            objects.push({ x: 24, y: 2, type: 'portal_ship' });
-            for (let x = 28; x <= 55; x += 3) {
-                let yVal = Math.sin(x) > 0 ? 2 : 7;
-                objects.push({ x: x, y: yVal, type: 'block' });
-                if (x % 6 === 0) objects.push({ x: x, y: yVal + 1, type: 'spike' });
+            setupCanvas() {
+                const rect = this.canvas.parentElement.getBoundingClientRect();
+                this.canvas.width = rect.width || 960;
+                this.canvas.height = rect.height || 540;
+                this.scale = this.canvas.height / 360; // Base reference height 360px
             }
 
-            // Wave mode
-            objects.push({ x: 60, y: 4, type: 'portal_wave' });
-            for (let x = 65; x <= 95; x += 2) {
-                if (x % 4 === 0) {
-                    objects.push({ x: x, y: 1, type: 'block' });
-                    objects.push({ x: x, y: 8, type: 'block' });
-                }
-            }
-
-            // Cube Finish
-            objects.push({ x: 100, y: 3, type: 'portal_cube' });
-            objects.push({ x: 106, y: 1, type: 'spike' });
-            objects.push({ x: 107, y: 1, type: 'spike' });
-            objects.push({ x: 108, y: 1, type: 'spike' });
-
-            objects.push({ x: 120, y: 1, type: 'finish' });
-            return objects;
-        }
-
-        /* ===================================================================
-           3. MAIN GAME ENGINE & PHYSICS
-           =================================================================== */
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-
-        // State variables
-        let currentLevelIndex = 0;
-        let gameState = 'MENU'; // MENU, PLAYING, PAUSED, VICTORY, GAMEOVER
-        let attempts = 1;
-        let practiceMode = false;
-        let checkpoints = [];
-        let progressPercent = 0;
-
-        // Player Entity
-        const player = {
-            x: 0,
-            y: 0,
-            vx: 8.5, // horizontal speed
-            vy: 0,
-            width: BLOCK_SIZE,
-            height: BLOCK_SIZE,
-            rotation: 0,
-            grounded: false,
-            mode: 'cube', // cube, ship, wave
-            gravity: 1.1,
-            gravityDir: 1, // 1 for down, -1 for flipped up
-            isHoldingJump: false,
-            hasTouchedOrb: false
-        };
-
-        // Particles
-        let particles = [];
-        let backgroundStars = [];
-
-        // Initialize Background Stars
-        for (let i = 0; i < 80; i++) {
-            backgroundStars.push({
-                x: Math.random() * window.innerWidth,
-                y: Math.random() * window.innerHeight,
-                size: Math.random() * 2 + 1,
-                speed: Math.random() * 0.5 + 0.2
-            });
-        }
-
-        function resizeCanvas() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-        }
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
-
-        // Keyboard & Touch Controls
-        function handleJumpStart(e) {
-            if (e.type === 'touchstart') {
-                // Prevent default scrolling on mobile
-                if (e.target.tagName !== 'BUTTON' && !e.target.closest('button')) {
-                    e.preventDefault();
-                }
-            }
-            if (gameState !== 'PLAYING') return;
-            player.isHoldingJump = true;
-            triggerOrbInteraction();
-        }
-
-        function handleJumpEnd() {
-            player.isHoldingJump = false;
-            player.hasTouchedOrb = false;
-        }
-
-        window.addEventListener('keydown', (e) => {
-            if (e.code === 'Space' || e.code === 'ArrowUp') {
-                handleJumpStart(e);
-            }
-            if (e.code === 'KeyP') {
-                togglePause();
-            }
-        });
-        window.addEventListener('keyup', (e) => {
-            if (e.code === 'Space' || e.code === 'ArrowUp') {
-                handleJumpEnd();
-            }
-        });
-
-        canvas.addEventListener('mousedown', handleJumpStart);
-        canvas.addEventListener('mouseup', handleJumpEnd);
-        canvas.addEventListener('touchstart', handleJumpStart, { passive: false });
-        canvas.addEventListener('touchend', handleJumpEnd);
-
-        function resetPlayer() {
-            const level = LEVELS[currentLevelIndex];
-            if (practiceMode && checkpoints.length > 0) {
-                const cp = checkpoints[checkpoints.length - 1];
-                player.x = cp.x;
-                player.y = cp.y;
-                player.mode = cp.mode;
-                player.gravityDir = cp.gravityDir;
-            } else {
-                player.x = 100;
-                player.y = canvas.height - BLOCK_SIZE * 2;
-                player.mode = 'cube';
-                player.gravityDir = 1;
-            }
-            player.vx = 8.5;
-            player.vy = 0;
-            player.rotation = 0;
-            player.grounded = true;
-            player.isHoldingJump = false;
-            player.hasTouchedOrb = false;
-            particles = [];
-        }
-
-        function startLevel(index) {
-            currentLevelIndex = index;
-            checkpoints = [];
-            attempts = 1;
-            document.getElementById('attemptText').innerText = `ATTEMPT ${attempts}`;
-            resetPlayer();
-            gameState = 'PLAYING';
-            
-            document.getElementById('mainMenu').classList.add('hidden');
-            document.getElementById('pauseMenu').classList.add('hidden');
-            document.getElementById('victoryMenu').classList.add('hidden');
-            document.getElementById('hudOverlay').classList.remove('opacity-0');
-
-            sound.startMusic(currentLevelIndex);
-        }
-
-        function updatePhysics() {
-            if (gameState !== 'PLAYING') return;
-
-            const floorY = canvas.height - BLOCK_SIZE;
-            const ceilingY = BLOCK_SIZE;
-
-            // Player horizontal movement
-            player.x += player.vx;
-
-            // Mode-specific movement mechanics
-            if (player.mode === 'cube') {
-                // Apply Gravity
-                player.vy += player.gravity * player.gravityDir;
-                player.y += player.vy;
-
-                // Cube Rotation in air
-                if (!player.grounded) {
-                    player.rotation += 0.15 * player.gravityDir;
-                } else {
-                    // Snap rotation to nearest 90 deg when landed
-                    player.rotation = Math.round(player.rotation / (Math.PI / 2)) * (Math.PI / 2);
-                    
-                    // Continuous jump buffer when holding key
-                    if (player.isHoldingJump) {
-                        player.vy = -16 * player.gravityDir;
-                        player.grounded = false;
-                        sound.playJump();
-                        spawnJumpParticles();
+            loadSavedData() {
+                try {
+                    const saved = localStorage.getItem('gd_remastered_save');
+                    if (saved) {
+                        const data = JSON.parse(saved);
+                        if (data.bestProgress) this.bestProgress = data.bestProgress;
+                        if (data.primary) this.selectedPrimary = data.primary;
+                        if (data.secondary) this.selectedSecondary = data.secondary;
+                        if (data.face !== undefined) this.selectedFace = data.face;
                     }
-                }
-
-            } else if (player.mode === 'ship') {
-                // Fly Up when holding jump, drop when released
-                const flyForce = player.isHoldingJump ? -1.2 : 0.8;
-                player.vy += flyForce * player.gravityDir;
-                player.vy = Math.max(-10, Math.min(10, player.vy)); // Terminal velocity clamp
-                player.y += player.vy;
-
-                // Smooth ship pitch angle
-                player.rotation = (player.vy * 0.05);
-
-            } else if (player.mode === 'wave') {
-                // Sharp diagonal wave movement
-                const waveSpeed = 10;
-                player.vy = player.isHoldingJump ? -waveSpeed * player.gravityDir : waveSpeed * player.gravityDir;
-                player.y += player.vy;
-
-                // Sharp wave rotation
-                player.rotation = player.isHoldingJump ? -Math.PI / 4 : Math.PI / 4;
+                } catch(e) {}
+                this.updateLevelUI();
             }
 
-            // Floor & Ceiling Collision
-            if (player.y >= floorY - player.height) {
-                player.y = floorY - player.height;
-                player.vy = 0;
-                player.grounded = true;
-            } else if (player.y <= ceilingY) {
-                player.y = ceilingY;
-                player.vy = 0;
-            } else {
-                player.grounded = false;
+            saveData() {
+                try {
+                    localStorage.setItem('gd_remastered_save', JSON.stringify({
+                        bestProgress: this.bestProgress,
+                        primary: this.selectedPrimary,
+                        secondary: this.selectedSecondary,
+                        face: this.selectedFace
+                    }));
+                } catch(e) {}
             }
 
-            // Check Object Collisions
-            checkMapCollisions();
+            resetPlayer() {
+                this.player = {
+                    x: 100,
+                    y: 0, // Y=0 is ground level in game coordinates
+                    vx: 7.5, // Forward speed
+                    vy: 0,
+                    mode: 'cube', // 'cube', 'ship', 'wave'
+                    size: 34,
+                    rotation: 0,
+                    grounded: true,
+                    dead: false,
+                    gravity: -1.1,
+                    jumpForce: 14.5,
+                    shipFlyForce: 0.7,
+                    waveDir: 1 // 1 for down, -1 for up
+                };
+            }
 
-            // Spawn dynamic particle trail
-            if (Math.random() < 0.6) {
-                particles.push({
-                    x: player.x,
-                    y: player.y + player.height / 2 + (Math.random() * 10 - 5),
-                    vx: -player.vx * 0.3 + (Math.random() * 2 - 1),
-                    vy: Math.random() * 2 - 1,
-                    size: Math.random() * 6 + 3,
-                    alpha: 1,
-                    color: SKINS[selectedSkin].primary
+            bindEvents() {
+                window.addEventListener('resize', () => this.setupCanvas());
+
+                // Keypress controls
+                const handleKeyDown = (e) => {
+                    if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') {
+                        if (!this.isJumpPressed) {
+                            this.isJumpPressed = true;
+                            this.triggerJumpAction();
+                        }
+                        if (['Space', 'ArrowUp'].includes(e.code)) e.preventDefault();
+                    }
+                    if (e.code === 'KeyZ' && this.gameState === 'PLAYING' && this.practiceMode) {
+                        this.setCheckpoint();
+                    }
+                    if (e.code === 'KeyX' && this.gameState === 'PLAYING' && this.practiceMode) {
+                        this.removeCheckpoint();
+                    }
+                    if (e.code === 'KeyP' || e.code === 'Escape') {
+                        if (this.gameState === 'PLAYING') this.pauseGame();
+                        else if (this.gameState === 'PAUSED') this.resumeGame();
+                    }
+                };
+
+                const handleKeyUp = (e) => {
+                    if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') {
+                        this.isJumpPressed = false;
+                    }
+                };
+
+                window.addEventListener('keydown', handleKeyDown);
+                window.addEventListener('keyup', handleKeyUp);
+
+                // Mouse / Touch Controls on Canvas
+                const handlePointerDown = (e) => {
+                    if (this.gameState !== 'PLAYING') return;
+                    this.isJumpPressed = true;
+                    this.triggerJumpAction();
+                };
+
+                const handlePointerUp = () => {
+                    this.isJumpPressed = false;
+                };
+
+                this.canvas.addEventListener('mousedown', handlePointerDown);
+                this.canvas.addEventListener('mouseup', handlePointerUp);
+                this.canvas.addEventListener('touchstart', (e) => {
+                    handlePointerDown(e);
+                    e.preventDefault();
+                }, { passive: false });
+                this.canvas.addEventListener('touchend', handlePointerUp);
+
+                // UI Button Listeners
+                document.getElementById('btn-prev-level').onclick = () => this.changeLevel(-1);
+                document.getElementById('btn-next-level').onclick = () => this.changeLevel(1);
+
+                document.getElementById('btn-play-normal').onclick = () => this.startGame(false);
+                document.getElementById('btn-play-practice').onclick = () => this.startGame(true);
+
+                document.getElementById('btn-pause').onclick = () => this.pauseGame();
+                document.getElementById('btn-resume').onclick = () => this.resumeGame();
+                document.getElementById('btn-restart').onclick = () => this.startGame(this.practiceMode);
+                document.getElementById('btn-exit-main').onclick = () => this.showMainMenu();
+
+                document.getElementById('btn-complete-restart').onclick = () => this.startGame(this.practiceMode);
+                document.getElementById('btn-complete-next').onclick = () => {
+                    this.changeLevel(1);
+                    this.startGame(false);
+                };
+
+                document.getElementById('btn-practice-checkpoint').onclick = () => this.setCheckpoint();
+                document.getElementById('btn-practice-remove').onclick = () => this.removeCheckpoint();
+
+                // Sound Toggle
+                document.getElementById('btn-toggle-sound').onclick = () => {
+                    audio.init();
+                    audio.muted = !audio.muted;
+                    const icon = document.getElementById('sound-icon');
+                    const btn = document.getElementById('btn-toggle-sound');
+                    if (audio.muted) {
+                        icon.className = 'fa-solid fa-volume-xmark text-slate-400';
+                        btn.classList.add('opacity-70');
+                    } else {
+                        icon.className = 'fa-solid fa-volume-high text-cyan-400';
+                        btn.classList.remove('opacity-70');
+                        if (this.gameState === 'PLAYING') audio.startMusic(this.currentLevelIdx);
+                    }
+                };
+
+                // Skins modal listeners
+                document.getElementById('btn-open-skins').onclick = () => {
+                    document.getElementById('menu-skins').classList.remove('hidden');
+                };
+                document.getElementById('btn-close-skins').onclick = () => {
+                    document.getElementById('menu-skins').classList.add('hidden');
+                    this.saveData();
+                };
+
+                this.setupSkinSelectors();
+            }
+
+            setupSkinSelectors() {
+                const primContainer = document.getElementById('primary-colors-grid');
+                primContainer.innerHTML = '';
+                this.primaryColors.forEach(c => {
+                    const btn = document.createElement('button');
+                    btn.className = 'w-9 h-9 rounded-xl border-2 border-white/40 shadow-md transition-transform active:scale-95';
+                    btn.style.backgroundColor = c;
+                    btn.onclick = () => {
+                        this.selectedPrimary = c;
+                        this.renderSkinPreview();
+                    };
+                    primContainer.appendChild(btn);
+                });
+
+                const secContainer = document.getElementById('secondary-colors-grid');
+                secContainer.innerHTML = '';
+                this.secondaryColors.forEach(c => {
+                    const btn = document.createElement('button');
+                    btn.className = 'w-9 h-9 rounded-xl border-2 border-white/40 shadow-md transition-transform active:scale-95';
+                    btn.style.backgroundColor = c;
+                    btn.onclick = () => {
+                        this.selectedSecondary = c;
+                        this.renderSkinPreview();
+                    };
+                    secContainer.appendChild(btn);
+                });
+
+                const faceContainer = document.getElementById('face-styles-grid');
+                faceContainer.innerHTML = '';
+                ['Normal', 'Happy', 'Angry'].forEach((faceName, idx) => {
+                    const btn = document.createElement('button');
+                    btn.className = 'px-3 py-1.5 rounded-xl bg-slate-800 border border-slate-600 text-xs font-bold hover:bg-slate-700';
+                    btn.innerText = faceName;
+                    btn.onclick = () => {
+                        this.selectedFace = idx;
+                        this.renderSkinPreview();
+                    };
+                    faceContainer.appendChild(btn);
                 });
             }
 
-            // Update Progress Percentage
-            const level = LEVELS[currentLevelIndex];
-            const endX = level.map.find(o => o.type === 'finish')?.x * BLOCK_SIZE || 4000;
-            progressPercent = Math.min(100, Math.floor((player.x / endX) * 100));
-            document.getElementById('progressBar').style.width = `${progressPercent}%`;
-            document.getElementById('progressText').innerText = `${progressPercent}%`;
-        }
+            renderSkinPreview() {
+                const prevCanvas = document.getElementById('skin-preview-canvas');
+                const ctx = prevCanvas.getContext('2d');
+                ctx.clearRect(0, 0, 80, 80);
+                this.drawPlayerIcon(ctx, 40, 40, 50, 0, 'cube');
+            }
 
-        function triggerOrbInteraction() {
-            if (player.hasTouchedOrb) return;
+            changeLevel(dir) {
+                this.currentLevelIdx = (this.currentLevelIdx + dir + LEVELS.length) % LEVELS.length;
+                this.updateLevelUI();
+            }
 
-            const level = LEVELS[currentLevelIndex];
-            const px = player.x + player.width / 2;
-            const py = player.y + player.height / 2;
+            updateLevelUI() {
+                const lvl = LEVELS[this.currentLevelIdx];
+                document.getElementById('level-title').innerText = lvl.name;
+                document.getElementById('level-difficulty-badge').innerText = lvl.difficulty;
+                document.getElementById('level-best-bar').style.width = `${this.bestProgress[this.currentLevelIdx]}%`;
+                document.getElementById('level-best-text').innerText = `BEST: ${this.bestProgress[this.currentLevelIdx]}%`;
+            }
 
-            level.map.forEach(obj => {
-                const ox = obj.x * BLOCK_SIZE + BLOCK_SIZE / 2;
-                const oy = canvas.height - (obj.y + 1) * BLOCK_SIZE + BLOCK_SIZE / 2;
-                const dist = Math.hypot(px - ox, py - oy);
+            startGame(isPractice = false) {
+                audio.init();
+                this.practiceMode = isPractice;
+                this.gameState = 'PLAYING';
+                this.attempts = 1;
+                this.checkpoints = [];
 
-                if (dist < BLOCK_SIZE * 1.5) {
-                    if (obj.type === 'orb_yellow') {
-                        player.vy = -16 * player.gravityDir;
-                        player.hasTouchedOrb = true;
-                        sound.playOrb();
-                        spawnOrbRingParticle(ox, oy, '#eab308');
-                    } else if (obj.type === 'orb_blue') {
-                        player.gravityDir *= -1;
-                        player.vy = -8 * player.gravityDir;
-                        player.hasTouchedOrb = true;
-                        sound.playOrb();
-                        spawnOrbRingParticle(ox, oy, '#3b82f6');
-                    }
+                this.resetPlayer();
+
+                // UI setup
+                document.getElementById('menu-main').classList.add('hidden');
+                document.getElementById('menu-pause').classList.add('hidden');
+                document.getElementById('menu-complete').classList.add('hidden');
+                document.getElementById('hud').classList.remove('opacity-0');
+
+                const cpBtn = document.getElementById('btn-practice-checkpoint');
+                const rmBtn = document.getElementById('btn-practice-remove');
+                if (this.practiceMode) {
+                    cpBtn.classList.remove('hidden');
+                    rmBtn.classList.remove('hidden');
+                } else {
+                    cpBtn.classList.add('hidden');
+                    rmBtn.classList.add('hidden');
                 }
-            });
-        }
 
-        function checkMapCollisions() {
-            const level = LEVELS[currentLevelIndex];
+                audio.startMusic(this.currentLevelIdx);
+            }
 
-            for (let obj of level.map) {
-                const ox = obj.x * BLOCK_SIZE;
-                const oy = canvas.height - (obj.y + 1) * BLOCK_SIZE;
-                const ow = BLOCK_SIZE;
-                const oh = BLOCK_SIZE;
+            pauseGame() {
+                if (this.gameState !== 'PLAYING') return;
+                this.gameState = 'PAUSED';
+                document.getElementById('menu-pause').classList.remove('hidden');
+                audio.stopMusic();
+            }
 
-                // AABB Bounding Box Test
-                if (
-                    player.x < ox + ow &&
-                    player.x + player.width > ox &&
-                    player.y < oy + oh &&
-                    player.y + player.height > oy
-                ) {
-                    if (obj.type === 'block') {
-                        // Determine side of collision
-                        const prevX = player.x - player.vx;
-                        if (prevX + player.width <= ox) {
-                            // Hit wall on left -> Death!
-                            triggerDeath();
-                            return;
-                        } else {
-                            // Landed on top / bottom
-                            if (player.vy * player.gravityDir >= 0) {
-                                player.y = oy - player.height;
-                                player.vy = 0;
-                                player.grounded = true;
+            resumeGame() {
+                if (this.gameState !== 'PAUSED') return;
+                this.gameState = 'PLAYING';
+                document.getElementById('menu-pause').classList.add('hidden');
+                audio.startMusic(this.currentLevelIdx);
+            }
+
+            showMainMenu() {
+                this.gameState = 'MENU';
+                audio.stopMusic();
+                document.getElementById('menu-main').classList.remove('hidden');
+                document.getElementById('menu-pause').classList.add('hidden');
+                document.getElementById('menu-complete').classList.add('hidden');
+                document.getElementById('hud').classList.add('opacity-0');
+            }
+
+            setCheckpoint() {
+                if (!this.practiceMode || this.gameState !== 'PLAYING') return;
+                this.checkpoints.push({
+                    player: { ...this.player },
+                    cameraX: this.cameraX
+                });
+                // Small visual particle feedback
+                this.addCheckpointParticle();
+            }
+
+            removeCheckpoint() {
+                if (!this.practiceMode || this.checkpoints.length === 0) return;
+                this.checkpoints.pop();
+            }
+
+            addCheckpointParticle() {
+                this.particles.push({
+                    x: this.player.x,
+                    y: this.player.y + 20,
+                    vx: 0, vy: 2,
+                    size: 15,
+                    color: '#00ff66',
+                    life: 1.0
+                });
+            }
+
+            triggerJumpAction() {
+                if (this.gameState !== 'PLAYING') return;
+
+                const p = this.player;
+
+                // Check orb interactions
+                const level = LEVELS[this.currentLevelIdx];
+                for (let obj of level.objects) {
+                    if (obj.type.startsWith('orb_')) {
+                        const dist = Math.hypot((p.x + p.size/2) - (obj.x + 20), (p.y + p.size/2) - (obj.y + 20));
+                        if (dist < 45) {
+                            if (obj.type === 'orb_yellow') {
+                                p.vy = p.jumpForce * 1.1;
+                                audio.playOrbJump();
+                                this.createPulseParticles(obj.x + 20, obj.y + 20, '#ffff00');
+                                return;
                             }
                         }
-                    } else if (obj.type === 'spike' || obj.type === 'spike_ceiling') {
-                        triggerDeath();
-                        return;
-                    } else if (obj.type === 'pad_yellow') {
-                        player.vy = -20 * player.gravityDir;
-                        sound.playPad();
-                        spawnOrbRingParticle(ox + ow / 2, oy + oh / 2, '#eab308');
-                    } else if (obj.type === 'pad_blue') {
-                        player.gravityDir *= -1;
-                        player.vy = -12 * player.gravityDir;
-                        sound.playPad();
-                        spawnOrbRingParticle(ox + ow / 2, oy + oh / 2, '#3b82f6');
-                    } else if (obj.type === 'portal_ship' && player.mode !== 'ship') {
-                        player.mode = 'ship';
-                        sound.playPortal();
-                    } else if (obj.type === 'portal_wave' && player.mode !== 'wave') {
-                        player.mode = 'wave';
-                        sound.playPortal();
-                    } else if (obj.type === 'portal_cube' && player.mode !== 'cube') {
-                        player.mode = 'cube';
-                        sound.playPortal();
-                    } else if (obj.type === 'finish') {
-                        triggerVictory();
-                        return;
+                    }
+                }
+
+                // Normal jump execution
+                if (p.mode === 'cube') {
+                    if (p.grounded) {
+                        p.vy = p.jumpForce;
+                        p.grounded = false;
+                        audio.playJump();
                     }
                 }
             }
-        }
 
-        function triggerDeath() {
-            sound.playDeath();
-            spawnDeathExplosion(player.x + player.width / 2, player.y + player.height / 2);
+            updatePlayer() {
+                if (this.gameState !== 'PLAYING') return;
 
-            attempts++;
-            document.getElementById('attemptText').innerText = `ATTEMPT ${attempts}`;
+                const p = this.player;
+                const level = LEVELS[this.currentLevelIdx];
 
-            resetPlayer();
-        }
-
-        function triggerVictory() {
-            gameState = 'VICTORY';
-            sound.stopMusic();
-            sound.playWin();
-
-            // Save Progress locally
-            const savedNormal = localStorage.getItem(`level_${currentLevelIndex}_normal`) || 0;
-            if (progressPercent > savedNormal) {
-                localStorage.setItem(`level_${currentLevelIndex}_normal`, progressPercent);
-            }
-
-            document.getElementById('victoryAttempts').innerText = `TOTAL ATTEMPTS: ${attempts}`;
-            document.getElementById('victoryMenu').classList.remove('hidden');
-            document.getElementById('victoryMenu').classList.add('flex');
-            updateLevelStatsUI();
-        }
-
-        /* ===================================================================
-           4. GRAPHICS & RENDERING ENGINE
-           =================================================================== */
-        function drawBackground(cameraX) {
-            const level = LEVELS[currentLevelIndex];
-            
-            // Dynamic Gradient Background
-            const bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-            bgGrad.addColorStop(0, level.bgGradient[0]);
-            bgGrad.addColorStop(1, level.bgGradient[1]);
-            ctx.fillStyle = bgGrad;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            // Parallax Animated Stars
-            ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
-            backgroundStars.forEach(star => {
-                let sx = (star.x - cameraX * star.speed) % canvas.width;
-                if (sx < 0) sx += canvas.width;
-                ctx.beginPath();
-                ctx.arc(sx, star.y, star.size, 0, Math.PI * 2);
-                ctx.fill();
-            });
-
-            // Grid Lines Effect on Floor
-            ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
-            ctx.lineWidth = 1;
-            const gridOffset = cameraX % BLOCK_SIZE;
-            for (let x = -gridOffset; x < canvas.width; x += BLOCK_SIZE) {
-                ctx.beginPath();
-                ctx.moveTo(x, 0);
-                ctx.lineTo(x, canvas.height);
-                ctx.stroke();
-            }
-
-            // Ground Floor Texture Line
-            ctx.fillStyle = "#0f172a";
-            ctx.fillRect(0, canvas.height - BLOCK_SIZE, canvas.width, BLOCK_SIZE);
-            
-            ctx.strokeStyle = level.accentColor;
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.moveTo(0, canvas.height - BLOCK_SIZE);
-            ctx.lineTo(canvas.width, canvas.height - BLOCK_SIZE);
-            ctx.stroke();
-        }
-
-        function drawPlayer(cameraX) {
-            const screenX = player.x - cameraX;
-            const screenY = player.y;
-
-            ctx.save();
-            ctx.translate(screenX + player.width / 2, screenY + player.height / 2);
-            ctx.rotate(player.rotation);
-
-            const skin = SKINS[selectedSkin];
-
-            if (player.mode === 'cube') {
-                // Procedural Neon Cube Design
-                ctx.fillStyle = skin.primary;
-                ctx.fillRect(-player.width / 2, -player.height / 2, player.width, player.height);
-
-                // Inner Glow Border
-                ctx.strokeStyle = skin.secondary;
-                ctx.lineWidth = 3;
-                ctx.strokeRect(-player.width / 2 + 4, -player.height / 2 + 4, player.width - 8, player.height - 8);
-
-                // Center Eye
-                ctx.fillStyle = "#ffffff";
-                ctx.fillRect(-6, -6, 12, 12);
-
-            } else if (player.mode === 'ship') {
-                // Ship Jet Rocket Design
-                ctx.fillStyle = skin.primary;
-                ctx.beginPath();
-                ctx.moveTo(player.width / 2, 0);
-                ctx.lineTo(-player.width / 2, -player.height / 2);
-                ctx.lineTo(-player.width / 4, 0);
-                ctx.lineTo(-player.width / 2, player.height / 2);
-                ctx.closePath();
-                ctx.fill();
-
-                ctx.strokeStyle = skin.secondary;
-                ctx.lineWidth = 2;
-                ctx.stroke();
-
-            } else if (player.mode === 'wave') {
-                // Sharp Wave Dart
-                ctx.fillStyle = skin.primary;
-                ctx.beginPath();
-                ctx.moveTo(player.width / 2, 0);
-                ctx.lineTo(-player.width / 2, -player.height / 2);
-                ctx.lineTo(-player.width / 2, player.height / 2);
-                ctx.closePath();
-                ctx.fill();
-                
-                ctx.strokeStyle = "#ffffff";
-                ctx.lineWidth = 2;
-                ctx.stroke();
-            }
-
-            ctx.restore();
-        }
-
-        function drawMapObjects(cameraX) {
-            const level = LEVELS[currentLevelIndex];
-
-            level.map.forEach(obj => {
-                const screenX = obj.x * BLOCK_SIZE - cameraX;
-                const screenY = canvas.height - (obj.y + 1) * BLOCK_SIZE;
-
-                // Render only visible onscreen objects
-                if (screenX < -BLOCK_SIZE || screenX > canvas.width + BLOCK_SIZE) return;
-
-                if (obj.type === 'block') {
-                    // Tech/Neon Block Texture
-                    ctx.fillStyle = "#1e293b";
-                    ctx.fillRect(screenX, screenY, BLOCK_SIZE, BLOCK_SIZE);
-
-                    ctx.strokeStyle = level.accentColor;
-                    ctx.lineWidth = 2;
-                    ctx.strokeRect(screenX + 2, screenY + 2, BLOCK_SIZE - 4, BLOCK_SIZE - 4);
-
-                    // Cross detail
-                    ctx.strokeStyle = "rgba(255,255,255,0.15)";
-                    ctx.beginPath();
-                    ctx.moveTo(screenX, screenY);
-                    ctx.lineTo(screenX + BLOCK_SIZE, screenY + BLOCK_SIZE);
-                    ctx.stroke();
-
-                } else if (obj.type === 'spike') {
-                    // Triangle Spike
-                    ctx.fillStyle = "#ef4444";
-                    ctx.beginPath();
-                    ctx.moveTo(screenX, screenY + BLOCK_SIZE);
-                    ctx.lineTo(screenX + BLOCK_SIZE / 2, screenY);
-                    ctx.lineTo(screenX + BLOCK_SIZE, screenY + BLOCK_SIZE);
-                    ctx.closePath();
-                    ctx.fill();
-
-                    ctx.strokeStyle = "#fca5a5";
-                    ctx.lineWidth = 2;
-                    ctx.stroke();
-
-                } else if (obj.type === 'spike_ceiling') {
-                    // Hanging Ceiling Spike
-                    ctx.fillStyle = "#ef4444";
-                    ctx.beginPath();
-                    ctx.moveTo(screenX, screenY);
-                    ctx.lineTo(screenX + BLOCK_SIZE / 2, screenY + BLOCK_SIZE);
-                    ctx.lineTo(screenX + BLOCK_SIZE, screenY);
-                    ctx.closePath();
-                    ctx.fill();
-
-                } else if (obj.type === 'pad_yellow') {
-                    // Yellow Jump Pad
-                    ctx.fillStyle = "#eab308";
-                    ctx.fillRect(screenX + 4, screenY + BLOCK_SIZE - 10, BLOCK_SIZE - 8, 10);
-
-                } else if (obj.type === 'pad_blue') {
-                    // Blue Gravity Pad
-                    ctx.fillStyle = "#3b82f6";
-                    ctx.fillRect(screenX + 4, screenY + BLOCK_SIZE - 10, BLOCK_SIZE - 8, 10);
-
-                } else if (obj.type === 'orb_yellow' || obj.type === 'orb_blue') {
-                    // Interactive Jump Orbs
-                    const color = obj.type === 'orb_yellow' ? '#eab308' : '#3b82f6';
-                    ctx.fillStyle = color;
-                    ctx.beginPath();
-                    ctx.arc(screenX + BLOCK_SIZE / 2, screenY + BLOCK_SIZE / 2, 12, 0, Math.PI * 2);
-                    ctx.fill();
-
-                    ctx.strokeStyle = "#ffffff";
-                    ctx.lineWidth = 2;
-                    ctx.stroke();
-
-                } else if (obj.type.startsWith('portal_')) {
-                    // Gamemode Portal Vertical Ring
-                    ctx.strokeStyle = obj.type === 'portal_ship' ? '#a855f7' : (obj.type === 'portal_wave' ? '#06b6d4' : '#10b981');
-                    ctx.lineWidth = 4;
-                    ctx.beginPath();
-                    ctx.ellipse(screenX + BLOCK_SIZE / 2, screenY + BLOCK_SIZE / 2, 15, 35, 0, 0, Math.PI * 2);
-                    ctx.stroke();
-
-                } else if (obj.type === 'finish') {
-                    // End Finish Line Wall
-                    ctx.fillStyle = "#10b981";
-                    ctx.fillRect(screenX, 0, 10, canvas.height);
-                }
-            });
-        }
-
-        function spawnDeathExplosion(x, y) {
-            for (let i = 0; i < 30; i++) {
-                const angle = Math.random() * Math.PI * 2;
-                const speed = Math.random() * 10 + 2;
-                particles.push({
-                    x: x,
-                    y: y,
-                    vx: Math.cos(angle) * speed,
-                    vy: Math.sin(angle) * speed,
-                    size: Math.random() * 8 + 4,
-                    alpha: 1,
-                    color: SKINS[selectedSkin].primary
-                });
-            }
-        }
-
-        function spawnJumpParticles() {
-            for (let i = 0; i < 8; i++) {
-                particles.push({
-                    x: player.x + player.width / 2,
-                    y: player.y + player.height,
-                    vx: Math.random() * 4 - 2,
-                    vy: Math.random() * 3 + 1,
-                    size: Math.random() * 5 + 2,
-                    alpha: 1,
-                    color: "#ffffff"
-                });
-            }
-        }
-
-        function spawnOrbRingParticle(x, y, color) {
-            for (let i = 0; i < 12; i++) {
-                const angle = (Math.PI * 2 / 12) * i;
-                particles.push({
-                    x: x,
-                    y: y,
-                    vx: Math.cos(angle) * 6,
-                    vy: Math.sin(angle) * 6,
-                    size: 4,
-                    alpha: 1,
-                    color: color
-                });
-            }
-        }
-
-        function updateAndDrawParticles(cameraX) {
-            for (let i = particles.length - 1; i >= 0; i--) {
-                const p = particles[i];
+                // Forward movement
                 p.x += p.vx;
-                p.y += p.vy;
-                p.alpha -= 0.02;
 
-                if (p.alpha <= 0) {
-                    particles.splice(i, 1);
-                    continue;
+                // Mode-specific Movement & Gravity
+                if (p.mode === 'cube') {
+                    p.vy += p.gravity;
+                    p.y += p.vy;
+
+                    // Cube Rotation logic
+                    if (!p.grounded) {
+                        p.rotation += 8; // Rotate clockwise in air
+                    } else {
+                        // Snap rotation to nearest 90 degrees on ground
+                        p.rotation = Math.round(p.rotation / 90) * 90;
+                    }
+
+                    // Auto-jump if jump button held
+                    if (this.isJumpPressed && p.grounded) {
+                        p.vy = p.jumpForce;
+                        p.grounded = false;
+                        audio.playJump();
+                    }
+                } 
+                else if (p.mode === 'ship') {
+                    if (this.isJumpPressed) {
+                        p.vy += p.shipFlyForce;
+                    } else {
+                        p.vy += p.gravity * 0.6;
+                    }
+                    // Terminal velocity cap
+                    p.vy = Math.max(-10, Math.min(10, p.vy));
+                    p.y += p.vy;
+
+                    // Ship tilt angle based on vertical velocity
+                    p.rotation = p.vy * 3;
                 }
+                else if (p.mode === 'wave') {
+                    if (this.isJumpPressed) {
+                        p.y += p.vx * 0.85; // Move up at 45 degree angle
+                        p.rotation = -45;
+                    } else {
+                        p.y -= p.vx * 0.85; // Move down at 45 degree angle
+                        p.rotation = 45;
+                    }
+                }
+
+                // Floor collision (y = 0)
+                if (p.y <= 0) {
+                    p.y = 0;
+                    p.vy = 0;
+                    p.grounded = true;
+                } else {
+                    p.grounded = false;
+                }
+
+                // Ceiling cap
+                if (p.y > 300) {
+                    p.y = 300;
+                    p.vy = 0;
+                }
+
+                // Object Collision Detection
+                const playerBox = { x: p.x, y: p.y, width: p.size, height: p.size };
+
+                for (let obj of level.objects) {
+                    // Quick distance cull optimization
+                    if (Math.abs(obj.x - p.x) > 200) continue;
+
+                    if (obj.type === 'spike') {
+                        // Hitbox for triangle spike
+                        if (this.checkSpikeCollision(playerBox, obj)) {
+                            this.handleDeath();
+                            return;
+                        }
+                    } 
+                    else if (obj.type === 'block') {
+                        const blockBox = { x: obj.x, y: obj.y, width: TILE, height: TILE };
+                        if (this.checkAABB(playerBox, blockBox)) {
+                            // Determine collision direction
+                            const prevY = p.y - p.vy;
+                            if (prevY >= obj.y + TILE - 5) {
+                                // Landed on top of block
+                                p.y = obj.y + TILE;
+                                p.vy = 0;
+                                p.grounded = true;
+                            } else {
+                                // Hit side of block -> Crash!
+                                this.handleDeath();
+                                return;
+                            }
+                        }
+                    }
+                    else if (obj.type === 'pad_yellow') {
+                        const padBox = { x: obj.x, y: obj.y, width: TILE, height: 15 };
+                        if (this.checkAABB(playerBox, padBox)) {
+                            p.vy = p.jumpForce * 1.35;
+                            p.grounded = false;
+                            audio.playOrbJump();
+                            this.createPulseParticles(obj.x + 20, obj.y + 10, '#ffff00');
+                        }
+                    }
+                    else if (obj.type.startsWith('portal_')) {
+                        const portalBox = { x: obj.x, y: obj.y, width: 30, height: 90 };
+                        if (this.checkAABB(playerBox, portalBox)) {
+                            const newMode = obj.type.replace('portal_', '');
+                            if (p.mode !== newMode) {
+                                p.mode = newMode;
+                                audio.playPortal();
+                                this.createPulseParticles(obj.x + 15, obj.y + 45, '#00f3ff');
+                            }
+                        }
+                    }
+                    else if (obj.type === 'finish') {
+                        if (p.x >= obj.x) {
+                            this.handleWin();
+                            return;
+                        }
+                    }
+                }
+
+                // Update Camera
+                this.cameraX = p.x - 150;
+
+                // Trail Particles
+                if (Math.random() < 0.6) {
+                    this.particles.push({
+                        x: p.x,
+                        y: p.y + p.size/2,
+                        vx: -2 + (Math.random() - 0.5),
+                        vy: (Math.random() - 0.5) * 2,
+                        size: 6 + Math.random() * 4,
+                        color: this.selectedPrimary,
+                        life: 1.0
+                    });
+                }
+
+                // Update particles
+                this.updateParticles();
+
+                // Calculate level percentage completion
+                const finishObj = level.objects.find(o => o.type === 'finish');
+                const totalDist = finishObj ? finishObj.x : 4000;
+                const pct = Math.min(100, Math.floor((p.x / totalDist) * 100));
+
+                document.getElementById('progress-bar').style.width = `${pct}%`;
+                document.getElementById('progress-text').innerText = `${pct}%`;
+
+                if (pct > this.bestProgress[this.currentLevelIdx]) {
+                    this.bestProgress[this.currentLevelIdx] = pct;
+                    this.saveData();
+                }
+            }
+
+            checkAABB(a, b) {
+                return (
+                    a.x < b.x + b.width &&
+                    a.x + a.width > b.x &&
+                    a.y < b.y + b.height &&
+                    a.y + a.height > b.y
+                );
+            }
+
+            checkSpikeCollision(player, spike) {
+                // Generous slightly inner bounding triangle check for fair gameplay
+                const pad = 6;
+                const pLeft = player.x + pad;
+                const pRight = player.x + player.width - pad;
+                const pBottom = player.y + pad;
+                const pTop = player.y + player.height - pad;
+
+                const sLeft = spike.x;
+                const sRight = spike.x + TILE;
+                const sBottom = spike.y;
+                const sTop = spike.y + TILE;
+
+                return (pRight > sLeft && pLeft < sRight && pBottom < sTop && pTop > sBottom);
+            }
+
+            handleDeath() {
+                audio.playDeath();
+                this.createDeathExplosion();
+
+                if (this.practiceMode && this.checkpoints.length > 0) {
+                    // Respawn at latest checkpoint
+                    const cp = this.checkpoints[this.checkpoints.length - 1];
+                    this.player = { ...cp.player };
+                    this.cameraX = cp.cameraX;
+                    this.attempts++;
+                } else {
+                    // Restart from start
+                    this.resetPlayer();
+                    this.attempts++;
+                }
+            }
+
+            handleWin() {
+                audio.stopMusic();
+                audio.playWin();
+                this.gameState = 'WIN';
+
+                this.bestProgress[this.currentLevelIdx] = 100;
+                this.saveData();
+
+                document.getElementById('complete-stats').innerText = `Attempts: ${this.attempts} | Mode: ${this.practiceMode ? 'Practice' : 'Normal'}`;
+                document.getElementById('menu-complete').classList.remove('hidden');
+            }
+
+            createDeathExplosion() {
+                for (let i = 0; i < 35; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = 3 + Math.random() * 8;
+                    this.deathParticles.push({
+                        x: this.player.x + this.player.size/2,
+                        y: this.player.y + this.player.size/2,
+                        vx: Math.cos(angle) * speed,
+                        vy: Math.sin(angle) * speed,
+                        size: 6 + Math.random() * 8,
+                        color: Math.random() > 0.5 ? this.selectedPrimary : this.selectedSecondary,
+                        life: 1.0
+                    });
+                }
+            }
+
+            createPulseParticles(x, y, color) {
+                for (let i = 0; i < 12; i++) {
+                    const angle = (i / 12) * Math.PI * 2;
+                    this.particles.push({
+                        x: x, y: y,
+                        vx: Math.cos(angle) * 4,
+                        vy: Math.sin(angle) * 4,
+                        size: 5,
+                        color: color,
+                        life: 1.0
+                    });
+                }
+            }
+
+            updateParticles() {
+                for (let i = this.particles.length - 1; i >= 0; i--) {
+                    const pt = this.particles[i];
+                    pt.x += pt.vx;
+                    pt.y += pt.vy;
+                    pt.life -= 0.04;
+                    if (pt.life <= 0) this.particles.splice(i, 1);
+                }
+
+                for (let i = this.deathParticles.length - 1; i >= 0; i--) {
+                    const pt = this.deathParticles[i];
+                    pt.x += pt.vx;
+                    pt.y += pt.vy;
+                    pt.life -= 0.025;
+                    if (pt.life <= 0) this.deathParticles.splice(i, 1);
+                }
+            }
+
+            render() {
+                const ctx = this.ctx;
+                const W = this.canvas.width;
+                const H = this.canvas.height;
 
                 ctx.save();
-                ctx.globalAlpha = p.alpha;
-                ctx.fillStyle = p.color;
-                ctx.fillRect(p.x - cameraX, p.y, p.size, p.size);
+                ctx.scale(this.scale, this.scale);
+                const viewW = W / this.scale;
+                const viewH = H / this.scale;
+
+                const level = LEVELS[this.currentLevelIdx];
+
+                // 1. Draw Background Gradient
+                const bgGrad = ctx.createLinearGradient(0, 0, 0, viewH);
+                bgGrad.addColorStop(0, level.bgGradient[0]);
+                bgGrad.addColorStop(1, level.bgGradient[1]);
+                ctx.fillStyle = bgGrad;
+                ctx.fillRect(0, 0, viewW, viewH);
+
+                // Grid Lines background effect
+                ctx.strokeStyle = "rgba(255, 255, 255, 0.04)";
+                ctx.lineWidth = 1;
+                const gridOffset = (-this.cameraX * 0.3) % 40;
+                for (let x = gridOffset; x < viewW; x += 40) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, 0);
+                    ctx.lineTo(x, viewH);
+                    ctx.stroke();
+                }
+
+                // Game Coordinate System Transform: Y=0 is near bottom of canvas
+                const groundY = viewH - 60;
+
+                // 2. Draw Objects
+                for (let obj of level.objects) {
+                    const screenX = obj.x - this.cameraX;
+                    if (screenX < -100 || screenX > viewW + 100) continue;
+
+                    const screenY = groundY - obj.y - TILE;
+
+                    if (obj.type === 'spike') {
+                        ctx.fillStyle = '#ff0055';
+                        ctx.shadowColor = '#ff0055';
+                        ctx.shadowBlur = 10;
+                        ctx.beginPath();
+                        ctx.moveTo(screenX + TILE/2, screenY);
+                        ctx.lineTo(screenX + TILE, screenY + TILE);
+                        ctx.lineTo(screenX, screenY + TILE);
+                        ctx.closePath();
+                        ctx.fill();
+                        ctx.strokeStyle = '#ffffff';
+                        ctx.lineWidth = 2;
+                        ctx.stroke();
+                        ctx.shadowBlur = 0;
+                    }
+                    else if (obj.type === 'block') {
+                        ctx.fillStyle = '#0f172a';
+                        ctx.fillRect(screenX, screenY, TILE, TILE);
+                        ctx.strokeStyle = level.floorColor;
+                        ctx.lineWidth = 2.5;
+                        ctx.strokeRect(screenX, screenY, TILE, TILE);
+                        
+                        // Inner cross icon
+                        ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+                        ctx.beginPath();
+                        ctx.moveTo(screenX, screenY); ctx.lineTo(screenX + TILE, screenY + TILE);
+                        ctx.moveTo(screenX + TILE, screenY); ctx.lineTo(screenX, screenY + TILE);
+                        ctx.stroke();
+                    }
+                    else if (obj.type === 'pad_yellow') {
+                        ctx.fillStyle = '#ffff00';
+                        ctx.shadowColor = '#ffff00';
+                        ctx.shadowBlur = 12;
+                        ctx.fillRect(screenX + 5, groundY - obj.y - 10, TILE - 10, 10);
+                        ctx.shadowBlur = 0;
+                    }
+                    else if (obj.type.startsWith('orb_')) {
+                        ctx.fillStyle = '#ffff00';
+                        ctx.shadowColor = '#ffff00';
+                        ctx.shadowBlur = 15;
+                        ctx.beginPath();
+                        ctx.arc(screenX + 20, groundY - obj.y - 20, 14, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.strokeStyle = '#ffffff';
+                        ctx.lineWidth = 2;
+                        ctx.stroke();
+                        ctx.shadowBlur = 0;
+                    }
+                    else if (obj.type.startsWith('portal_')) {
+                        const portalColor = obj.type.includes('ship') ? '#ff00ea' : (obj.type.includes('wave') ? '#00f3ff' : '#00ff66');
+                        ctx.fillStyle = portalColor;
+                        ctx.shadowColor = portalColor;
+                        ctx.shadowBlur = 20;
+                        ctx.fillRect(screenX, groundY - obj.y - 90, 25, 90);
+                        ctx.shadowBlur = 0;
+                    }
+                    else if (obj.type === 'finish') {
+                        ctx.fillStyle = '#00ff66';
+                        ctx.fillRect(screenX, 0, 10, viewH);
+                    }
+                }
+
+                // 3. Draw Checkpoints in Practice Mode
+                if (this.practiceMode) {
+                    for (let cp of this.checkpoints) {
+                        const screenX = cp.player.x - this.cameraX;
+                        if (screenX >= -20 && screenX <= viewW + 20) {
+                            ctx.fillStyle = '#00ff66';
+                            ctx.beginPath();
+                            ctx.arc(screenX, groundY - cp.player.y - 15, 8, 0, Math.PI*2);
+                            ctx.fill();
+                        }
+                    }
+                }
+
+                // 4. Draw Particles & Death Effects
+                for (let pt of this.particles) {
+                    ctx.fillStyle = pt.color;
+                    ctx.globalAlpha = pt.life;
+                    ctx.fillRect(pt.x - this.cameraX, groundY - pt.y - pt.size, pt.size, pt.size);
+                }
+
+                for (let pt of this.deathParticles) {
+                    ctx.fillStyle = pt.color;
+                    ctx.globalAlpha = pt.life;
+                    ctx.fillRect(pt.x - this.cameraX, groundY - pt.y - pt.size, pt.size, pt.size);
+                }
+                ctx.globalAlpha = 1.0;
+
+                // 5. Draw Player (if alive)
+                if (this.gameState === 'PLAYING' || this.gameState === 'PAUSED') {
+                    const p = this.player;
+                    const screenX = p.x - this.cameraX;
+                    const screenY = groundY - p.y - p.size;
+
+                    this.drawPlayerIcon(ctx, screenX + p.size/2, screenY + p.size/2, p.size, p.rotation, p.mode);
+                }
+
+                // 6. Draw Textured Floor
+                ctx.fillStyle = '#0b0f19';
+                ctx.fillRect(0, groundY, viewW, 60);
+
+                ctx.strokeStyle = level.floorColor;
+                ctx.shadowColor = level.floorColor;
+                ctx.shadowBlur = 12;
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.moveTo(0, groundY);
+                ctx.lineTo(viewW, groundY);
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+
                 ctx.restore();
             }
-        }
 
-        function gameLoop() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawPlayerIcon(ctx, centerX, centerY, size, rotation, mode) {
+                ctx.save();
+                ctx.translate(centerX, centerY);
+                ctx.rotate((rotation * Math.PI) / 180);
 
-            // Smooth Camera Follow Player
-            const cameraX = Math.max(0, player.x - 200);
+                if (mode === 'ship') {
+                    // Draw outer ship pod outline
+                    ctx.fillStyle = this.selectedSecondary;
+                    ctx.beginPath();
+                    ctx.ellipse(0, 5, size*0.7, size*0.35, 0, 0, Math.PI*2);
+                    ctx.fill();
+                }
 
-            drawBackground(cameraX);
-            drawMapObjects(cameraX);
+                // Main Square / Cube Body
+                const half = size / 2;
+                ctx.fillStyle = this.selectedPrimary;
+                ctx.fillRect(-half, -half, size, size);
 
-            if (gameState === 'PLAYING') {
-                updatePhysics();
-                drawPlayer(cameraX);
+                // Inner Secondary Accent Square
+                ctx.fillStyle = this.selectedSecondary;
+                ctx.fillRect(-half + 5, -half + 5, size - 10, size - 10);
+
+                // Core Black Square
+                ctx.fillStyle = '#0d0e15';
+                ctx.fillRect(-half + 9, -half + 9, size - 18, size - 18);
+
+                // Eye / Face expression
+                ctx.fillStyle = '#ffffff';
+                if (this.selectedFace === 0) {
+                    // Normal Eyes
+                    ctx.fillRect(-half + 11, -half + 12, 5, 8);
+                    ctx.fillRect(half - 16, -half + 12, 5, 8);
+                } else if (this.selectedFace === 1) {
+                    // Happy Eyes
+                    ctx.fillRect(-half + 11, -half + 12, 5, 5);
+                    ctx.fillRect(half - 16, -half + 12, 5, 5);
+                    ctx.fillRect(-half + 12, half - 15, 10, 3);
+                } else {
+                    // Angry Eyes
+                    ctx.fillRect(-half + 10, -half + 14, 6, 6);
+                    ctx.fillRect(half - 16, -half + 14, 6, 6);
+                }
+
+                ctx.restore();
             }
 
-            updateAndDrawParticles(cameraX);
+            loop(time) {
+                const dt = time - this.lastTime;
+                this.lastTime = time;
 
-            requestAnimationFrame(gameLoop);
-        }
+                if (this.gameState === 'PLAYING') {
+                    this.updatePlayer();
+                }
 
-        /* ===================================================================
-           5. UI CONTROLLER & MENU EVENTS
-           =================================================================== */
-        function updateLevelUI() {
-            const level = LEVELS[currentLevelIndex];
-            document.getElementById('levelTitle').innerText = level.title;
-            document.getElementById('levelAuthor').innerText = `${level.author} • ${level.badge}`;
-            document.getElementById('levelBadge').innerText = level.badge;
-            document.getElementById('levelBadge').className = `px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider mb-3 ${level.badgeColor}`;
-            document.getElementById('levelCard').style.borderColor = level.accentColor;
-
-            updateLevelStatsUI();
-        }
-
-        function updateLevelStatsUI() {
-            const savedNormal = localStorage.getItem(`level_${currentLevelIndex}_normal`) || 0;
-            const savedPractice = localStorage.getItem(`level_${currentLevelIndex}_practice`) || 0;
-            document.getElementById('statNormalProgress').innerText = `${savedNormal}%`;
-            document.getElementById('statPracticeProgress').innerText = `${savedPractice}%`;
-        }
-
-        function renderSkinsUI() {
-            const grid = document.getElementById('skinGrid');
-            grid.innerHTML = '';
-            SKINS.forEach(skin => {
-                const btn = document.createElement('button');
-                btn.className = `p-4 rounded-2xl border-2 flex flex-col items-center gap-2 transition ${selectedSkin === skin.id ? 'border-amber-400 bg-amber-500/20' : 'border-slate-700 bg-slate-900/50'}`;
-                btn.innerHTML = `
-                    <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl text-slate-950" style="background:${skin.primary}">
-                        <i class="fa-solid ${skin.icon}"></i>
-                    </div>
-                    <span class="text-xs font-bold text-slate-300">${skin.name}</span>
-                `;
-                btn.onclick = () => {
-                    selectedSkin = skin.id;
-                    renderSkinsUI();
-                };
-                grid.appendChild(btn);
-            });
-        }
-
-        function togglePause() {
-            if (gameState === 'PLAYING') {
-                gameState = 'PAUSED';
-                document.getElementById('pauseLevelTitle').innerText = LEVELS[currentLevelIndex].title;
-                document.getElementById('pauseMenu').classList.remove('hidden');
-                document.getElementById('pauseMenu').classList.add('flex');
-            } else if (gameState === 'PAUSED') {
-                gameState = 'PLAYING';
-                document.getElementById('pauseMenu').classList.add('hidden');
+                this.render();
+                requestAnimationFrame((t) => this.loop(t));
             }
         }
 
-        // Attach UI Buttons Listeners
-        document.getElementById('btnPlay').onclick = () => startLevel(currentLevelIndex);
-        
-        document.getElementById('btnPrevLevel').onclick = () => {
-            currentLevelIndex = (currentLevelIndex - 1 + LEVELS.length) % LEVELS.length;
-            updateLevelUI();
+        // Initialize Game on Window Load
+        window.onload = () => {
+            window.game = new GeometryDashGame();
         };
-
-        document.getElementById('btnNextLevel').onclick = () => {
-            currentLevelIndex = (currentLevelIndex + 1) % LEVELS.length;
-            updateLevelUI();
-        };
-
-        document.getElementById('btnPause').onclick = togglePause;
-        
-        document.getElementById('btnResume').onclick = togglePause;
-
-        document.getElementById('btnRestart').onclick = () => {
-            startLevel(currentLevelIndex);
-        };
-
-        document.getElementById('btnQuit').onclick = () => {
-            sound.stopMusic();
-            gameState = 'MENU';
-            document.getElementById('pauseMenu').classList.add('hidden');
-            document.getElementById('victoryMenu').classList.add('hidden');
-            document.getElementById('hudOverlay').classList.add('opacity-0');
-            document.getElementById('mainMenu').classList.remove('hidden');
-        };
-
-        document.getElementById('btnVictoryMenu').onclick = document.getElementById('btnQuit').onclick;
-        document.getElementById('btnVictoryReplay').onclick = () => startLevel(currentLevelIndex);
-
-        document.getElementById('btnPracticeMode').onclick = () => {
-            practiceMode = !practiceMode;
-            const btn = document.getElementById('btnPracticeMode');
-            const addBtn = document.getElementById('btnAddCheckpoint');
-            const remBtn = document.getElementById('btnRemoveCheckpoint');
-
-            if (practiceMode) {
-                btn.classList.add('bg-cyan-500/30', 'border-cyan-400');
-                addBtn.classList.remove('hidden');
-                remBtn.classList.remove('hidden');
-            } else {
-                btn.classList.remove('bg-cyan-500/30', 'border-cyan-400');
-                addBtn.classList.add('hidden');
-                remBtn.classList.add('hidden');
-            }
-        };
-
-        document.getElementById('btnAddCheckpoint').onclick = () => {
-            if (gameState === 'PLAYING' && practiceMode) {
-                checkpoints.push({
-                    x: player.x,
-                    y: player.y,
-                    mode: player.mode,
-                    gravityDir: player.gravityDir
-                });
-            }
-        };
-
-        document.getElementById('btnRemoveCheckpoint').onclick = () => {
-            if (practiceMode && checkpoints.length > 0) {
-                checkpoints.pop();
-            }
-        };
-
-        document.getElementById('btnToggleSound').onclick = () => {
-            sound.isMuted = !sound.isMuted;
-            const btn = document.getElementById('btnToggleSound');
-            btn.innerHTML = sound.isMuted ? `<i class="fa-solid fa-volume-xmark text-red-400"></i>` : `<i class="fa-solid fa-volume-high text-cyan-400"></i>`;
-        };
-
-        document.getElementById('btnCustomization').onclick = () => {
-            renderSkinsUI();
-            document.getElementById('skinMenu').classList.remove('hidden');
-            document.getElementById('skinMenu').classList.add('flex');
-        };
-
-        document.getElementById('btnCloseSkin').onclick = () => {
-            document.getElementById('skinMenu').classList.add('hidden');
-        };
-
-        document.getElementById('btnInfo').onclick = () => {
-            document.getElementById('infoMenu').classList.remove('hidden');
-            document.getElementById('infoMenu').classList.add('flex');
-        };
-
-        document.getElementById('btnCloseInfo').onclick = () => {
-            document.getElementById('infoMenu').classList.add('hidden');
-        };
-
-        // Initialize UI State
-        updateLevelUI();
-
-        // Start Animation Loop on Window Load
-        window.onload = function() {
-            requestAnimationFrame(gameLoop);
-        };
-
     </script>
 </body>
 </html>
