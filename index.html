@@ -1,1282 +1,1277 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>3D Kikoriki Chase - First Person</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Three.js Library -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <!-- FontAwesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        body, html {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            user-select: none;
-            -webkit-user-select: none;
-            touch-action: none;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        #game-canvas {
-            width: 100%;
-            height: 100%;
-            display: block;
-        }
-        .crosshair {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 16px;
-            height: 16px;
-            transform: translate(-50%, -50%);
-            pointer-events: none;
-            z-index: 20;
-        }
-        .crosshair::before, .crosshair::after {
-            content: '';
-            position: absolute;
-            background: rgba(255, 255, 255, 0.85);
-            box-shadow: 0 0 4px rgba(0,0,0,0.8);
-        }
-        .crosshair::before {
-            top: 7px; left: 0; width: 16px; height: 2px;
-        }
-        .crosshair::after {
-            top: 0; left: 7px; width: 2px; height: 16px;
-        }
-        .hit-marker {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 24px;
-            height: 24px;
-            transform: translate(-50%, -50%) rotate(45deg);
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.1s ease-out;
-            z-index: 21;
-        }
-        .hit-marker::before, .hit-marker::after {
-            content: '';
-            position: absolute;
-            background: #ff3333;
-        }
-        .hit-marker::before { top: 10px; left: 0; width: 24px; height: 4px; }
-        .hit-marker::after { top: 0; left: 10px; width: 4px; height: 24px; }
-        
-        /* Minimap styling */
-        #minimap-container {
-            position: absolute;
-            top: 16px;
-            right: 16px;
-            width: 140px;
-            height: 140px;
-            border-radius: 50%;
-            border: 4px solid rgba(255, 255, 255, 0.8);
-            background: rgba(0, 40, 10, 0.65);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-            overflow: hidden;
-            z-index: 30;
-        }
-        #minimap-canvas {
-            width: 100%;
-            height: 100%;
-        }
-        
-        /* Vignette flash on attack/kill */
-        #flash-overlay {
-            position: absolute;
-            inset: 0;
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.15s ease-out;
-            z-index: 15;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>3D Kikoriki Chase - FPS Hunt</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      user-select: none;
+      -webkit-user-select: none;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background-color: #111827;
+    }
+    #game-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .crosshair {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      z-index: 20;
+    }
+    .vignette-damage {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      box-shadow: inset 0 0 100px rgba(239, 68, 68, 0);
+      transition: box-shadow 0.2s ease-out;
+      z-index: 15;
+    }
+    .vignette-damage.active {
+      box-shadow: inset 0 0 120px rgba(239, 68, 68, 0.85);
+    }
+    .weapon-slot {
+      transition: all 0.2s ease;
+    }
+    .weapon-slot.active {
+      border-color: #f59e0b;
+      background-color: rgba(245, 158, 11, 0.25);
+      transform: scale(1.08);
+    }
+    /* Touch controls styling */
+    .touch-btn {
+      touch-action: manipulation;
+    }
+  </style>
 </head>
-<body class="bg-slate-900 text-white select-none">
+<body class="text-white relative">
 
-    <!-- Game Canvas -->
-    <canvas id="game-canvas"></canvas>
+  <canvas id="game-canvas"></canvas>
+  <div id="vignette" class="vignette-damage"></div>
 
-    <!-- Crosshair & Hit Marker -->
-    <div class="crosshair"></div>
-    <div id="hit-marker" class="hit-marker"></div>
-    
-    <!-- Red/Gold Flash overlay -->
-    <div id="flash-overlay"></div>
+  <!-- FPS Crosshair -->
+  <div class="crosshair flex items-center justify-center">
+    <div class="w-2 h-2 bg-yellow-400 rounded-full border border-black shadow-lg"></div>
+  </div>
 
-    <!-- HUD Overlay -->
-    <div class="absolute top-4 left-4 z-30 flex flex-col gap-2 pointer-events-none">
-        <!-- Main Info Box -->
-        <div class="bg-black/60 backdrop-blur-md border border-white/20 p-3 rounded-xl shadow-lg flex items-center gap-4">
-            <div class="flex items-center justify-center w-12 h-12 rounded-full bg-amber-600 text-2xl border-2 border-amber-300 shadow">
-                🐻
-            </div>
-            <div>
-                <h1 class="font-bold text-lg text-amber-300 leading-none">Kopatych (Bear)</h1>
-                <p class="text-xs text-slate-300 mt-1">Village Cleansing Mission</p>
-            </div>
+  <!-- UI HUD OVERLAY -->
+  <div id="hud" class="absolute inset-0 pointer-events-none flex flex-col justify-between p-4 z-20">
+    <!-- Top Bar: Player Stats & Target Info -->
+    <div class="flex justify-between items-start w-full max-w-5xl mx-auto">
+      <!-- Kopatych Player HP -->
+      <div class="bg-gray-900/80 backdrop-blur border-2 border-yellow-600 rounded-xl p-3 flex items-center gap-3 shadow-xl">
+        <div class="w-12 h-12 rounded-full bg-amber-800 border-2 border-yellow-400 flex items-center justify-center text-xl font-black">
+          🐻
         </div>
-
-        <!-- Target Counter -->
-        <div class="bg-black/60 backdrop-blur-md border border-white/20 px-4 py-2 rounded-xl shadow-lg flex items-center justify-between min-w-[200px]">
-            <span class="text-xs font-semibold uppercase tracking-wider text-slate-300"><i class="fa-solid fa-bullseye text-red-400 mr-2"></i>Targets Left:</span>
-            <span id="targets-count" class="text-2xl font-black text-red-500">8 / 8</span>
+        <div>
+          <div class="text-xs uppercase font-bold text-amber-400 tracking-wider">Kopatych (Bear)</div>
+          <div class="w-40 bg-gray-700 h-4 rounded-full overflow-hidden border border-gray-600 mt-1">
+            <div id="player-hp-bar" class="bg-gradient-to-r from-red-500 to-green-500 h-full w-full transition-all duration-300"></div>
+          </div>
         </div>
+      </div>
 
-        <!-- Target Info Hover Box -->
-        <div id="target-info" class="bg-black/75 backdrop-blur-md border border-red-500/40 px-4 py-2 rounded-xl shadow-lg transition-opacity duration-200 opacity-0 min-w-[220px]">
-            <div class="flex justify-between items-center mb-1">
-                <span id="target-name" class="font-bold text-sm text-yellow-300">Target</span>
-                <span id="target-hp-text" class="text-xs text-slate-300 font-mono">100/100</span>
-            </div>
-            <div class="w-full bg-gray-700 h-2.5 rounded-full overflow-hidden border border-white/10">
-                <div id="target-hp-bar" class="bg-gradient-to-r from-red-600 to-amber-500 h-full w-full transition-all duration-150"></div>
-            </div>
+      <!-- Remaining Smeshariki Target Counter -->
+      <div class="bg-gray-900/80 backdrop-blur border-2 border-amber-500 rounded-xl px-5 py-3 text-center shadow-xl">
+        <div class="text-xs uppercase font-bold text-gray-400 tracking-widest">Targets Remaining</div>
+        <div id="targets-left" class="text-3xl font-black text-amber-400 tracking-wider">8 / 8</div>
+      </div>
+
+      <!-- Target Hover Card -->
+      <div id="target-card" class="bg-gray-900/80 backdrop-blur border-2 border-red-500/50 rounded-xl p-3 flex items-center gap-3 shadow-xl opacity-0 transition-opacity duration-200">
+        <div id="target-avatar" class="w-10 h-10 rounded-full bg-blue-600 border border-white flex items-center justify-center text-lg">
+          🐰
         </div>
+        <div>
+          <div id="target-name" class="text-xs uppercase font-bold text-red-400">Target</div>
+          <div class="w-32 bg-gray-700 h-3 rounded-full overflow-hidden mt-1 border border-gray-600">
+            <div id="target-hp-bar" class="bg-red-500 h-full w-full transition-all duration-200"></div>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <!-- Minimap -->
-    <div id="minimap-container">
-        <canvas id="minimap-canvas" width="140" height="140"></canvas>
-    </div>
+    <!-- Bottom Bar: Weapon Selector & Minimap -->
+    <div class="flex justify-between items-end w-full max-w-5xl mx-auto">
+      <!-- Radar Minimap -->
+      <div class="relative w-32 h-32 md:w-40 md:h-40 rounded-full border-2 border-amber-500/80 bg-gray-900/90 shadow-2xl overflow-hidden flex items-center justify-center">
+        <canvas id="minimap" class="w-full h-full"></canvas>
+        <div class="absolute w-2 h-2 bg-amber-400 rounded-full border border-black z-10"></div>
+      </div>
 
-    <!-- Controls Overlay / Instructions -->
-    <div id="controls-hint" class="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 bg-black/70 backdrop-blur-sm border border-white/10 px-6 py-2 rounded-full text-xs text-slate-200 shadow-xl flex items-center gap-6 pointer-events-none">
-        <div><span class="bg-white/20 px-2 py-0.5 rounded font-mono font-bold text-white">WASD</span> Move</div>
-        <div><span class="bg-white/20 px-2 py-0.5 rounded font-mono font-bold text-white">MOUSE</span> Look</div>
-        <div><span class="bg-white/20 px-2 py-0.5 rounded font-mono font-bold text-white">L-CLICK</span> Attack with Pitchfork</div>
-        <div><span class="bg-white/20 px-2 py-0.5 rounded font-mono font-bold text-white">SHIFT</span> Run</div>
-    </div>
-
-    <!-- Mobile Touch Controls -->
-    <div id="touch-controls" class="absolute bottom-6 left-6 z-40 md:hidden flex gap-4">
-        <div id="joystick-zone" class="w-32 h-32 bg-white/10 border-2 border-white/30 rounded-full relative touch-none flex items-center justify-center">
-            <div id="joystick-knob" class="w-12 h-12 bg-amber-500/80 rounded-full shadow-lg border border-amber-300"></div>
-        </div>
-    </div>
-    <div class="absolute bottom-6 right-6 z-40 md:hidden flex gap-3">
-        <button id="mobile-attack-btn" class="w-20 h-20 bg-gradient-to-tr from-red-600 to-amber-500 border-2 border-amber-300 text-white rounded-full shadow-2xl flex flex-col items-center justify-center active:scale-95 transition-transform">
-            <i class="fa-solid fa-hand-fist text-2xl"></i>
-            <span class="text-[10px] font-bold uppercase mt-1">Attack</span>
+      <!-- Weapons Switcher Bar -->
+      <div class="pointer-events-auto flex items-center gap-2 md:gap-3 bg-gray-900/90 backdrop-blur border-2 border-amber-600/60 p-2 rounded-2xl shadow-2xl">
+        <button id="weapon-btn-1" onclick="switchWeapon(0)" class="weapon-slot active flex flex-col items-center p-2 rounded-xl border-2 border-gray-700 bg-gray-800 text-amber-300 w-20 md:w-24">
+          <span class="text-xl md:text-2xl">🔱</span>
+          <span class="text-[10px] font-bold uppercase mt-1">1. Pitchfork</span>
         </button>
-    </div>
+        <button id="weapon-btn-2" onclick="switchWeapon(1)" class="weapon-slot flex flex-col items-center p-2 rounded-xl border-2 border-gray-700 bg-gray-800 text-amber-300 w-20 md:w-24">
+          <span class="text-xl md:text-2xl">🔨</span>
+          <span class="text-[10px] font-bold uppercase mt-1">2. Wood Club</span>
+        </button>
+        <button id="weapon-btn-3" onclick="switchWeapon(2)" class="weapon-slot flex flex-col items-center p-2 rounded-xl border-2 border-gray-700 bg-gray-800 text-amber-300 w-20 md:w-24">
+          <span class="text-xl md:text-2xl">🍯</span>
+          <span class="text-[10px] font-bold uppercase mt-1">3. Honey Gun</span>
+        </button>
+      </div>
 
-    <!-- Start / Lock Pointer Screen -->
-    <div id="start-screen" class="absolute inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex flex-col items-center justify-center text-center p-6">
-        <div class="max-w-md bg-slate-900 border border-amber-500/30 p-8 rounded-3xl shadow-2xl relative overflow-hidden">
-            <div class="absolute -top-12 -right-12 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl"></div>
-            <div class="text-6xl mb-4">🌾🐻 pitchfork</div>
-            <h1 class="text-3xl font-black text-amber-400 mb-2 tracking-tight">KIKORIKI VILLAGE CHASE</h1>
-            <p class="text-sm text-slate-300 mb-6 leading-relaxed">
-                You are <span class="text-amber-400 font-semibold">Kopatych the Bear</span>. Armed with your trusty pitchfork, explore the village and eliminate all 8 Smeshariki neighbors!
-            </p>
-            <button id="start-btn" class="w-full py-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-lg rounded-2xl shadow-xl hover:shadow-amber-500/25 transition duration-200 cursor-pointer uppercase tracking-wider">
-                Start Hunt
-            </button>
+      <!-- Attack Hint -->
+      <div class="hidden md:flex flex-col items-end text-xs text-amber-300 font-semibold bg-gray-900/80 border border-amber-500/40 p-3 rounded-xl">
+        <span>[L-Click] Attack / Shoot</span>
+        <span>[1, 2, 3] Switch Weapons</span>
+        <span>[W, A, S, D] Walk around</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Touch Controls Overlay for Mobile -->
+  <div id="touch-controls" class="absolute inset-0 pointer-events-none z-30 flex justify-between items-end p-6 md:hidden">
+    <!-- Virtual Joystick Container -->
+    <div id="joystick-zone" class="w-32 h-32 bg-gray-800/60 border-2 border-amber-500/50 rounded-full relative pointer-events-auto touch-btn flex items-center justify-center">
+      <div id="joystick-knob" class="w-12 h-12 bg-amber-500/80 rounded-full shadow-lg absolute"></div>
+    </div>
+    <!-- Attack Action Button -->
+    <button id="touch-attack-btn" class="w-20 h-20 bg-red-600/90 active:bg-red-700 border-2 border-yellow-400 rounded-full shadow-2xl flex items-center justify-center text-3xl font-extrabold pointer-events-auto touch-btn">
+      💥
+    </button>
+  </div>
+
+  <!-- START / INSTRUCTIONS OVERLAY -->
+  <div id="start-screen" class="absolute inset-0 bg-gray-950/90 backdrop-blur-md z-50 flex flex-col items-center justify-center p-6 text-center">
+    <div class="max-w-xl bg-gray-900 border-2 border-amber-500 rounded-2xl p-8 shadow-2xl">
+      <h1 class="text-4xl font-black text-amber-400 tracking-wide mb-2 uppercase">Kikoriki FPS Chase 3D</h1>
+      <p class="text-sm text-gray-300 mb-6">Play as Kopatych the Bear in First-Person POV! Catch and eliminate all 8 Kikoriki villagers before nightfall. Characters have realistic animated arms, legs, running physics, and full house/obstacle collision physics!</p>
+      
+      <div class="grid grid-cols-3 gap-3 mb-6 text-xs text-amber-200">
+        <div class="bg-gray-800 p-3 rounded-xl border border-gray-700">
+          <div class="text-2xl mb-1">🔱</div>
+          <div class="font-bold">Pitchfork</div>
+          <div class="text-gray-400 text-[10px]">Fast melee thrusts</div>
         </div>
-    </div>
-
-    <!-- Win Screen -->
-    <div id="win-screen" class="hidden absolute inset-0 z-50 bg-slate-950/90 backdrop-blur-lg flex flex-col items-center justify-center text-center p-6">
-        <div class="max-w-md bg-slate-900 border border-red-500/40 p-8 rounded-3xl shadow-2xl">
-            <div class="text-6xl mb-4">👑🏆</div>
-            <h1 class="text-3xl font-black text-amber-400 mb-2">VILLAGE CLEARED!</h1>
-            <p class="text-sm text-slate-300 mb-6">
-                Kopatych stands supreme! All Smeshariki have been defeated and the village is now peaceful and quiet.
-            </p>
-            <button id="restart-btn" class="w-full py-4 bg-gradient-to-r from-red-600 to-amber-500 hover:from-red-500 hover:to-amber-400 text-white font-black text-lg rounded-2xl shadow-xl transition cursor-pointer uppercase tracking-wider">
-                Play Again
-            </button>
+        <div class="bg-gray-800 p-3 rounded-xl border border-gray-700">
+          <div class="text-2xl mb-1">🔨</div>
+          <div class="font-bold">Wooden Club</div>
+          <div class="text-gray-400 text-[10px]">Heavy knockback smash</div>
         </div>
+        <div class="bg-gray-800 p-3 rounded-xl border border-gray-700">
+          <div class="text-2xl mb-1">🍯</div>
+          <div class="font-bold">Honey Blaster</div>
+          <div class="text-gray-400 text-[10px]">Explosive honey shots</div>
+        </div>
+      </div>
+
+      <button id="start-btn" class="w-full py-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-gray-950 font-black text-xl rounded-xl shadow-lg transform active:scale-95 transition-all">
+        START HUNTING
+      </button>
     </div>
+  </div>
 
-    <script>
-        // Sound FX Generator using Web Audio API
-        class SoundEngine {
-            constructor() {
-                this.ctx = null;
-            }
-            init() {
-                if (!this.ctx) {
-                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-                }
-            }
-            playSwing() {
-                if (!this.ctx) return;
-                const osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(150, this.ctx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(40, this.ctx.currentTime + 0.15);
-                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
-                osc.connect(gain);
-                gain.connect(this.ctx.destination);
-                osc.start();
-                osc.stop(this.ctx.currentTime + 0.15);
-            }
-            playHit() {
-                if (!this.ctx) return;
-                // Thump sound
-                const osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(220, this.ctx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(60, this.ctx.currentTime + 0.2);
-                gain.gain.setValueAtTime(0.6, this.ctx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
-                osc.connect(gain);
-                gain.connect(this.ctx.destination);
-                osc.start();
-                osc.stop(this.ctx.currentTime + 0.2);
+  <!-- VICTORY OVERLAY -->
+  <div id="victory-screen" class="absolute inset-0 bg-gray-950/95 backdrop-blur-lg z-50 flex flex-col items-center justify-center p-6 text-center hidden">
+    <div class="max-w-md bg-gray-900 border-2 border-amber-400 rounded-2xl p-8 shadow-2xl">
+      <div class="text-6xl mb-3">👑🐻</div>
+      <h2 class="text-3xl font-black text-amber-400 uppercase tracking-wide mb-2">Village Cleared!</h2>
+      <p class="text-gray-300 text-sm mb-6">Kopatych successfully defeated all Smeshariki characters and took full control of the village!</p>
+      <button onclick="location.reload()" class="px-8 py-3 bg-amber-500 hover:bg-amber-600 text-gray-950 font-bold rounded-xl shadow-lg">
+        Play Again
+      </button>
+    </div>
+  </div>
 
-                // High squeak
-                setTimeout(() => {
-                    if (!this.ctx) return;
-                    const sq = this.ctx.createOscillator();
-                    const sg = this.ctx.createGain();
-                    sq.type = 'sine';
-                    sq.frequency.setValueAtTime(600, this.ctx.currentTime);
-                    sq.frequency.linearRampToValueAtTime(900, this.ctx.currentTime + 0.15);
-                    sg.gain.setValueAtTime(0.3, this.ctx.currentTime);
-                    sg.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
-                    sq.connect(sg);
-                    sg.connect(this.ctx.destination);
-                    sq.start();
-                    sq.stop(this.ctx.currentTime + 0.15);
-                }, 40);
+  <script>
+    /* =========================================================================
+       1. WEB AUDIO SOUND EFFECTS GENERATOR
+       ========================================================================= */
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    function playSound(type) {
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      const now = audioCtx.currentTime;
+
+      if (type === 'swing') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(180, now);
+        osc.frequency.exponentialRampToValueAtTime(40, now + 0.18);
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.18);
+        osc.start(now);
+        osc.stop(now + 0.18);
+      } else if (type === 'hit') {
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(300, now);
+        osc.frequency.exponentialRampToValueAtTime(60, now + 0.2);
+        gain.gain.setValueAtTime(0.5, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+        osc.start(now);
+        osc.stop(now + 0.2);
+      } else if (type === 'shoot') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(400, now);
+        osc.frequency.exponentialRampToValueAtTime(100, now + 0.25);
+        gain.gain.setValueAtTime(0.4, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+        osc.start(now);
+        osc.stop(now + 0.25);
+      } else if (type === 'splat') {
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(150, now);
+        osc.frequency.linearRampToValueAtTime(50, now + 0.3);
+        gain.gain.setValueAtTime(0.4, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+        osc.start(now);
+        osc.stop(now + 0.3);
+      } else if (type === 'squeak') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(600 + Math.random() * 300, now);
+        osc.frequency.linearRampToValueAtTime(1200, now + 0.15);
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+        osc.start(now);
+        osc.stop(now + 0.15);
+      }
+    }
+
+    /* =========================================================================
+       2. PROCEDURAL HIGH-RES FACE TEXTURES FOR SMESHARIKI
+       ========================================================================= */
+    function createFaceTexture(characterKey) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 512;
+      canvas.height = 512;
+      const ctx = canvas.getContext('2d');
+
+      // Base transparent face area
+      ctx.clearRect(0, 0, 512, 512);
+
+      // Helper eye renderer
+      function drawEyes(x1, y1, x2, y2, r = 24, pupilR = 10) {
+        // Left Eye
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath(); ctx.arc(x1, y1, r, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#000000'; ctx.lineWidth = 4; ctx.stroke();
+        ctx.fillStyle = '#000000';
+        ctx.beginPath(); ctx.arc(x1 + 2, y1, pupilR, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath(); ctx.arc(x1, y1 - 4, 3, 0, Math.PI * 2); ctx.fill();
+
+        // Right Eye
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath(); ctx.arc(x2, y2, r, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#000000'; ctx.lineWidth = 4; ctx.stroke();
+        ctx.fillStyle = '#000000';
+        ctx.beginPath(); ctx.arc(x2 - 2, y2, pupilR, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath(); ctx.arc(x2 - 4, y2 - 4, 3, 0, Math.PI * 2); ctx.fill();
+      }
+
+      if (characterKey === 'krosh') { // Rabbit
+        drawEyes(210, 230, 302, 230, 32, 12);
+        // Smile & Teeth
+        ctx.strokeStyle = '#000000'; ctx.lineWidth = 5;
+        ctx.beginPath(); ctx.arc(256, 260, 45, 0.1 * Math.PI, 0.9 * Math.PI); ctx.stroke();
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(242, 290, 12, 18); ctx.fillRect(258, 290, 12, 18);
+        ctx.strokeRect(242, 290, 12, 18); ctx.strokeRect(258, 290, 12, 18);
+        // Pink Nose
+        ctx.fillStyle = '#ff6b81';
+        ctx.beginPath(); ctx.arc(256, 255, 10, 0, Math.PI * 2); ctx.fill();
+      }
+      else if (characterKey === 'chiko') { // Hedgehog
+        drawEyes(215, 240, 297, 240, 28, 10);
+        // Glasses frame
+        ctx.strokeStyle = '#1e1b4b'; ctx.lineWidth = 8;
+        ctx.beginPath(); ctx.arc(215, 240, 38, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath(); ctx.arc(297, 240, 38, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(253, 240); ctx.lineTo(259, 240); ctx.stroke();
+        // Nose & Mouth
+        ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(256, 275, 8, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#000'; ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.arc(256, 280, 20, 0.2 * Math.PI, 0.8 * Math.PI); ctx.stroke();
+      }
+      else if (characterKey === 'nyusha') { // Pig
+        drawEyes(210, 220, 302, 220, 26, 10);
+        // Pig Snout
+        ctx.fillStyle = '#ff4757';
+        ctx.beginPath(); ctx.ellipse(256, 260, 26, 18, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#a40000';
+        ctx.beginPath(); ctx.arc(246, 260, 5, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(266, 260, 5, 0, Math.PI * 2); ctx.fill();
+        // Rosy Cheeks
+        ctx.fillStyle = 'rgba(255, 105, 180, 0.5)';
+        ctx.beginPath(); ctx.arc(175, 265, 20, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(337, 265, 20, 0, Math.PI * 2); ctx.fill();
+      }
+      else if (characterKey === 'losyash') { // Elk
+        drawEyes(210, 230, 302, 230, 26, 10);
+        // Big Black Nose
+        ctx.fillStyle = '#2f3542';
+        ctx.beginPath(); ctx.ellipse(256, 270, 20, 14, 0, 0, Math.PI * 2); ctx.fill();
+        // Smart mouth
+        ctx.strokeStyle = '#000'; ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.arc(256, 285, 25, 0.1 * Math.PI, 0.9 * Math.PI); ctx.stroke();
+      }
+      else if (characterKey === 'barash') { // Ram
+        drawEyes(215, 240, 297, 240, 25, 9);
+        // Sad/Poetic eyebrows
+        ctx.strokeStyle = '#57606f'; ctx.lineWidth = 5;
+        ctx.beginPath(); ctx.moveTo(195, 210); ctx.lineTo(230, 222); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(317, 210); ctx.lineTo(282, 222); ctx.stroke();
+        // Small nose & mouth
+        ctx.fillStyle = '#ff7675';
+        ctx.beginPath(); ctx.arc(256, 268, 8, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#000'; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.arc(256, 285, 15, 0.8 * Math.PI, 0.2 * Math.PI, true); ctx.stroke();
+      }
+      else if (characterKey === 'pin') { // Penguin
+        // White Face Mask
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath(); ctx.ellipse(256, 250, 85, 65, 0, 0, Math.PI * 2); ctx.fill();
+        drawEyes(220, 230, 292, 230, 22, 9);
+        // Yellow Beak
+        ctx.fillStyle = '#ffa500';
+        ctx.beginPath(); ctx.polygon = [ [256, 250], [225, 280], [287, 280] ];
+        ctx.moveTo(256, 295); ctx.lineTo(225, 255); ctx.lineTo(287, 255); ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = '#d35400'; ctx.lineWidth = 3; ctx.stroke();
+      }
+      else if (characterKey === 'karych') { // Raven
+        drawEyes(220, 220, 292, 220, 22, 9);
+        // Huge Yellow Beak
+        ctx.fillStyle = '#f1c40f';
+        ctx.beginPath(); ctx.ellipse(256, 265, 45, 22, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#d68910'; ctx.lineWidth = 4; ctx.stroke();
+      }
+      else if (characterKey === 'sovunya') { // Owl
+        drawEyes(210, 230, 302, 230, 30, 11);
+        // Orange Beak
+        ctx.fillStyle = '#e67e22';
+        ctx.beginPath(); ctx.moveTo(256, 285); ctx.lineTo(240, 250); ctx.lineTo(272, 250); ctx.closePath(); ctx.fill();
+        // Sleepy eyelids
+        ctx.fillStyle = '#8e44ad';
+        ctx.beginPath(); ctx.arc(210, 230, 31, Math.PI, 0); ctx.fill();
+        ctx.beginPath(); ctx.arc(302, 230, 31, Math.PI, 0); ctx.fill();
+      }
+
+      return new THREE.CanvasTexture(canvas);
+    }
+
+    /* =========================================================================
+       3. THREE.JS SCENE SETUP & COLLISION OBSTACLES REGISTER
+       ========================================================================= */
+    const canvas = document.getElementById('game-canvas');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x87ceeb);
+    scene.fog = new THREE.FogExp2(0x87ceeb, 0.007);
+
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 500);
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+    // Lighting
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.65);
+    scene.add(ambientLight);
+
+    const sun = new THREE.DirectionalLight(0xfffaed, 0.85);
+    sun.position.set(60, 100, 40);
+    sun.castShadow = true;
+    sun.shadow.mapSize.width = 2048;
+    sun.shadow.mapSize.height = 2048;
+    sun.shadow.camera.near = 10;
+    sun.shadow.camera.far = 250;
+    const d = 100;
+    sun.shadow.camera.left = -d; sun.shadow.camera.right = d;
+    sun.shadow.camera.top = d; sun.shadow.camera.bottom = -d;
+    scene.add(sun);
+
+    // Collision Objects Store (Boxes & Cylinders for impossible clip-throughs)
+    const obstacles = [];
+
+    function addBoxObstacle(x, z, width, depth) {
+      obstacles.push({
+        type: 'box',
+        minX: x - width / 2,
+        maxX: x + width / 2,
+        minZ: z - depth / 2,
+        maxZ: z + depth / 2
+      });
+    }
+
+    function addCylinderObstacle(x, z, radius) {
+      obstacles.push({
+        type: 'cylinder',
+        x: x,
+        z: z,
+        radius: radius
+      });
+    }
+
+    // Check collision against all obstacles and map boundaries
+    function checkCollision(posX, posZ, radius = 0.8) {
+      // 1. Boundary mountain ring
+      const distFromCenter = Math.hypot(posX, posZ);
+      if (distFromCenter > 112) return true;
+
+      // 2. Obstacles
+      for (let i = 0; i < obstacles.length; i++) {
+        const obs = obstacles[i];
+        if (obs.type === 'box') {
+          if (posX >= obs.minX - radius && posX <= obs.maxX + radius &&
+              posZ >= obs.minZ - radius && posZ <= obs.maxZ + radius) {
+            return true;
+          }
+        } else if (obs.type === 'cylinder') {
+          const dx = posX - obs.x;
+          const dz = posZ - obs.z;
+          if (Math.hypot(dx, dz) < (obs.radius + radius)) {
+            return true;
+          }
+        }
+      }
+      return false;
+    }
+
+    /* =========================================================================
+       4. WORLD ENVIRONMENT (GRASS, PATHS, HOUSES, FENCES, MOUNTAINS)
+       ========================================================================= */
+    // Terrain Ground
+    const groundGeo = new THREE.PlaneGeometry(300, 300);
+    const groundMat = new THREE.MeshStandardMaterial({ color: 0x55a630, roughness: 0.9, metalness: 0.1 });
+    const ground = new THREE.Mesh(groundGeo, groundMat);
+    ground.rotation.x = -Math.PI / 2;
+    ground.receiveShadow = true;
+    scene.add(ground);
+
+    // Dirt Paths
+    const pathGeo = new THREE.PlaneGeometry(12, 180);
+    const pathMat = new THREE.MeshStandardMaterial({ color: 0xc2a649, roughness: 0.95 });
+    const path1 = new THREE.Mesh(pathGeo, pathMat);
+    path1.rotation.x = -Math.PI / 2;
+    path1.position.y = 0.02;
+    scene.add(path1);
+
+    const path2 = new THREE.Mesh(pathGeo, pathMat);
+    path2.rotation.x = -Math.PI / 2;
+    path2.rotation.z = Math.PI / 2;
+    path2.position.y = 0.02;
+    scene.add(path2);
+
+    // Surrounding Impassable Mountain Ring
+    const mountainGroup = new THREE.Group();
+    const mtnGeo = new THREE.ConeGeometry(22, 45, 7);
+    const mtnMat = new THREE.MeshStandardMaterial({ color: 0x4b6584, roughness: 0.8 });
+    const numMountains = 32;
+    for (let i = 0; i < numMountains; i++) {
+      const angle = (i / numMountains) * Math.PI * 2;
+      const r = 125;
+      const mx = Math.cos(angle) * r;
+      const mz = Math.sin(angle) * r;
+      const mtn = new THREE.Mesh(mtnGeo, mtnMat);
+      mtn.position.set(mx, 20, mz);
+      mtn.rotation.y = Math.random() * Math.PI;
+      mountainGroup.add(mtn);
+      addCylinderObstacle(mx, mz, 18);
+    }
+    scene.add(mountainGroup);
+
+    // Trees Builder
+    function createTree(x, z, scale = 1) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+
+      const trunkGeo = new THREE.CylinderGeometry(0.5 * scale, 0.7 * scale, 5 * scale, 8);
+      const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5c4033, roughness: 0.9 });
+      const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+      trunk.position.y = (2.5 * scale);
+      trunk.castShadow = true;
+      group.add(trunk);
+
+      const leavesGeo = new THREE.SphereGeometry(3 * scale, 8, 8);
+      const leavesMat = new THREE.MeshStandardMaterial({ color: 0x2d6a4f, roughness: 0.8 });
+      const leaves = new THREE.Mesh(leavesGeo, leavesMat);
+      leaves.position.y = (5.5 * scale);
+      leaves.castShadow = true;
+      group.add(leaves);
+
+      scene.add(group);
+      addCylinderObstacle(x, z, 1.2 * scale);
+    }
+
+    // Scatter Trees around map
+    for (let i = 0; i < 40; i++) {
+      const ang = Math.random() * Math.PI * 2;
+      const dist = 30 + Math.random() * 75;
+      const tx = Math.cos(ang) * dist;
+      const tz = Math.sin(ang) * dist;
+      // Don't place on central dirt paths
+      if (Math.abs(tx) > 10 && Math.abs(tz) > 10) {
+        createTree(tx, tz, 0.8 + Math.random() * 0.5);
+      }
+    }
+
+    // House Creator Helper
+    function createHouse(x, z, color, roofColor, size = 12, name = "House") {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+
+      // Main Walls
+      const wallGeo = new THREE.BoxGeometry(size, size * 0.8, size);
+      const wallMat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.6 });
+      const wall = new THREE.Mesh(wallGeo, wallMat);
+      wall.position.y = (size * 0.8) / 2;
+      wall.castShadow = true;
+      wall.receiveShadow = true;
+      group.add(wall);
+
+      // Roof
+      const roofGeo = new THREE.ConeGeometry(size * 0.85, size * 0.7, 4);
+      const roofMat = new THREE.MeshStandardMaterial({ color: roofColor, roughness: 0.5 });
+      const roof = new THREE.Mesh(roofGeo, roofMat);
+      roof.position.y = (size * 0.8) + (size * 0.7) / 2;
+      roof.rotation.y = Math.PI / 4;
+      roof.castShadow = true;
+      group.add(roof);
+
+      // Door
+      const doorGeo = new THREE.BoxGeometry(size * 0.25, size * 0.45, 0.4);
+      const doorMat = new THREE.MeshStandardMaterial({ color: 0x3d2314 });
+      const door = new THREE.Mesh(doorGeo, doorMat);
+      door.position.set(0, (size * 0.45) / 2, size / 2 + 0.1);
+      group.add(door);
+
+      scene.add(group);
+      addBoxObstacle(x, z, size + 2, size + 2);
+    }
+
+    // Add Kikoriki Houses
+    createHouse(-35, -35, 0x3b82f6, 0x1e3a8a, 14, "Krosh's House");
+    createHouse(40, -40, 0xec4899, 0x9d174d, 13, "Nyusha's House");
+    createHouse(-45, 40, 0x8b5cf6, 0x4c1d95, 15, "Sovunya's House");
+    createHouse(35, 35, 0xeab308, 0x854d0e, 14, "Losyash's House");
+    createHouse(0, -65, 0x78350f, 0x451a03, 16, "Kopatych's Log Cabin");
+
+    // Pumpkin Garden near Kopatych's house
+    for (let px = -12; px <= 12; px += 6) {
+      for (let pz = -75; pz <= -60; pz += 6) {
+        const pGeo = new THREE.SphereGeometry(1.2, 8, 8);
+        const pMat = new THREE.MeshStandardMaterial({ color: 0xf97316, roughness: 0.5 });
+        const pMesh = new THREE.Mesh(pGeo, pMat);
+        pMesh.position.set(px, 1.0, pz);
+        pMesh.scale.set(1.2, 0.9, 1.2);
+        pMesh.castShadow = true;
+        scene.add(pMesh);
+        addCylinderObstacle(px, pz, 1.0);
+      }
+    }
+
+    /* =========================================================================
+       5. 3D SMESHARIKI CHARACTERS WITH FULL ARMS, LEGS & ACCESSORIES
+       ========================================================================= */
+    const charactersData = [
+      { id: 'krosh', name: 'Krosh (Rabbit)', color: 0x4299e1, hp: 80, speed: 7.0, icon: '🐰', x: -20, z: -20 },
+      { id: 'chiko', name: 'Chiko (Hedgehog)', color: 0x9f7aea, hp: 70, speed: 5.5, icon: '🦔', x: 20, z: -25 },
+      { id: 'nyusha', name: 'Nyusha (Pig)', color: 0xed64a6, hp: 75, speed: 6.0, icon: '🐷', x: 25, z: 20 },
+      { id: 'losyash', name: 'Losyash (Elk)', color: 0xecc94b, hp: 90, speed: 5.0, icon: '🦌', x: -25, z: 25 },
+      { id: 'barash', name: 'Barash (Ram)', color: 0xe2e8f0, hp: 65, speed: 6.5, icon: '🐑', x: -10, z: -45 },
+      { id: 'pin', name: 'Pin (Penguin)', color: 0x2d3748, hp: 85, speed: 5.8, icon: '🐧', x: 10, z: -50 },
+      { id: 'karych', name: 'Kar-Karych (Crow)', color: 0x2b6cb0, hp: 70, speed: 6.2, icon: '🦅', x: -40, z: 10 },
+      { id: 'sovunya', name: 'Sovunya (Owl)', color: 0x805ad5, hp: 80, speed: 5.5, icon: '🦉', x: 30, z: -10 }
+    ];
+
+    const activeEnemies = [];
+
+    function createCharacter3D(data) {
+      const group = new THREE.Group();
+      group.position.set(data.x, 1.6, data.z);
+
+      // Face Texture Material
+      const faceTex = createFaceTexture(data.id);
+      const faceMat = new THREE.MeshStandardMaterial({ map: faceTex, transparent: true });
+
+      // Body Sphere
+      const bodyGeo = new THREE.SphereGeometry(1.5, 32, 32);
+      const bodyMat = new THREE.MeshStandardMaterial({ color: data.color, roughness: 0.5 });
+      const bodyMesh = new THREE.Mesh(bodyGeo, bodyMat);
+      bodyMesh.castShadow = true;
+      group.add(bodyMesh);
+
+      // Face Overlay Mesh
+      const faceGeo = new THREE.SphereGeometry(1.51, 32, 32);
+      const faceMesh = new THREE.Mesh(faceGeo, faceMat);
+      group.add(faceMesh);
+
+      // Limbs Materials
+      const limbMat = new THREE.MeshStandardMaterial({ color: data.color, roughness: 0.6 });
+
+      // Left & Right Arms
+      const armGeo = new THREE.CylinderGeometry(0.22, 0.18, 1.1, 8);
+      
+      const armL = new THREE.Mesh(armGeo, limbMat);
+      armL.position.set(-1.4, -0.2, 0);
+      armL.rotation.z = Math.PI / 4;
+      group.add(armL);
+
+      const armR = new THREE.Mesh(armGeo, limbMat);
+      armR.position.set(1.4, -0.2, 0);
+      armR.rotation.z = -Math.PI / 4;
+      group.add(armR);
+
+      // Left & Right Legs & Feet
+      const legGeo = new THREE.CylinderGeometry(0.25, 0.2, 0.9, 8);
+      const footGeo = new THREE.BoxGeometry(0.5, 0.25, 0.8);
+      const footMat = new THREE.MeshStandardMaterial({ color: 0x1a202c });
+
+      const legLGroup = new THREE.Group();
+      legLGroup.position.set(-0.6, -1.2, 0);
+      const legL = new THREE.Mesh(legGeo, limbMat);
+      legL.position.y = -0.3;
+      const footL = new THREE.Mesh(footGeo, footMat);
+      footL.position.set(0, -0.7, 0.2);
+      legLGroup.add(legL, footL);
+      group.add(legLGroup);
+
+      const legRGroup = new THREE.Group();
+      legRGroup.position.set(0.6, -1.2, 0);
+      const legR = new THREE.Mesh(legGeo, limbMat);
+      legR.position.y = -0.3;
+      const footR = new THREE.Mesh(footGeo, footMat);
+      footR.position.set(0, -0.7, 0.2);
+      legRGroup.add(legR, footR);
+      group.add(legRGroup);
+
+      // CHARACTER SPECIFIC ACCESSORIES
+      if (data.id === 'krosh') { // Long Bunny Ears
+        const earGeo = new THREE.CylinderGeometry(0.25, 0.35, 2.2, 12);
+        const earL = new THREE.Mesh(earGeo, limbMat);
+        earL.position.set(-0.6, 2.3, 0);
+        earL.rotation.z = -0.2;
+        const earR = new THREE.Mesh(earGeo, limbMat);
+        earR.position.set(0.6, 2.3, 0);
+        earR.rotation.z = 0.2;
+        group.add(earL, earR);
+      }
+      else if (data.id === 'chiko') { // Spiky Quills
+        const quillGeo = new THREE.ConeGeometry(0.25, 1.0, 5);
+        const quillMat = new THREE.MeshStandardMaterial({ color: 0x4c1d95 });
+        for (let q = 0; q < 18; q++) {
+          const quill = new THREE.Mesh(quillGeo, quillMat);
+          const phi = Math.random() * Math.PI * 0.8 + 0.3;
+          const theta = Math.random() * Math.PI;
+          quill.position.setFromSphericalCoords(1.5, phi, theta + Math.PI / 2);
+          quill.lookAt(group.position.clone().add(quill.position.clone().multiplyScalar(2)));
+          group.add(quill);
+        }
+      }
+      else if (data.id === 'losyash') { // Antlers
+        const antlerMat = new THREE.MeshStandardMaterial({ color: 0x78350f });
+        const mainAntlerGeo = new THREE.CylinderGeometry(0.12, 0.15, 2.0);
+        const antlerL = new THREE.Mesh(mainAntlerGeo, antlerMat);
+        antlerL.position.set(-1.0, 2.2, 0);
+        antlerL.rotation.z = -0.6;
+        const antlerR = new THREE.Mesh(mainAntlerGeo, antlerMat);
+        antlerR.position.set(1.0, 2.2, 0);
+        antlerR.rotation.z = 0.6;
+        group.add(antlerL, antlerR);
+      }
+      else if (data.id === 'barash') { // Ram Horns
+        const hornGeo = new THREE.TorusGeometry(0.6, 0.18, 8, 16, Math.PI * 1.3);
+        const hornMat = new THREE.MeshStandardMaterial({ color: 0x718096 });
+        const hornL = new THREE.Mesh(hornGeo, hornMat);
+        hornL.position.set(-1.4, 0.8, 0.2);
+        hornL.rotation.y = Math.PI / 2;
+        const hornR = new THREE.Mesh(hornGeo, hornMat);
+        hornR.position.set(1.4, 0.8, 0.2);
+        hornR.rotation.y = -Math.PI / 2;
+        group.add(hornL, hornR);
+      }
+
+      scene.add(group);
+
+      const enemyObj = {
+        data: data,
+        mesh: group,
+        armL: armL,
+        armR: armR,
+        legL: legLGroup,
+        legR: legRGroup,
+        hp: data.hp,
+        maxHp: data.hp,
+        speed: data.speed,
+        isDead: false,
+        walkCycle: Math.random() * 10,
+        targetX: data.x,
+        targetZ: data.z,
+        changeDirTimer: 0
+      };
+
+      activeEnemies.push(enemyObj);
+    }
+
+    // Spawn all 8 Characters
+    charactersData.forEach(d => createCharacter3D(d));
+
+    /* =========================================================================
+       6. FIRST-PERSON POV RIG, BEAR PAWS & MULTIPLE WEAPONS
+       ========================================================================= */
+    const fpsRig = new THREE.Group();
+    scene.add(fpsRig);
+    fpsRig.position.set(0, 1.7, 30); // Kopatych initial spawn
+
+    // Attach Camera to FPS Rig
+    fpsRig.add(camera);
+    camera.position.set(0, 0, 0);
+
+    // BEAR ARMS & WEAPONS CONTAINER
+    const weaponContainer = new THREE.Group();
+    fpsRig.add(weaponContainer);
+    weaponContainer.position.set(0.35, -0.45, -0.6); // Positioned lower right in front of camera
+
+    // Kopatych Bear Fur Material
+    const bearFurMat = new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.8 });
+    const clawMat = new THREE.MeshStandardMaterial({ color: 0x1c1917, roughness: 0.3 });
+
+    // Bear Left & Right Paws
+    function createBearPaw() {
+      const pawGroup = new THREE.Group();
+      const armMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.28, 1.2, 12), bearFurMat);
+      armMesh.rotation.x = Math.PI / 3;
+      pawGroup.add(armMesh);
+
+      // Claws
+      for (let c = -2; c <= 2; c++) {
+        const claw = new THREE.Mesh(new THREE.ConeGeometry(0.04, 0.25, 6), clawMat);
+        claw.position.set(c * 0.08, -0.4, -0.5);
+        claw.rotation.x = Math.PI / 2;
+        pawGroup.add(claw);
+      }
+      return pawGroup;
+    }
+
+    const rightBearArm = createBearPaw();
+    rightBearArm.position.set(0, 0, 0);
+    weaponContainer.add(rightBearArm);
+
+    // 3 WEAPON MODELS ATTACHED TO HAND
+    const weaponModels = [];
+
+    // Weapon 1: Pitchfork
+    const pitchforkGroup = new THREE.Group();
+    const handleMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 2.5, 8), new THREE.MeshStandardMaterial({ color: 0x5c4033 }));
+    handleMesh.rotation.x = Math.PI / 2;
+    handleMesh.position.z = -0.8;
+    pitchforkGroup.add(handleMesh);
+
+    const metalMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.8, roughness: 0.2 });
+    for (let t = -2; t <= 2; t += 2) {
+      const tine = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.7, 6), metalMat);
+      tine.position.set(t * 0.1, 0, -2.1);
+      tine.rotation.x = -Math.PI / 2;
+      pitchforkGroup.add(tine);
+    }
+    weaponContainer.add(pitchforkGroup);
+    weaponModels.push(pitchforkGroup);
+
+    // Weapon 2: Heavy Wooden Club
+    const clubGroup = new THREE.Group();
+    const clubHandle = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.08, 1.5, 8), new THREE.MeshStandardMaterial({ color: 0x451a03 }));
+    clubHandle.rotation.x = Math.PI / 2;
+    clubHandle.position.z = -0.5;
+    const clubHead = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.15, 1.0, 10), new THREE.MeshStandardMaterial({ color: 0x270f03, roughness: 0.9 }));
+    clubHead.rotation.x = Math.PI / 2;
+    clubHead.position.z = -1.4;
+    clubGroup.add(clubHandle, clubHead);
+    clubGroup.visible = false;
+    weaponContainer.add(clubGroup);
+    weaponModels.push(clubGroup);
+
+    // Weapon 3: Honey Blaster / Cannon
+    const honeyGunGroup = new THREE.Group();
+    const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 1.6, 12), new THREE.MeshStandardMaterial({ color: 0x78350f }));
+    barrel.rotation.x = Math.PI / 2;
+    barrel.position.z = -0.8;
+    const honeyJar = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 0.6, 12), new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.2, transparent: true, opacity: 0.85 }));
+    honeyJar.position.set(0, 0.25, -0.6);
+    honeyGunGroup.add(barrel, honeyJar);
+    honeyGunGroup.visible = false;
+    weaponContainer.add(honeyGunGroup);
+    weaponModels.push(honeyGunGroup);
+
+    // Active Weapon State
+    let activeWeaponIndex = 0;
+    let isAttacking = false;
+    let attackProgress = 0;
+    let attackCooldown = false;
+
+    function switchWeapon(index) {
+      if (index === activeWeaponIndex || isAttacking) return;
+      weaponModels[activeWeaponIndex].visible = false;
+      activeWeaponIndex = index;
+      weaponModels[activeWeaponIndex].visible = true;
+
+      // Update UI
+      document.querySelectorAll('.weapon-slot').forEach((el, idx) => {
+        if (idx === index) el.classList.add('active');
+        else el.classList.remove('active');
+      });
+      playSound('swing');
+    }
+
+    /* =========================================================================
+       7. HONEY PROJECTILES & IMPACT PARTICLES
+       ========================================================================= */
+    const honeyProjectiles = [];
+    const particles = [];
+
+    function spawnHoneyBlob(pos, dir) {
+      const pGeo = new THREE.SphereGeometry(0.3, 12, 12);
+      const pMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.1, emissive: 0xd97706, emissiveIntensity: 0.4 });
+      const mesh = new THREE.Mesh(pGeo, pMat);
+      mesh.position.copy(pos);
+      scene.add(mesh);
+
+      honeyProjectiles.push({
+        mesh: mesh,
+        dir: dir.clone().normalize(),
+        speed: 35.0,
+        life: 2.5
+      });
+      playSound('shoot');
+    }
+
+    function spawnHitParticles(pos, colorHex) {
+      const count = 18;
+      const pGeo = new THREE.SphereGeometry(0.12, 6, 6);
+      const pMat = new THREE.MeshBasicMaterial({ color: colorHex });
+
+      for (let i = 0; i < count; i++) {
+        const p = new THREE.Mesh(pGeo, pMat);
+        p.position.copy(pos);
+        const vel = new THREE.Vector3(
+          (Math.random() - 0.5) * 8,
+          Math.random() * 6 + 2,
+          (Math.random() - 0.5) * 8
+        );
+        scene.add(p);
+        particles.push({ mesh: p, vel: vel, life: 0.6 });
+      }
+    }
+
+    /* =========================================================================
+       8. PLAYER CONTROLS (FPS MOUSE LOOK & TOUCH JOYSTICK)
+       ========================================================================= */
+    const keys = {};
+    let yaw = 0;
+    let pitch = 0;
+    let playerHp = 100;
+
+    // First Person Pointer Lock Look
+    document.addEventListener('keydown', e => {
+      keys[e.code] = true;
+      if (e.code === 'Digit1') switchWeapon(0);
+      if (e.code === 'Digit2') switchWeapon(1);
+      if (e.code === 'Digit3') switchWeapon(2);
+    });
+    document.addEventListener('keyup', e => keys[e.code] = false);
+
+    canvas.addEventListener('click', () => {
+      if (document.pointerLockElement !== canvas) {
+        canvas.requestPointerLock();
+      } else {
+        performAttack();
+      }
+    });
+
+    document.addEventListener('mousemove', e => {
+      if (document.pointerLockElement === canvas) {
+        yaw -= e.movementX * 0.0025;
+        pitch -= e.movementY * 0.0025;
+        pitch = Math.max(-Math.PI / 2.5, Math.min(Math.PI / 2.5, pitch));
+
+        fpsRig.rotation.y = yaw;
+        camera.rotation.x = pitch;
+      }
+    });
+
+    // Mouse Wheel weapon switch
+    document.addEventListener('wheel', e => {
+      if (e.deltaY > 0) switchWeapon((activeWeaponIndex + 1) % 3);
+      else switchWeapon((activeWeaponIndex + 2) % 3);
+    });
+
+    // Touch Virtual Joystick Logic for Mobile
+    let touchMoveX = 0, touchMoveY = 0;
+    const joystickZone = document.getElementById('joystick-zone');
+    const joystickKnob = document.getElementById('joystick-knob');
+
+    if (joystickZone) {
+      let touchId = null;
+      joystickZone.addEventListener('touchstart', e => {
+        const touch = e.changedTouches[0];
+        touchId = touch.identifier;
+      });
+      joystickZone.addEventListener('touchmove', e => {
+        for (let t of e.changedTouches) {
+          if (t.identifier === touchId) {
+            const rect = joystickZone.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            let dx = t.clientX - centerX;
+            let dy = t.clientY - centerY;
+            const dist = Math.hypot(dx, dy);
+            const maxR = 40;
+            if (dist > maxR) { dx = (dx / dist) * maxR; dy = (dy / dist) * maxR; }
+            joystickKnob.style.transform = `translate(${dx}px, ${dy}px)`;
+            touchMoveX = dx / maxR;
+            touchMoveY = dy / maxR;
+          }
+        }
+      });
+      const resetJoystick = () => {
+        touchMoveX = 0; touchMoveY = 0;
+        joystickKnob.style.transform = `translate(0px, 0px)`;
+      };
+      joystickZone.addEventListener('touchend', resetJoystick);
+      joystickZone.addEventListener('touchcancel', resetJoystick);
+    }
+
+    document.getElementById('touch-attack-btn')?.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      performAttack();
+    });
+
+    document.getElementById('start-btn').addEventListener('click', () => {
+      document.getElementById('start-screen').classList.add('hidden');
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      canvas.requestPointerLock();
+    });
+
+    /* =========================================================================
+       9. COMBAT & ATTACK EXECUTION LOGIC
+       ========================================================================= */
+    function performAttack() {
+      if (attackCooldown) return;
+      isAttacking = true;
+      attackProgress = 0;
+      attackCooldown = true;
+
+      if (activeWeaponIndex === 2) { // Honey Cannon Ranged Shot
+        const firePos = new THREE.Vector3();
+        weaponContainer.getWorldPosition(firePos);
+        const fireDir = new THREE.Vector3();
+        camera.getWorldDirection(fireDir);
+        spawnHoneyBlob(firePos, fireDir);
+        setTimeout(() => attackCooldown = false, 400);
+      } else {
+        playSound('swing');
+        setTimeout(() => attackCooldown = false, activeWeaponIndex === 0 ? 320 : 600);
+      }
+    }
+
+    function checkMeleeHit() {
+      const raycaster = new THREE.Raycaster();
+      raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+
+      const reach = activeWeaponIndex === 0 ? 4.5 : 3.8;
+      const damage = activeWeaponIndex === 0 ? 35 : 70;
+
+      activeEnemies.forEach(enemy => {
+        if (enemy.isDead) return;
+        const dist = fpsRig.position.distanceTo(enemy.mesh.position);
+        if (dist <= reach) {
+          const enemyPos = enemy.mesh.position.clone();
+          const dirToEnemy = enemyPos.clone().sub(fpsRig.position).normalize();
+          const camDir = new THREE.Vector3();
+          camera.getWorldDirection(camDir);
+
+          if (camDir.dot(dirToEnemy) > 0.6) { // Facing enemy
+            enemy.hp -= damage;
+            spawnHitParticles(enemy.mesh.position.clone().add(new THREE.Vector3(0, 1, 0)), enemy.data.color);
+            playSound('hit');
+            playSound('squeak');
+
+            // Knockback
+            enemy.mesh.position.add(dirToEnemy.multiplyScalar(1.5));
+
+            if (enemy.hp <= 0) {
+              enemy.isDead = true;
+              scene.remove(enemy.mesh);
             }
-            playVictory() {
-                if (!this.ctx) return;
-                const notes = [261.63, 329.63, 392.00, 523.25];
-                notes.forEach((freq, idx) => {
-                    setTimeout(() => {
-                        const osc = this.ctx.createOscillator();
-                        const gain = this.ctx.createGain();
-                        osc.type = 'triangle';
-                        osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
-                        gain.gain.setValueAtTime(0.4, this.ctx.currentTime);
-                        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.4);
-                        osc.connect(gain);
-                        gain.connect(this.ctx.destination);
-                        osc.start();
-                        osc.stop(this.ctx.currentTime + 0.4);
-                    }, idx * 150);
-                });
-            }
+            updateHUDTarget(enemy);
+          }
+        }
+      });
+    }
+
+    function updateHUDTarget(enemy) {
+      const targetCard = document.getElementById('target-card');
+      const targetAvatar = document.getElementById('target-avatar');
+      const targetName = document.getElementById('target-name');
+      const targetHpBar = document.getElementById('target-hp-bar');
+
+      targetCard.style.opacity = '1';
+      targetAvatar.textContent = enemy.data.icon;
+      targetName.textContent = enemy.data.name;
+      const pct = Math.max(0, (enemy.hp / enemy.maxHp) * 100);
+      targetHpBar.style.width = `${pct}%`;
+
+      clearTimeout(window.targetTimeout);
+      window.targetTimeout = setTimeout(() => {
+        targetCard.style.opacity = '0';
+      }, 3000);
+    }
+
+    /* =========================================================================
+       10. RADAR MINIMAP RENDERER
+       ========================================================================= */
+    const minimapCanvas = document.getElementById('minimap');
+    const miniCtx = minimapCanvas.getContext('2d');
+    minimapCanvas.width = 160;
+    minimapCanvas.height = 160;
+
+    function updateMinimap() {
+      miniCtx.clearRect(0, 0, 160, 160);
+      const cx = 80, cy = 80;
+      const scale = 0.75;
+
+      // Draw Enemies Blips
+      activeEnemies.forEach(enemy => {
+        if (enemy.isDead) return;
+        const dx = (enemy.mesh.position.x - fpsRig.position.x) * scale;
+        const dz = (enemy.mesh.position.z - fpsRig.position.z) * scale;
+
+        if (Math.hypot(dx, dz) < 72) {
+          miniCtx.fillStyle = '#ef4444';
+          miniCtx.beginPath();
+          miniCtx.arc(cx + dx, cy + dz, 4, 0, Math.PI * 2);
+          miniCtx.fill();
+        }
+      });
+    }
+
+    /* =========================================================================
+       11. MAIN GAME LOOP (PLAYER MOVEMENT, AI RUNNING ANIMATIONS, COLLISIONS)
+       ========================================================================= */
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const delta = Math.min(clock.getDelta(), 0.1);
+
+      /* --- 1. PLAYER FPS MOVEMENT WITH IMPASSABLE COLLISIONS --- */
+      const moveSpeed = 12.0 * delta;
+      let moveDir = new THREE.Vector3();
+
+      if (keys['KeyW'] || keys['ArrowUp']) moveDir.z -= 1;
+      if (keys['KeyS'] || keys['ArrowDown']) moveDir.z += 1;
+      if (keys['KeyA'] || keys['ArrowLeft']) moveDir.x -= 1;
+      if (keys['KeyD'] || keys['ArrowRight']) moveDir.x += 1;
+
+      // Apply mobile joystick input
+      if (touchMoveY !== 0 || touchMoveX !== 0) {
+        moveDir.z = touchMoveY;
+        moveDir.x = touchMoveX;
+      }
+
+      if (moveDir.lengthSq() > 0) {
+        moveDir.normalize();
+        // Transform direction to camera yaw
+        const forward = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
+        const side = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
+
+        const targetVel = forward.multiplyScalar(-moveDir.z).add(side.multiplyScalar(moveDir.x)).multiplyScalar(moveSpeed);
+
+        // Slide Collision Resolution along X and Z axes
+        const nextX = fpsRig.position.x + targetVel.x;
+        const nextZ = fpsRig.position.z + targetVel.z;
+
+        if (!checkCollision(nextX, fpsRig.position.z, 0.9)) {
+          fpsRig.position.x = nextX;
+        }
+        if (!checkCollision(fpsRig.position.x, nextZ, 0.9)) {
+          fpsRig.position.z = nextZ;
         }
 
-        const audioFX = new SoundEngine();
+        // FPS Head & Hand Walk Bobbing
+        const bob = Math.sin(clock.getElapsedTime() * 12) * 0.04;
+        weaponContainer.position.y = -0.45 + bob;
+      }
 
-        // Function to produce custom 2D face textures for each distinct Smesharik character
-        function createCharacterFaceTexture(type) {
-            const canvas = document.createElement('canvas');
-            canvas.width = 512;
-            canvas.height = 512;
-            const ctx = canvas.getContext('2d');
+      /* --- 2. WEAPON ATTACK ANIMATIONS --- */
+      if (isAttacking) {
+        attackProgress += delta * 7.0;
+        if (activeWeaponIndex === 0) { // Pitchfork Thrust
+          weaponContainer.position.z = -0.6 - Math.sin(attackProgress * Math.PI) * 0.7;
+          if (attackProgress >= 0.5 && attackProgress - delta * 7.0 < 0.5) checkMeleeHit();
+        } else if (activeWeaponIndex === 1) { // Club Overhead Smash
+          weaponContainer.rotation.x = Math.sin(attackProgress * Math.PI) * 0.9;
+          weaponContainer.position.z = -0.6 - Math.sin(attackProgress * Math.PI) * 0.3;
+          if (attackProgress >= 0.5 && attackProgress - delta * 7.0 < 0.5) checkMeleeHit();
+        } else if (activeWeaponIndex === 2) { // Honey Cannon Recoil
+          weaponContainer.position.z = -0.6 + Math.sin(attackProgress * Math.PI) * 0.3;
+        }
 
-            // Fill background with base color matching character
-            let baseColor = '#ffffff';
-            if (type === 'krosh') baseColor = '#50b4ff';
-            else if (type === 'chiko') baseColor = '#b440a0';
-            else if (type === 'nyusha') baseColor = '#ff78b4';
-            else if (type === 'barash') baseColor = '#c8a0e0';
-            else if (type === 'losyash') baseColor = '#ff9620';
-            else if (type === 'pin') baseColor = '#1e2430';
-            else if (type === 'karych') baseColor = '#1e3264';
-            else if (type === 'sovunya') baseColor = '#8040a0';
+        if (attackProgress >= 1.0) {
+          isAttacking = false;
+          weaponContainer.position.set(0.35, -0.45, -0.6);
+          weaponContainer.rotation.set(0, 0, 0);
+        }
+      }
 
-            ctx.fillStyle = baseColor;
-            ctx.fillRect(0, 0, 512, 512);
+      /* --- 3. HONEY PROJECTILES PHYSICS & IMPACTS --- */
+      for (let i = honeyProjectiles.length - 1; i >= 0; i--) {
+        const proj = honeyProjectiles[i];
+        proj.mesh.position.addScaledVector(proj.dir, proj.speed * delta);
+        proj.life -= delta;
 
-            // Front face region centered around (256, 256)
-            ctx.save();
+        // Collision with map obstacles
+        if (checkCollision(proj.mesh.position.x, proj.mesh.position.z, 0.3) || proj.life <= 0) {
+          spawnHitParticles(proj.mesh.position, 0xf59e0b);
+          playSound('splat');
+          scene.remove(proj.mesh);
+          honeyProjectiles.splice(i, 1);
+          continue;
+        }
 
-            if (type === 'krosh') {
-                // Krosh: Huge wide cartoon eyes, black pupils, happy open mouth with two front bunny teeth
-                // White eye bases
-                ctx.fillStyle = '#ffffff';
-                ctx.beginPath(); ctx.ellipse(190, 210, 45, 55, 0, 0, Math.PI * 2); ctx.fill();
-                ctx.beginPath(); ctx.ellipse(322, 210, 45, 55, 0, 0, Math.PI * 2); ctx.fill();
-                // Pupils
-                ctx.fillStyle = '#000000';
-                ctx.beginPath(); ctx.arc(205, 210, 18, 0, Math.PI * 2); ctx.fill();
-                ctx.beginPath(); ctx.arc(307, 210, 18, 0, Math.PI * 2); ctx.fill();
-                // Highlights
-                ctx.fillStyle = '#ffffff';
-                ctx.beginPath(); ctx.arc(210, 205, 6, 0, Math.PI * 2); ctx.fill();
-                ctx.beginPath(); ctx.arc(312, 205, 6, 0, Math.PI * 2); ctx.fill();
-                // Mouth
-                ctx.fillStyle = '#800010';
-                ctx.beginPath(); ctx.arc(256, 290, 50, 0, Math.PI); ctx.fill();
-                // Teeth
-                ctx.fillStyle = '#ffffff';
-                ctx.fillRect(238, 290, 16, 22);
-                ctx.fillRect(258, 290, 16, 22);
-                ctx.strokeStyle = '#cccccc'; ctx.lineWidth = 2;
-                ctx.strokeRect(238, 290, 16, 22);
-                ctx.strokeRect(258, 290, 16, 22);
-            } 
-            else if (type === 'chiko') {
-                // Chiko (Hedgehog): Big round black-rimmed glasses framing eyes, timid smile
-                // Glasses rims
-                ctx.fillStyle = '#ffffff';
-                ctx.beginPath(); ctx.arc(180, 230, 50, 0, Math.PI * 2); ctx.fill();
-                ctx.beginPath(); ctx.arc(332, 230, 50, 0, Math.PI * 2); ctx.fill();
-                // Pupils
-                ctx.fillStyle = '#000000';
-                ctx.beginPath(); ctx.arc(190, 230, 16, 0, Math.PI * 2); ctx.fill();
-                ctx.beginPath(); ctx.arc(322, 230, 16, 0, Math.PI * 2); ctx.fill();
-                // Glasses frames
-                ctx.lineWidth = 14;
-                ctx.strokeStyle = '#111111';
-                ctx.beginPath(); ctx.arc(180, 230, 54, 0, Math.PI * 2); ctx.stroke();
-                ctx.beginPath(); ctx.arc(332, 230, 54, 0, Math.PI * 2); ctx.stroke();
-                // Bridge
-                ctx.beginPath(); ctx.moveTo(234, 230); ctx.lineTo(278, 230); ctx.stroke();
-                // Small nose
-                ctx.fillStyle = '#401030';
-                ctx.beginPath(); ctx.arc(256, 300, 12, 0, Math.PI * 2); ctx.fill();
-                // Smile line
-                ctx.strokeStyle = '#222222'; ctx.lineWidth = 6;
-                ctx.beginPath(); ctx.arc(256, 320, 25, 0.2, Math.PI - 0.2); ctx.stroke();
+        // Hit Detection against Enemies
+        for (let enemy of activeEnemies) {
+          if (enemy.isDead) continue;
+          if (proj.mesh.position.distanceTo(enemy.mesh.position) < 1.8) {
+            enemy.hp -= 45;
+            spawnHitParticles(enemy.mesh.position, 0xf59e0b);
+            playSound('hit');
+            playSound('squeak');
+            if (enemy.hp <= 0) {
+              enemy.isDead = true;
+              scene.remove(enemy.mesh);
             }
-            else if (type === 'nyusha') {
-                // Nyusha (Pig): Glamorous eyes with lashes, pink pig snout with 2 nostrils, cheeks
-                // Eyes
-                ctx.fillStyle = '#ffffff';
-                ctx.beginPath(); ctx.ellipse(190, 210, 40, 48, 0, 0, Math.PI * 2); ctx.fill();
-                ctx.beginPath(); ctx.ellipse(322, 210, 40, 48, 0, 0, Math.PI * 2); ctx.fill();
-                ctx.fillStyle = '#221100';
-                ctx.beginPath(); ctx.arc(200, 210, 16, 0, Math.PI * 2); ctx.fill();
-                ctx.beginPath(); ctx.arc(312, 210, 16, 0, Math.PI * 2); ctx.fill();
-                // Eyelashes
-                ctx.strokeStyle = '#000000'; ctx.lineWidth = 5;
-                ctx.beginPath(); ctx.moveTo(160, 180); ctx.lineTo(145, 165); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(180, 170); ctx.lineTo(175, 150); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(352, 180); ctx.lineTo(367, 165); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(332, 170); ctx.lineTo(337, 150); ctx.stroke();
-                // Pig Snout
-                ctx.fillStyle = '#ff4090';
-                ctx.beginPath(); ctx.ellipse(256, 285, 42, 32, 0, 0, Math.PI * 2); ctx.fill();
-                ctx.fillStyle = '#a01050';
-                ctx.beginPath(); ctx.ellipse(240, 285, 10, 14, 0, 0, Math.PI * 2); ctx.fill();
-                ctx.beginPath(); ctx.ellipse(272, 285, 10, 14, 0, 0, Math.PI * 2); ctx.fill();
-                // Blush
-                ctx.fillStyle = 'rgba(255, 50, 120, 0.35)';
-                ctx.beginPath(); ctx.arc(130, 270, 30, 0, Math.PI * 2); ctx.fill();
-                ctx.beginPath(); ctx.arc(382, 270, 30, 0, Math.PI * 2); ctx.fill();
-            }
-            else if (type === 'barash') {
-                // Barash (Ram): Sleepy/poetic eyes, small nose, pink cheeks
-                ctx.fillStyle = '#ffffff';
-                ctx.beginPath(); ctx.ellipse(195, 220, 38, 45, 0, 0, Math.PI * 2); ctx.fill();
-                ctx.beginPath(); ctx.ellipse(317, 220, 38, 45, 0, 0, Math.PI * 2); ctx.fill();
-                ctx.fillStyle = '#331133';
-                ctx.beginPath(); ctx.arc(205, 225, 15, 0, Math.PI * 2); ctx.fill();
-                ctx.beginPath(); ctx.arc(307, 225, 15, 0, Math.PI * 2); ctx.fill();
-                // Half-closed sleepy eyelids
-                ctx.fillStyle = '#c8a0e0';
-                ctx.beginPath(); ctx.rect(150, 170, 90, 35); ctx.fill();
-                ctx.beginPath(); ctx.rect(272, 170, 90, 35); ctx.fill();
-                // Nose/mouth
-                ctx.fillStyle = '#603060';
-                ctx.beginPath(); ctx.arc(256, 285, 10, 0, Math.PI * 2); ctx.fill();
-                ctx.strokeStyle = '#603060'; ctx.lineWidth = 4;
-                ctx.beginPath(); ctx.moveTo(256, 295); ctx.lineTo(256, 310); ctx.stroke();
-            }
-            else if (type === 'losyash') {
-                // Losyash (Elk): Large intelligent eyes, dark brown oval muzzle
-                // Muzzle patch
-                ctx.fillStyle = '#d07010';
-                ctx.beginPath(); ctx.ellipse(256, 310, 75, 55, 0, 0, Math.PI * 2); ctx.fill();
-                // Eyes
-                ctx.fillStyle = '#ffffff';
-                ctx.beginPath(); ctx.ellipse(190, 210, 42, 50, 0, 0, Math.PI * 2); ctx.fill();
-                ctx.beginPath(); ctx.ellipse(322, 210, 42, 50, 0, 0, Math.PI * 2); ctx.fill();
-                ctx.fillStyle = '#111111';
-                ctx.beginPath(); ctx.arc(200, 210, 16, 0, Math.PI * 2); ctx.fill();
-                ctx.beginPath(); ctx.arc(312, 210, 16, 0, Math.PI * 2); ctx.fill();
-                // Nose
-                ctx.fillStyle = '#3a1a00';
-                ctx.beginPath(); ctx.ellipse(256, 290, 22, 15, 0, 0, Math.PI * 2); ctx.fill();
-            }
-            else if (type === 'pin') {
-                // Pin (Penguin): White tummy & face mask, eyes
-                ctx.fillStyle = '#ffffff';
-                ctx.beginPath(); ctx.ellipse(256, 270, 110, 130, 0, 0, Math.PI * 2); ctx.fill();
-                // Eyes
-                ctx.beginPath(); ctx.ellipse(215, 210, 28, 35, 0, 0, Math.PI * 2); ctx.fill();
-                ctx.beginPath(); ctx.ellipse(297, 210, 28, 35, 0, 0, Math.PI * 2); ctx.fill();
-                ctx.fillStyle = '#000000';
-                ctx.beginPath(); ctx.arc(220, 210, 12, 0, Math.PI * 2); ctx.fill();
-                ctx.beginPath(); ctx.arc(292, 210, 12, 0, Math.PI * 2); ctx.fill();
-            }
-            else if (type === 'karych') {
-                // Kar-Karych: Refined eyes, white chest patch
-                ctx.fillStyle = '#ffffff';
-                ctx.beginPath(); ctx.ellipse(256, 330, 80, 90, 0, 0, Math.PI * 2); ctx.fill();
-                // Eyes
-                ctx.beginPath(); ctx.ellipse(195, 210, 36, 44, 0, 0, Math.PI * 2); ctx.fill();
-                ctx.beginPath(); ctx.ellipse(317, 210, 36, 44, 0, 0, Math.PI * 2); ctx.fill();
-                ctx.fillStyle = '#111111';
-                ctx.beginPath(); ctx.arc(205, 210, 14, 0, Math.PI * 2); ctx.fill();
-                ctx.beginPath(); ctx.arc(307, 210, 14, 0, Math.PI * 2); ctx.fill();
-            }
-            else if (type === 'sovunya') {
-                // Sovunya: Owl face ring, big expressive eyes
-                ctx.fillStyle = '#f0d0ff';
-                ctx.beginPath(); ctx.ellipse(256, 260, 120, 100, 0, 0, Math.PI * 2); ctx.fill();
-                // Eyes
-                ctx.fillStyle = '#ffffff';
-                ctx.beginPath(); ctx.arc(185, 220, 48, 0, Math.PI * 2); ctx.fill();
-                ctx.beginPath(); ctx.arc(327, 220, 48, 0, Math.PI * 2); ctx.fill();
-                ctx.fillStyle = '#220033';
-                ctx.beginPath(); ctx.arc(195, 220, 18, 0, Math.PI * 2); ctx.fill();
-                ctx.beginPath(); ctx.arc(317, 220, 18, 0, Math.PI * 2); ctx.fill();
-            }
+            updateHUDTarget(enemy);
 
-            ctx.restore();
+            scene.remove(proj.mesh);
+            honeyProjectiles.splice(i, 1);
+            break;
+          }
+        }
+      }
 
-            const texture = new THREE.CanvasTexture(canvas);
-            texture.needsUpdate = true;
-            return texture;
+      /* --- 4. ENEMY AI & RUNNING LIMB ANIMATIONS --- */
+      let remainingCount = 0;
+
+      activeEnemies.forEach(enemy => {
+        if (enemy.isDead) return;
+        remainingCount++;
+
+        const distToPlayer = enemy.mesh.position.distanceTo(fpsRig.position);
+        let currentSpeed = enemy.speed * 0.4;
+
+        // Panic Fleeing AI
+        if (distToPlayer < 22) {
+          currentSpeed = enemy.speed * 1.2; // Sprint when close to Kopatych
+          const fleeDir = enemy.mesh.position.clone().sub(fpsRig.position).normalize();
+          enemy.targetX = enemy.mesh.position.x + fleeDir.x * 10;
+          enemy.targetZ = enemy.mesh.position.z + fleeDir.z * 10;
+        } else {
+          // Wandering logic
+          enemy.changeDirTimer -= delta;
+          if (enemy.changeDirTimer <= 0) {
+            enemy.targetX = enemy.mesh.position.x + (Math.random() - 0.5) * 30;
+            enemy.targetZ = enemy.mesh.position.z + (Math.random() - 0.5) * 30;
+            enemy.changeDirTimer = 3 + Math.random() * 4;
+          }
         }
 
-        // Game Engine Variables
-        let scene, camera, renderer;
-        let clock = new THREE.Clock();
-        let targets = [];
-        let hitParticles = [];
-        let villageObjects = [];
+        // Move towards target position with Collision sliding
+        const stepDir = new THREE.Vector3(enemy.targetX - enemy.mesh.position.x, 0, enemy.targetZ - enemy.mesh.position.z);
+        if (stepDir.lengthSq() > 0.5) {
+          stepDir.normalize();
+          const moveX = stepDir.x * currentSpeed * delta;
+          const moveZ = stepDir.z * currentSpeed * delta;
 
-        // Player / First Person View Variables
-        let player = {
-            position: new THREE.Vector3(0, 1.5, 0),
-            velocity: new THREE.Vector3(),
-            yaw: 0,
-            pitch: 0,
-            speed: 9.0,
-            isAttacking: false,
-            attackTimer: 0
-        };
+          if (!checkCollision(enemy.mesh.position.x + moveX, enemy.mesh.position.z, 0.9)) {
+            enemy.mesh.position.x += moveX;
+          }
+          if (!checkCollision(enemy.mesh.position.x, enemy.mesh.position.z + moveZ, 0.9)) {
+            enemy.mesh.position.z += moveZ;
+          }
 
-        // Inputs
-        const keys = { w: false, a: false, s: false, d: false, shift: false };
-        let joystickVector = { x: 0, y: 0 };
-        let isPointerLocked = false;
+          // Orient enemy towards movement direction
+          enemy.mesh.rotation.y = Math.atan2(stepDir.x, stepDir.z);
 
-        // View Model (First Person Pitchfork & Bear Arms)
-        let viewModelGroup, pitchforkMesh, leftArmMesh, rightArmMesh;
+          // Dynamic Limb Running Animation
+          enemy.walkCycle += delta * currentSpeed * 2.8;
+          const swing = Math.sin(enemy.walkCycle) * 0.75;
 
-        // Init Game
-        function initEngine() {
-            const canvas = document.getElementById('game-canvas');
-            scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x87ceeb); // Bright sky blue
-            scene.fog = new THREE.FogExp2(0x87ceeb, 0.012);
+          enemy.legL.rotation.x = swing;
+          enemy.legR.rotation.x = -swing;
+          enemy.armL.rotation.x = -swing * 0.9;
+          enemy.armR.rotation.x = swing * 0.9;
 
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 300);
-            
-            renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-            renderer.shadowMap.enabled = true;
-            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-
-            // Lighting
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.65);
-            scene.add(ambientLight);
-
-            const sunLight = new THREE.DirectionalLight(0xfff5ea, 0.9);
-            sunLight.position.set(60, 100, 40);
-            sunLight.castShadow = true;
-            sunLight.shadow.mapSize.width = 2048;
-            sunLight.shadow.mapSize.height = 2048;
-            sunLight.shadow.camera.near = 0.5;
-            sunLight.shadow.camera.far = 250;
-            const d = 80;
-            sunLight.shadow.camera.left = -d;
-            sunLight.shadow.camera.right = d;
-            sunLight.shadow.camera.top = d;
-            sunLight.shadow.camera.bottom = -d;
-            scene.add(sunLight);
-
-            // Construct 3D World Environment
-            buildVillageEnvironment();
-
-            // Construct First Person View Model (Arms & Pitchfork attached to camera)
-            buildFirstPersonViewModel();
-
-            // Spawn 8 Authentic Smeshariki Targets
-            spawnSmesharikiTargets();
-
-            // Setup Listeners
-            setupInputListeners();
-
-            // Window Resize
-            window.addEventListener('resize', onWindowResize);
-
-            // Start Main Game Loop
-            animate();
+          // Body vertical running bounce
+          enemy.mesh.position.y = 1.6 + Math.abs(Math.sin(enemy.walkCycle * 2)) * 0.22;
+        } else {
+          // Idle state reset limbs
+          enemy.legL.rotation.x = 0;
+          enemy.legR.rotation.x = 0;
+          enemy.armL.rotation.x = 0;
+          enemy.armR.rotation.x = 0;
+          enemy.mesh.position.y = 1.6;
         }
+      });
 
-        function buildFirstPersonViewModel() {
-            viewModelGroup = new THREE.Group();
-            camera.add(viewModelGroup);
-            scene.add(camera);
+      // Update Targets Left Counter
+      document.getElementById('targets-left').textContent = `${remainingCount} / ${activeEnemies.length}`;
 
-            // Fur Material for Kopatych Bear Paws
-            const furMaterial = new THREE.MeshLambertMaterial({ color: 0x7a431d });
-            const clawMaterial = new THREE.MeshLambertMaterial({ color: 0x221105 });
-            const metalMaterial = new THREE.MeshStandardMaterial({ color: 0xc0c5ce, roughness: 0.3, metalness: 0.8 });
-            const woodMaterial = new THREE.MeshLambertMaterial({ color: 0x5c3a21 });
+      if (remainingCount === 0) {
+        document.getElementById('victory-screen').classList.remove('hidden');
+        if (document.pointerLockElement === canvas) document.exitPointerLock();
+      }
 
-            // Right Arm / Paw holding pitchfork
-            const rightPawGroup = new THREE.Group();
-            const armGeo = new THREE.CylinderGeometry(0.12, 0.16, 0.9, 12);
-            const armMesh = new THREE.Mesh(armGeo, furMaterial);
-            armMesh.rotation.x = Math.PI / 3;
-            rightPawGroup.add(armMesh);
-
-            // Paw sphere
-            const handGeo = new THREE.SphereGeometry(0.18, 12, 12);
-            const handMesh = new THREE.Mesh(handGeo, furMaterial);
-            handMesh.position.set(0, 0.35, -0.2);
-            rightPawGroup.add(handMesh);
-
-            // Claws
-            for (let i = -2; i <= 2; i++) {
-                const clawGeo = new THREE.ConeGeometry(0.025, 0.12, 8);
-                const claw = new THREE.Mesh(clawGeo, clawMaterial);
-                claw.rotation.x = Math.PI / 2;
-                claw.position.set(i * 0.05, 0.42, -0.35);
-                rightPawGroup.add(claw);
-            }
-
-            rightPawGroup.position.set(0.35, -0.35, -0.5);
-            rightPawGroup.rotation.y = -0.2;
-            viewModelGroup.add(rightPawGroup);
-
-            // Pitchfork Weapon
-            pitchforkMesh = new THREE.Group();
-
-            // Long wooden handle
-            const handleGeo = new THREE.CylinderGeometry(0.03, 0.03, 2.2, 10);
-            const handle = new THREE.Mesh(handleGeo, woodMaterial);
-            handle.rotation.x = Math.PI / 2;
-            pitchforkMesh.add(handle);
-
-            // Metallic Head Connector
-            const headBaseGeo = new THREE.BoxGeometry(0.32, 0.04, 0.08);
-            const headBase = new THREE.Mesh(headBaseGeo, metalMaterial);
-            headBase.position.set(0, 0, -1.1);
-            pitchforkMesh.add(headBase);
-
-            // 3 Sharp Tines
-            for (let i = -1; i <= 1; i++) {
-                const tineGeo = new THREE.ConeGeometry(0.02, 0.5, 8);
-                const tine = new THREE.Mesh(tineGeo, metalMaterial);
-                tine.rotation.x = -Math.PI / 2;
-                tine.position.set(i * 0.12, 0, -1.35);
-                pitchforkMesh.add(tine);
-            }
-
-            pitchforkMesh.position.set(0.32, -0.25, -0.4);
-            pitchforkMesh.rotation.set(-0.1, -0.15, 0.05);
-            viewModelGroup.add(pitchforkMesh);
+      /* --- 5. PARTICLES ANIMATION --- */
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.mesh.position.addScaledVector(p.vel, delta);
+        p.vel.y -= 15 * delta; // Gravity
+        p.life -= delta;
+        if (p.life <= 0) {
+          scene.remove(p.mesh);
+          particles.splice(i, 1);
         }
-
-        function buildVillageEnvironment() {
-            // Ground
-            const groundGeo = new THREE.PlaneGeometry(240, 240);
-            const groundMat = new THREE.MeshLambertMaterial({ color: 0x5e9e45 });
-            const ground = new THREE.Mesh(groundGeo, groundMat);
-            ground.rotation.x = -Math.PI / 2;
-            ground.receiveShadow = true;
-            scene.add(ground);
-
-            // Dirt Crossroad Paths
-            const pathMat = new THREE.MeshLambertMaterial({ color: 0xa67c52 });
-            const mainPath1 = new THREE.Mesh(new THREE.PlaneGeometry(16, 200), pathMat);
-            mainPath1.rotation.x = -Math.PI / 2;
-            mainPath1.position.y = 0.02;
-            mainPath1.receiveShadow = true;
-            scene.add(mainPath1);
-
-            const mainPath2 = new THREE.Mesh(new THREE.PlaneGeometry(200, 16), pathMat);
-            mainPath2.rotation.x = -Math.PI / 2;
-            mainPath2.position.y = 0.02;
-            mainPath2.receiveShadow = true;
-            scene.add(mainPath2);
-
-            // Mountain Boundary Ring
-            const mountainMat = new THREE.MeshLambertMaterial({ color: 0x4a5d4e, flatShading: true });
-            for (let i = 0; i < 32; i++) {
-                const angle = (i / 32) * Math.PI * 2;
-                const dist = 110 + Math.random() * 10;
-                const height = 25 + Math.random() * 20;
-                const mountain = new THREE.Mesh(
-                    new THREE.ConeGeometry(22 + Math.random() * 10, height, 5),
-                    mountainMat
-                );
-                mountain.position.set(Math.cos(angle) * dist, height / 2, Math.sin(angle) * dist);
-                scene.add(mountain);
-            }
-
-            // Create Character Themed Houses
-            createHouse(0x8b5a2b, -35, 30, 'Kopatych Farmhouse'); // Kopatych Log Cabin
-            createHouse(0x4090ff, 35, 35, 'Krosh Ear House');     // Krosh House
-            createHouse(0xffd700, -40, -35, 'Losyash Tower');    // Losyash Observatory
-            createHouse(0x708090, 40, -30, 'Pin Workshop');      // Pin Workshop
-
-            // Add Kopatych's Pumpkin Patch
-            for (let x = -48; x <= -38; x += 3.5) {
-                for (let z = 20; z <= 28; z += 3.5) {
-                    const pumpkin = new THREE.Mesh(
-                        new THREE.SphereGeometry(0.7, 10, 8),
-                        new THREE.MeshLambertMaterial({ color: 0xff6600 })
-                    );
-                    pumpkin.scale.set(1.2, 0.9, 1.2);
-                    pumpkin.position.set(x + (Math.random() - 0.5), 0.5, z + (Math.random() - 0.5));
-                    pumpkin.castShadow = true;
-                    scene.add(pumpkin);
-                    villageObjects.push(pumpkin);
-                }
-            }
-
-            // Fences along paths
-            const fenceMat = new THREE.MeshLambertMaterial({ color: 0x6e4a27 });
-            for (let z = -80; z <= 80; z += 10) {
-                if (Math.abs(z) < 12) continue;
-                const post1 = new THREE.Mesh(new THREE.BoxGeometry(0.3, 1.2, 0.3), fenceMat);
-                post1.position.set(-10, 0.6, z);
-                scene.add(post1);
-                const post2 = new THREE.Mesh(new THREE.BoxGeometry(0.3, 1.2, 0.3), fenceMat);
-                post2.position.set(10, 0.6, z);
-                scene.add(post2);
-            }
-
-            // Trees scattered around village
-            for (let i = 0; i < 70; i++) {
-                const rx = (Math.random() - 0.5) * 180;
-                const rz = (Math.random() - 0.5) * 180;
-                // Don't place on center road
-                if (Math.abs(rx) < 12 || Math.abs(rz) < 12) continue;
-                spawnTree(rx, rz);
-            }
-        }
-
-        function createHouse(color, x, z, type) {
-            const group = new THREE.Group();
-            
-            // Base walls
-            const wallMat = new THREE.MeshLambertMaterial({ color: color });
-            const body = new THREE.Mesh(new THREE.BoxGeometry(10, 7, 10), wallMat);
-            body.position.y = 3.5;
-            body.castShadow = true;
-            body.receiveShadow = true;
-            group.add(body);
-
-            // Roof
-            const roofMat = new THREE.MeshLambertMaterial({ color: 0x8b0000 });
-            const roof = new THREE.Mesh(new THREE.ConeGeometry(8.5, 5, 4), roofMat);
-            roof.position.y = 9.5;
-            roof.rotation.y = Math.PI / 4;
-            roof.castShadow = true;
-            group.add(roof);
-
-            // Door
-            const doorMat = new THREE.MeshLambertMaterial({ color: 0x3d2314 });
-            const door = new THREE.Mesh(new THREE.BoxGeometry(2.2, 4, 0.2), doorMat);
-            door.position.set(0, 2, 5.05);
-            group.add(door);
-
-            group.position.set(x, 0, z);
-            scene.add(group);
-            villageObjects.push(body);
-        }
-
-        function spawnTree(x, z) {
-            const group = new THREE.Group();
-            const trunkMat = new THREE.MeshLambertMaterial({ color: 0x4a2e18 });
-            const foliageMat = new THREE.MeshLambertMaterial({ color: 0x2e7d32, flatShading: true });
-
-            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.7, 4, 8), trunkMat);
-            trunk.position.y = 2;
-            trunk.castShadow = true;
-            group.add(trunk);
-
-            const foliage = new THREE.Mesh(new THREE.DodecahedronGeometry(2.8 + Math.random()), foliageMat);
-            foliage.position.y = 5.2;
-            foliage.castShadow = true;
-            group.add(foliage);
-
-            group.position.set(x, 0, z);
-            scene.add(group);
-            villageObjects.push(trunk);
-        }
-
-        function spawnSmesharikiTargets() {
-            const characterConfigs = [
-                { id: 'krosh', name: 'Krosh (Rabbit)', color: 0x50b4ff, hp: 80, speed: 7.5, pos: [20, 15] },
-                { id: 'chiko', name: 'Chiko (Hedgehog)', color: 0xb440a0, hp: 75, speed: 6.2, pos: [-25, 20] },
-                { id: 'nyusha', name: 'Nyusha (Pig)', color: 0xff78b4, hp: 85, speed: 6.8, pos: [30, -25] },
-                { id: 'barash', name: 'Barash (Ram)', color: 0xc8a0e0, hp: 70, speed: 5.8, pos: [-30, -30] },
-                { id: 'losyash', name: 'Losyash (Elk)', color: 0xff9620, hp: 95, speed: 6.5, pos: [-40, -10] },
-                { id: 'pin', name: 'Pin (Penguin)', color: 0x1e2430, hp: 90, speed: 7.0, pos: [45, 10] },
-                { id: 'karych', name: 'Kar-Karych (Crow)', color: 0x1e3264, hp: 80, speed: 6.0, pos: [15, -45] },
-                { id: 'sovunya', name: 'Sovunya (Owl)', color: 0x8040a0, hp: 85, speed: 6.4, pos: [-15, 45] }
-            ];
-
-            characterConfigs.forEach(cfg => {
-                const characterGroup = new THREE.Group();
-
-                // 1. Core Sphere Body
-                const bodyGeo = new THREE.SphereGeometry(1.4, 32, 32);
-                const faceTex = createCharacterFaceTexture(cfg.id);
-                const bodyMat = new THREE.MeshLambertMaterial({
-                    map: faceTex,
-                    color: cfg.color
-                });
-                const bodyMesh = new THREE.Mesh(bodyGeo, bodyMat);
-                bodyMesh.rotation.y = -Math.PI / 2; // Orient texture facing forward
-                bodyMesh.castShadow = true;
-                characterGroup.add(bodyMesh);
-
-                // 2. Character-Specific 3D Accessories
-                const accMat = new THREE.MeshLambertMaterial({ color: 0x222222 });
-
-                if (cfg.id === 'krosh') {
-                    // Long Bunny Ears
-                    const earMat = new THREE.MeshLambertMaterial({ color: 0x50b4ff });
-                    const leftEar = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 2.2, 12), earMat);
-                    leftEar.position.set(-0.5, 2.2, 0);
-                    leftEar.rotation.z = 0.25;
-                    characterGroup.add(leftEar);
-
-                    const rightEar = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 2.2, 12), earMat);
-                    rightEar.position.set(0.5, 2.2, 0);
-                    rightEar.rotation.z = -0.25;
-                    characterGroup.add(rightEar);
-                }
-                else if (cfg.id === 'chiko') {
-                    // Quill Spikes on Back
-                    const quillMat = new THREE.MeshLambertMaterial({ color: 0x4a1040 });
-                    for (let i = 0; i < 16; i++) {
-                        const quill = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.8, 8), quillMat);
-                        const phi = (Math.random() * 0.5 + 0.25) * Math.PI;
-                        const theta = (Math.random() - 0.5) * Math.PI;
-                        quill.position.setFromSphericalCoords(1.4, phi, theta);
-                        quill.lookAt(characterGroup.position);
-                        quill.rotation.x += Math.PI;
-                        characterGroup.add(quill);
-                    }
-                }
-                else if (cfg.id === 'nyusha') {
-                    // Braid / Flower on top
-                    const flowerMat = new THREE.MeshLambertMaterial({ color: 0xff0055 });
-                    const flower = new THREE.Mesh(new THREE.DodecahedronGeometry(0.35), flowerMat);
-                    flower.position.set(0, 1.5, 0);
-                    characterGroup.add(flower);
-                }
-                else if (cfg.id === 'barash') {
-                    // Curly Ram Horns
-                    const hornMat = new THREE.MeshLambertMaterial({ color: 0xddccaa });
-                    const leftHorn = new THREE.Mesh(new THREE.TorusGeometry(0.4, 0.12, 8, 16, Math.PI * 1.3), hornMat);
-                    leftHorn.position.set(-1.3, 0.6, 0);
-                    leftHorn.rotation.y = Math.PI / 2;
-                    characterGroup.add(leftHorn);
-
-                    const rightHorn = new THREE.Mesh(new THREE.TorusGeometry(0.4, 0.12, 8, 16, Math.PI * 1.3), hornMat);
-                    rightHorn.position.set(1.3, 0.6, 0);
-                    rightHorn.rotation.y = -Math.PI / 2;
-                    characterGroup.add(rightHorn);
-                }
-                else if (cfg.id === 'losyash') {
-                    // Branching Antlers
-                    const antlerMat = new THREE.MeshLambertMaterial({ color: 0x5c3a21 });
-                    const leftAntler = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 1.4, 8), antlerMat);
-                    leftAntler.position.set(-0.7, 1.8, 0);
-                    leftAntler.rotation.z = 0.5;
-                    characterGroup.add(leftAntler);
-
-                    const rightAntler = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 1.4, 8), antlerMat);
-                    rightAntler.position.set(0.7, 1.8, 0);
-                    rightAntler.rotation.z = -0.5;
-                    characterGroup.add(rightAntler);
-                }
-                else if (cfg.id === 'pin') {
-                    // Aviator Helmet & Beak
-                    const helmetMat = new THREE.MeshLambertMaterial({ color: 0x553311 });
-                    const helmet = new THREE.Mesh(new THREE.SphereGeometry(1.42, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2.2), helmetMat);
-                    characterGroup.add(helmet);
-
-                    const beakMat = new THREE.MeshLambertMaterial({ color: 0xffaa00 });
-                    const beak = new THREE.Mesh(new THREE.ConeGeometry(0.25, 0.6, 8), beakMat);
-                    beak.rotation.x = Math.PI / 2;
-                    beak.position.set(0, -0.1, 1.5);
-                    characterGroup.add(beak);
-                }
-                else if (cfg.id === 'karych') {
-                    // Top Hat & Beak
-                    const hatMat = new THREE.MeshLambertMaterial({ color: 0x111111 });
-                    const hatBrim = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.9, 0.08, 16), hatMat);
-                    hatBrim.position.set(0, 1.42, 0);
-                    characterGroup.add(hatBrim);
-
-                    const hatTop = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 0.9, 16), hatMat);
-                    hatTop.position.set(0, 1.9, 0);
-                    characterGroup.add(hatTop);
-
-                    const beakMat = new THREE.MeshLambertMaterial({ color: 0xffbb00 });
-                    const beak = new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.7, 8), beakMat);
-                    beak.rotation.x = Math.PI / 2;
-                    beak.position.set(0, 0, 1.55);
-                    characterGroup.add(beak);
-                }
-                else if (cfg.id === 'sovunya') {
-                    // Winter Pom-Pom Cap
-                    const capMat = new THREE.MeshLambertMaterial({ color: 0xdd2266 });
-                    const cap = new THREE.Mesh(new THREE.ConeGeometry(1.2, 1.2, 16), capMat);
-                    cap.position.set(0, 1.8, 0);
-                    characterGroup.add(cap);
-
-                    const pom = new THREE.Mesh(new THREE.SphereGeometry(0.3, 12, 12), new THREE.MeshLambertMaterial({ color: 0xffffff }));
-                    pom.position.set(0, 2.5, 0);
-                    characterGroup.add(pom);
-                }
-
-                // Place target in world
-                characterGroup.position.set(cfg.pos[0], 1.4, cfg.pos[1]);
-                scene.add(characterGroup);
-
-                // Add to internal target tracking array
-                targets.push({
-                    id: cfg.id,
-                    name: cfg.name,
-                    mesh: characterGroup,
-                    bodyMesh: bodyMesh,
-                    hp: cfg.hp,
-                    maxHp: cfg.hp,
-                    speed: cfg.speed,
-                    alive: true,
-                    isPanicking: false,
-                    changeDirTimer: 0,
-                    moveAngle: Math.random() * Math.PI * 2
-                });
-            });
-
-            updateTargetsCountUI();
-        }
-
-        function setupInputListeners() {
-            // Keyboard WASD
-            window.addEventListener('keydown', (e) => {
-                const k = e.key.toLowerCase();
-                if (k === 'w') keys.w = true;
-                if (k === 'a') keys.a = true;
-                if (k === 's') keys.s = true;
-                if (k === 'd') keys.d = true;
-                if (e.key === 'Shift') keys.shift = true;
-            });
-
-            window.addEventListener('keyup', (e) => {
-                const k = e.key.toLowerCase();
-                if (k === 'w') keys.w = false;
-                if (k === 'a') keys.a = false;
-                if (k === 's') keys.s = false;
-                if (k === 'd') keys.d = false;
-                if (e.key === 'Shift') keys.shift = false;
-            });
-
-            // Start & Pointer Lock
-            const startBtn = document.getElementById('start-btn');
-            startBtn.addEventListener('click', () => {
-                audioFX.init();
-                document.getElementById('start-screen').classList.add('hidden');
-                requestPointerLock();
-            });
-
-            document.getElementById('restart-btn').addEventListener('click', () => {
-                location.reload();
-            });
-
-            document.body.addEventListener('click', (e) => {
-                if (e.target.closest('#start-screen') || e.target.closest('#win-screen') || e.target.closest('#mobile-attack-btn')) return;
-                
-                if (!isPointerLocked) {
-                    requestPointerLock();
-                } else {
-                    performPitchforkAttack();
-                }
-            });
-
-            document.addEventListener('pointerlockchange', () => {
-                isPointerLocked = (document.pointerLockElement === document.body);
-            });
-
-            // Mouse Look
-            window.addEventListener('mousemove', (e) => {
-                if (!isPointerLocked) return;
-                const sensitivity = 0.0022;
-                player.yaw -= e.movementX * sensitivity;
-                player.pitch -= e.movementY * sensitivity;
-                player.pitch = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, player.pitch));
-            });
-
-            // Mobile Attack Button
-            document.getElementById('mobile-attack-btn').addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                audioFX.init();
-                performPitchforkAttack();
-            });
-
-            // Mobile Joystick Logic
-            const joystickZone = document.getElementById('joystick-zone');
-            const joystickKnob = document.getElementById('joystick-knob');
-            let joystickActive = false;
-
-            joystickZone.addEventListener('touchstart', (e) => {
-                joystickActive = true;
-            });
-            joystickZone.addEventListener('touchmove', (e) => {
-                if (!joystickActive) return;
-                const rect = joystickZone.getBoundingClientRect();
-                const touch = e.touches[0];
-                const dx = touch.clientX - (rect.left + rect.width / 2);
-                const dy = touch.clientY - (rect.top + rect.height / 2);
-                const maxLen = rect.width / 2;
-                const dist = Math.min(Math.hypot(dx, dy), maxLen);
-                const angle = Math.atan2(dy, dx);
-
-                const knobX = Math.cos(angle) * dist;
-                const knobY = Math.sin(angle) * dist;
-                joystickKnob.style.transform = `translate(${knobX}px, ${knobY}px)`;
-
-                joystickVector.x = knobX / maxLen;
-                joystickVector.y = knobY / maxLen;
-            });
-            const resetJoystick = () => {
-                joystickActive = false;
-                joystickKnob.style.transform = `translate(0px, 0px)`;
-                joystickVector = { x: 0, y: 0 };
-            };
-            joystickZone.addEventListener('touchend', resetJoystick);
-            joystickZone.addEventListener('touchcancel', resetJoystick);
-        }
-
-        function requestPointerLock() {
-            document.body.requestPointerLock();
-        }
-
-        function performPitchforkAttack() {
-            if (player.isAttacking) return;
-            player.isAttacking = true;
-            player.attackTimer = 0;
-            audioFX.playSwing();
-
-            // Check hit against targets using raycaster from camera
-            const raycaster = new THREE.Raycaster();
-            raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
-
-            const aliveMeshes = targets.filter(t => t.alive).map(t => t.bodyMesh);
-            const intersects = raycaster.intersectObjects(aliveMeshes);
-
-            if (intersects.length > 0 && intersects[0].distance < 4.2) {
-                const hitMesh = intersects[0].object;
-                const target = targets.find(t => t.bodyMesh === hitMesh);
-
-                if (target && target.alive) {
-                    audioFX.playHit();
-                    target.hp -= 35;
-                    target.isPanicking = true;
-
-                    // Show Red Hit Marker & Flash Overlay
-                    showHitMarker();
-                    triggerFlashOverlay('rgba(255, 0, 0, 0.2)');
-
-                    // Spawn impact blood/star particles
-                    spawnHitParticles(intersects[0].point, target.mesh.position);
-
-                    // Update HUD Target HP Bar
-                    showTargetHUDInfo(target);
-
-                    if (target.hp <= 0) {
-                        target.alive = false;
-                        scene.remove(target.mesh);
-                        updateTargetsCountUI();
-                        triggerFlashOverlay('rgba(255, 215, 0, 0.35)');
-
-                        if (targets.every(t => !t.alive)) {
-                            audioFX.playVictory();
-                            document.getElementById('win-screen').classList.remove('hidden');
-                            document.exitPointerLock();
-                        }
-                    }
-                }
-            }
-        }
-
-        function showHitMarker() {
-            const marker = document.getElementById('hit-marker');
-            marker.style.opacity = '1';
-            setTimeout(() => { marker.style.opacity = '0'; }, 150);
-        }
-
-        function triggerFlashOverlay(color) {
-            const flash = document.getElementById('flash-overlay');
-            flash.style.background = color;
-            flash.style.opacity = '1';
-            setTimeout(() => { flash.style.opacity = '0'; }, 200);
-        }
-
-        function spawnHitParticles(pos) {
-            for (let i = 0; i < 15; i++) {
-                const p = new THREE.Mesh(
-                    new THREE.DodecahedronGeometry(0.12),
-                    new THREE.MeshBasicMaterial({ color: 0xff3333 })
-                );
-                p.position.copy(pos);
-                p.userData = {
-                    vel: new THREE.Vector3(
-                        (Math.random() - 0.5) * 6,
-                        Math.random() * 6 + 2,
-                        (Math.random() - 0.5) * 6
-                    ),
-                    life: 0.5
-                };
-                scene.add(p);
-                hitParticles.push(p);
-            }
-        }
-
-        function showTargetHUDInfo(target) {
-            const infoBox = document.getElementById('target-info');
-            const nameEl = document.getElementById('target-name');
-            const hpTextEl = document.getElementById('target-hp-text');
-            const hpBarEl = document.getElementById('target-hp-bar');
-
-            nameEl.innerText = target.name;
-            hpTextEl.innerText = `${Math.max(0, target.hp)} / ${target.maxHp}`;
-            hpBarEl.style.width = `${Math.max(0, (target.hp / target.maxHp) * 100)}%`;
-            infoBox.style.opacity = '1';
-
-            clearTimeout(infoBox.hideTimeout);
-            infoBox.hideTimeout = setTimeout(() => {
-                infoBox.style.opacity = '0';
-            }, 3000);
-        }
-
-        function updateTargetsCountUI() {
-            const remaining = targets.filter(t => t.alive).length;
-            document.getElementById('targets-count').innerText = `${remaining} / 8`;
-        }
-
-        function animate() {
-            requestAnimationFrame(animate);
-
-            const delta = Math.min(clock.getDelta(), 0.1);
-            const time = clock.getElapsedTime();
-
-            // 1. Update Player First-Person Movement
-            updatePlayerMovement(delta, time);
-
-            // 2. Update Smeshariki AI Behavior & Panic Movement
-            updateSmesharikiAI(delta);
-
-            // 3. Update Hit Particles
-            updateParticles(delta);
-
-            // 4. Render 3D World Scene
-            renderer.render(scene, camera);
-
-            // 5. Draw Top-Right Radar Minimap
-            drawMinimap();
-        }
-
-        function updatePlayerMovement(delta, time) {
-            // Apply Camera Orientation (Yaw & Pitch)
-            camera.rotation.order = 'YXZ';
-            camera.rotation.y = player.yaw;
-            camera.rotation.x = player.pitch;
-
-            // Calculate movement direction relative to camera yaw
-            const moveDir = new THREE.Vector3();
-            if (keys.w) moveDir.z -= 1;
-            if (keys.s) moveDir.z += 1;
-            if (keys.a) moveDir.x -= 1;
-            if (keys.d) moveDir.x += 1;
-
-            if (joystickVector.x !== 0 || joystickVector.y !== 0) {
-                moveDir.x = joystickVector.x;
-                moveDir.z = joystickVector.y;
-            }
-
-            if (moveDir.lengthSq() > 0) {
-                moveDir.normalize();
-                const currentSpeed = keys.shift ? player.speed * 1.5 : player.speed;
-
-                // Rotate movement vector by player yaw
-                const forward = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), player.yaw);
-                const right = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), player.yaw);
-
-                const finalVelocity = forward.multiplyScalar(-moveDir.z).add(right.multiplyScalar(moveDir.x)).multiplyScalar(currentSpeed);
-                player.position.addScaledVector(finalVelocity, delta);
-
-                // View Bobbing effect
-                viewModelGroup.position.y = Math.sin(time * 12) * 0.03;
-                viewModelGroup.position.x = Math.cos(time * 6) * 0.02;
-            } else {
-                // Subtle breathing sway
-                viewModelGroup.position.y = Math.sin(time * 2) * 0.01;
-                viewModelGroup.position.x = 0;
-            }
-
-            // World Map Boundaries (-110 to 110)
-            player.position.x = Math.max(-105, Math.min(105, player.position.x));
-            player.position.z = Math.max(-105, Math.min(105, player.position.z));
-
-            // Position FPS Camera at Kopatych's Eye Height (1.6m)
-            camera.position.copy(player.position);
-            camera.position.y = 1.6;
-
-            // Attack Pitchfork Thrust Animation
-            if (player.isAttacking) {
-                player.attackTimer += delta * 7;
-                if (player.attackTimer < Math.PI) {
-                    const thrust = Math.sin(player.attackTimer) * 0.55;
-                    pitchforkMesh.position.z = -0.4 - thrust;
-                    pitchforkMesh.rotation.x = -0.1 - thrust * 0.4;
-                } else {
-                    player.isAttacking = false;
-                    pitchforkMesh.position.z = -0.4;
-                    pitchforkMesh.rotation.x = -0.1;
-                }
-            }
-        }
-
-        function updateSmesharikiAI(delta) {
-            targets.forEach(t => {
-                if (!t.alive) return;
-
-                const distToPlayer = t.mesh.position.distanceTo(player.position);
-
-                // Trigger panic when player gets close (< 14 meters)
-                if (distToPlayer < 14) {
-                    t.isPanicking = true;
-                }
-
-                if (t.isPanicking) {
-                    // Flee directly away from player location
-                    const fleeDir = new THREE.Vector3().subVectors(t.mesh.position, player.position).normalize();
-                    fleeDir.y = 0;
-                    t.mesh.position.addScaledVector(fleeDir, t.speed * 1.4 * delta);
-                    t.mesh.rotation.y = Math.atan2(fleeDir.x, fleeDir.z) + Math.PI / 2;
-
-                    // Hop up and down in panic
-                    t.mesh.position.y = 1.4 + Math.abs(Math.sin(clock.getElapsedTime() * 14)) * 0.5;
-
-                    if (distToPlayer > 30) {
-                        t.isPanicking = false;
-                    }
-                } else {
-                    // Casual village wandering AI
-                    t.changeDirTimer -= delta;
-                    if (t.changeDirTimer <= 0) {
-                        t.changeDirTimer = 3 + Math.random() * 4;
-                        t.moveAngle = Math.random() * Math.PI * 2;
-                    }
-
-                    const moveDir = new THREE.Vector3(Math.cos(t.moveAngle), 0, Math.sin(t.moveAngle));
-                    t.mesh.position.addScaledVector(moveDir, t.speed * 0.4 * delta);
-                    t.mesh.rotation.y = Math.atan2(moveDir.x, moveDir.z) + Math.PI / 2;
-                    t.mesh.position.y = 1.4 + Math.abs(Math.sin(clock.getElapsedTime() * 5)) * 0.15;
-                }
-
-                // Map bounds for AI
-                t.mesh.position.x = Math.max(-100, Math.min(100, t.mesh.position.x));
-                t.mesh.position.z = Math.max(-100, Math.min(100, t.mesh.position.z));
-            });
-        }
-
-        function updateParticles(delta) {
-            for (let i = hitParticles.length - 1; i >= 0; i--) {
-                const p = hitParticles[i];
-                p.userData.life -= delta;
-                p.position.addScaledVector(p.userData.vel, delta);
-                p.userData.vel.y -= 15 * delta; // Gravity
-
-                if (p.userData.life <= 0) {
-                    scene.remove(p);
-                    hitParticles.splice(i, 1);
-                }
-            }
-        }
-
-        function drawMinimap() {
-            const canvas = document.getElementById('minimap-canvas');
-            const ctx = canvas.getContext('2d');
-            const cx = 70, cy = 70, scale = 0.65;
-
-            ctx.clearRect(0, 0, 140, 140);
-
-            // Draw Village Boundaries
-            ctx.strokeStyle = 'rgba(255,255,255,0.2)';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.arc(cx, cy, 65, 0, Math.PI * 2);
-            ctx.stroke();
-
-            // Draw Targets as Red Pulsing Dots
-            targets.forEach(t => {
-                if (!t.alive) return;
-                const dx = (t.mesh.position.x - player.position.x) * scale;
-                const dz = (t.mesh.position.z - player.position.z) * scale;
-
-                // Don't draw if outside minimap radius
-                if (Math.hypot(dx, dz) > 62) return;
-
-                ctx.fillStyle = '#ff3333';
-                ctx.beginPath();
-                ctx.arc(cx + dx, cy + dz, 4, 0, Math.PI * 2);
-                ctx.fill();
-            });
-
-            // Draw Kopatych Player Pointer (Center)
-            ctx.fillStyle = '#f59e0b';
-            ctx.beginPath();
-            ctx.arc(cx, cy, 5, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Direction Cone
-            ctx.strokeStyle = 'rgba(245, 158, 11, 0.5)';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(cx, cy);
-            ctx.lineTo(cx + Math.sin(-player.yaw - 0.4) * 16, cy - Math.cos(-player.yaw - 0.4) * 16);
-            ctx.moveTo(cx, cy);
-            ctx.lineTo(cx + Math.sin(-player.yaw + 0.4) * 16, cy - Math.cos(-player.yaw + 0.4) * 16);
-            ctx.stroke();
-        }
-
-        function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        }
-
-        // Initialize when window finishes loading
-        window.onload = function() {
-            initEngine();
-        };
-    </script>
+      }
+
+      // Update Minimap UI
+      updateMinimap();
+
+      renderer.render(scene, camera);
+    }
+
+    // Resize Handler
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // Start Game Loop after window load
+    window.onload = function () {
+      animate();
+    };
+  </script>
 </body>
 </html>
