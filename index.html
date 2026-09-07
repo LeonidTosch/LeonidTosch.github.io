@@ -3,393 +3,1161 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>3D Kikoriki Chase</title>
+    <title>3D Kikoriki Combat - First Person POV</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
     <style>
         body {
-            margin: 0;
+            font-family: 'Nunito', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
             overflow: hidden;
-            background-color: #87CEEB; /* Sky blue background */
-            font-family: 'Inter', sans-serif;
-            touch-action: none; /* Prevent default touch actions like scrolling */
+            background-color: #0f172a;
         }
-        #game-container {
-            width: 100vw;
-            height: 100vh;
-            position: absolute;
-            top: 0;
-            left: 0;
+        .font-game {
+            font-family: 'Fredoka One', cursive;
         }
-        #ui-layer {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none; /* Let clicks pass through UI layer */
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(12px);
+            border: 2px solid rgba(255, 255, 255, 0.15);
         }
-        /* Mobile Controls */
-        #dpad-container {
+        /* Custom Crosshair */
+        #crosshair {
             position: absolute;
-            bottom: 20px;
-            left: 20px;
-            width: 150px;
-            height: 150px;
-            background: rgba(255, 255, 255, 0.2);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 20px;
+            height: 20px;
+            pointer-events: none;
+            z-index: 25;
+        }
+        #crosshair::before, #crosshair::after {
+            content: '';
+            position: absolute;
+            background: rgba(255, 255, 255, 0.85);
+            box-shadow: 0 0 4px rgba(0,0,0,0.8);
+        }
+        #crosshair::before {
+            top: 9px; left: 0; width: 20px; height: 2px;
+        }
+        #crosshair::after {
+            top: 0; left: 9px; width: 2px; height: 20px;
+        }
+        #crosshair-dot {
+            position: absolute;
+            top: 8px; left: 8px; width: 4px; height: 4px;
+            background: #f59e0b;
             border-radius: 50%;
-            display: none; /* Hidden on desktop by default via JS */
-            pointer-events: auto;
-            touch-action: none;
         }
-        .dpad-btn {
+        .damage-vignette {
             position: absolute;
+            inset: 0;
+            pointer-events: none;
+            box-shadow: inset 0 0 80px rgba(239, 68, 68, 0);
+            transition: box-shadow 0.15s ease-out;
+            z-index: 20;
+        }
+        .custom-btn {
+            background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%);
+            box-shadow: 0 6px 0 #9a3412, 0 10px 15px rgba(0,0,0,0.3);
+            transition: all 0.1s ease;
+        }
+        .custom-btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 #9a3412, 0 4px 6px rgba(0,0,0,0.3);
+        }
+        #joystick-zone {
+            position: absolute;
+            bottom: 30px;
+            left: 30px;
+            width: 130px;
+            height: 130px;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(8px);
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            touch-action: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #joystick-knob {
             width: 50px;
             height: 50px;
-            background: rgba(255, 255, 255, 0.5);
-            border-radius: 10px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 24px;
-            color: #333;
-            user-select: none;
-        }
-        .dpad-btn:active {
-            background: rgba(255, 255, 255, 0.8);
-        }
-        #up-btn { top: 0; left: 50px; }
-        #down-btn { bottom: 0; left: 50px; }
-        #left-btn { top: 50px; left: 0; }
-        #right-btn { top: 50px; right: 0; }
-        
-        /* Modals */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.6);
-            justify-content: center;
-            align-items: center;
-            pointer-events: auto;
-            z-index: 50;
-        }
-        .modal-content {
-            background: white;
-            padding: 2rem;
-            border-radius: 1rem;
-            text-align: center;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-            max-width: 90%;
-            width: 400px;
+            background: radial-gradient(circle, #f59e0b 0%, #d97706 100%);
+            border: 3px solid #fff;
+            border-radius: 50%;
+            pointer-events: none;
+            transform: translate(0px, 0px);
         }
     </style>
 </head>
-<body>
+<body class="w-screen h-screen m-0 p-0 overflow-hidden select-none text-white bg-slate-950">
 
-    <div id="game-container"></div>
+    <!-- WebGL Canvas Container -->
+    <div id="canvas-container" class="w-full h-full absolute inset-0 z-0"></div>
 
-    <div id="ui-layer">
-        <div class="p-4 flex justify-between items-start pointer-events-auto">
+    <!-- Red Hit Vignette -->
+    <div id="vignette" class="damage-vignette"></div>
+
+    <!-- Center Crosshair -->
+    <div id="crosshair"><div id="crosshair-dot"></div></div>
+
+    <!-- HUD Overlay Header -->
+    <div class="absolute top-4 left-4 right-4 z-10 flex justify-between items-start pointer-events-none">
+        
+        <!-- Player Stats (Kopatych) -->
+        <div class="glass-panel px-5 py-3 rounded-2xl flex items-center gap-4 shadow-2xl pointer-events-auto">
+            <div class="w-12 h-12 rounded-full bg-amber-500 border-2 border-white flex items-center justify-center text-2xl shadow-inner font-bold">
+                🐻
+            </div>
             <div>
-                <h1 class="text-3xl font-black text-white drop-shadow-md outline-text" style="-webkit-text-stroke: 1px black;">3D Kikoriki Chase</h1>
-                <p class="text-xl text-yellow-300 font-bold drop-shadow-md outline-text" style="-webkit-text-stroke: 1px black;">Score: <span id="score">0</span> / <span id="total-enemies">0</span></p>
+                <div class="flex items-center justify-between gap-4">
+                    <h1 class="font-game text-lg text-amber-400 leading-none">KOPATYCH</h1>
+                    <span id="player-hp-text" class="text-xs font-bold text-red-400">100 / 100 HP</span>
+                </div>
+                <!-- Health Bar -->
+                <div class="w-44 h-3 bg-slate-800 rounded-full overflow-hidden mt-1 border border-slate-600">
+                    <div id="player-hp-bar" class="h-full bg-gradient-to-r from-red-500 to-emerald-400 transition-all duration-200" style="width: 100%;"></div>
+                </div>
             </div>
         </div>
 
-        <div id="dpad-container">
-            <div id="up-btn" class="dpad-btn">▲</div>
-            <div id="down-btn" class="dpad-btn">▼</div>
-            <div id="left-btn" class="dpad-btn">◀</div>
-            <div id="right-btn" class="dpad-btn">▶</div>
+        <!-- Target Info & Remaining Counter -->
+        <div class="flex flex-col items-end gap-2 pointer-events-auto">
+            <div class="glass-panel px-5 py-2 rounded-2xl flex items-center gap-3">
+                <span class="text-xs uppercase text-slate-300 font-bold tracking-wider">Targets Left:</span>
+                <span id="target-count" class="font-game text-2xl text-emerald-400">8 / 8</span>
+            </div>
+
+            <!-- Focused Enemy Health Bar -->
+            <div id="enemy-hud" class="glass-panel px-4 py-2 rounded-2xl opacity-0 transition-opacity duration-300 min-w-[200px] text-center">
+                <div id="enemy-name" class="font-game text-sm text-amber-300">KROSH</div>
+                <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden mt-1 border border-slate-600">
+                    <div id="enemy-hp-bar" class="h-full bg-red-500 transition-all duration-150" style="width: 100%;"></div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- Start Modal -->
-    <div id="startModal" class="modal flex">
-        <div class="modal-content">
-            <h2 class="text-3xl font-bold mb-4 text-orange-600">3D Kikoriki Chase</h2>
-            <p class="mb-4 text-gray-700">You are the Bear (Kopatych). Use Arrow Keys, WASD, or on-screen controls to move.</p>
-            <p class="mb-6 text-gray-700 font-semibold">Catch all the others!</p>
-            <button id="startBtn" class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-6 rounded-full w-full text-xl shadow-lg transition-transform transform hover:scale-105 active:scale-95">Play Game</button>
+    <!-- Controls Hint -->
+    <div id="controls-hint" class="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 glass-panel px-6 py-2 rounded-2xl text-xs text-amber-200 hidden md:block pointer-events-none">
+        <strong>[CLICK]</strong> Attack with Pitchfork | <strong>[WASD]</strong> Move | <strong>[MOUSE]</strong> Look Around | <strong>[SPACE]</strong> Honey Dash
+    </div>
+
+    <!-- Mobile Controls -->
+    <div id="mobile-controls" class="block md:hidden z-20">
+        <div id="joystick-zone">
+            <div id="joystick-knob"></div>
+        </div>
+        <button id="mobile-attack-btn" class="custom-btn absolute bottom-8 right-8 w-20 h-20 rounded-full font-game text-sm text-white flex flex-col items-center justify-center border-2 border-amber-300">
+            <span class="text-2xl">🍴</span>
+            <span>ATTACK</span>
+        </button>
+        <button id="mobile-boost-btn" class="custom-btn absolute bottom-32 right-8 w-16 h-16 rounded-full font-game text-xs text-white flex flex-col items-center justify-center border-2 border-amber-300">
+            <span>🍯</span>
+            <span>DASH</span>
+        </button>
+    </div>
+
+    <!-- Start Overlay Screen -->
+    <div id="start-screen" class="absolute inset-0 z-30 flex items-center justify-center bg-slate-950/90 backdrop-blur-md p-4">
+        <div class="glass-panel max-w-lg w-full p-8 rounded-3xl text-center shadow-2xl border-amber-500/30">
+            <div class="w-24 h-24 mx-auto mb-4 rounded-full bg-amber-500/20 border-4 border-amber-400 flex items-center justify-center text-6xl shadow-xl animate-bounce">
+                🐻
+            </div>
+            <h1 class="font-game text-4xl text-amber-400 mb-1">KIKORIKI 3D COMBAT</h1>
+            <p class="text-amber-200 text-xs font-bold uppercase tracking-widest mb-4">First-Person Over-the-Shoulder Edition</p>
+            <p class="text-slate-300 mb-6 text-sm leading-relaxed">
+                Equip Kopatych's <strong class="text-amber-400">Honey Pitchfork</strong>! Explore the village and hunt down all 8 Smeshariki as they run through the houses, roads, and gardens!
+            </p>
+
+            <button id="start-btn" class="custom-btn w-full py-4 rounded-2xl font-game text-xl text-white tracking-wide hover:brightness-110">
+                START BATTLE! 🍴
+            </button>
         </div>
     </div>
 
-    <!-- Game Over Modal -->
-    <div id="gameOverModal" class="modal">
-        <div class="modal-content">
-            <h2 class="text-4xl font-bold mb-4 text-green-600" id="gameOverTitle">Victory!</h2>
-            <p class="mb-6 text-gray-700 text-lg">You caught everyone.</p>
-            <button id="restartBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-full w-full text-xl shadow-lg transition-transform transform hover:scale-105 active:scale-95">Play Again</button>
+    <!-- Game Over Screen -->
+    <div id="gameover-screen" class="absolute inset-0 z-30 hidden flex items-center justify-center bg-slate-950/90 backdrop-blur-md p-4">
+        <div class="glass-panel max-w-lg w-full p-8 rounded-3xl text-center shadow-2xl border-red-500/40">
+            <div class="text-6xl mb-3">💀</div>
+            <h1 class="font-game text-4xl text-red-500 mb-2">KOPATYCH DEFEATED!</h1>
+            <p class="text-slate-300 mb-6 text-sm">The Smeshariki ganged up and knocked Kopatych out!</p>
+            <button id="restart-btn-fail" class="custom-btn w-full py-4 rounded-2xl font-game text-xl text-white tracking-wide">
+                TRY AGAIN 🔄
+            </button>
+        </div>
+    </div>
+
+    <!-- Victory Screen -->
+    <div id="victory-screen" class="absolute inset-0 z-30 hidden flex items-center justify-center bg-slate-950/90 backdrop-blur-md p-4">
+        <div class="glass-panel max-w-lg w-full p-8 rounded-3xl text-center shadow-2xl border-emerald-500/40">
+            <div class="text-6xl mb-3 animate-bounce">🏆</div>
+            <h1 class="font-game text-4xl text-amber-400 mb-2">VALLEY CONQUERED!</h1>
+            <p class="text-slate-300 mb-6 text-sm">You defeated all 8 Kikoriki characters with your pitchfork!</p>
+            <div id="time-taken" class="font-game text-2xl text-emerald-400 mb-6">TIME: 00:00</div>
+            <button id="restart-btn" class="custom-btn w-full py-4 rounded-2xl font-game text-xl text-white tracking-wide">
+                PLAY AGAIN 🔄
+            </button>
         </div>
     </div>
 
     <script>
-        // Game State
-        let scene, camera, renderer;
-        let player;
+        const WORLD_RADIUS = 80;
+        let scene, camera, renderer, clock;
+        let player, playerBody, pitchforkGroup;
+        let playerHP = 100;
+        const maxPlayerHP = 100;
         let enemies = [];
-        let score = 0;
-        let totalEnemies = 7; // Number of other characters
-        let gameActive = false;
-        let keys = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false, w: false, a: false, s: false, d: false };
-        let touchControls = { up: false, down: false, left: false, right: false };
-        
-        // Constants
-        const PLAYER_SPEED = 15;
-        const ENEMY_SPEED = 6;
-        const BOUNDARY = 45; // Field size limit
-        
-        // Character Config (Colors to approximate characters without complex textures)
-        // Kopatych (Bear) - Brownish orange
-        // Krosh (Rabbit) - Cyan
-        // Nyusha (Pig) - Pink
-        // Barash (Ram) - Light Purple
-        // Losyash (Moose) - Yellow/Orange
-        // Pin (Penguin) - Black/White (simplified to dark grey here)
-        // Sovunya (Owl) - Purple
-        // Kar-Karych (Crow) - Dark Blue
-        
-        const enemyConfigs = [
-            { name: 'Krosh', color: 0x00FFFF },
-            { name: 'Nyusha', color: 0xFFB6C1 },
-            { name: 'Barash', color: 0xDDA0DD },
-            { name: 'Losyash', color: 0xFFA500 },
-            { name: 'Pin', color: 0x333333 },
-            { name: 'Sovunya', color: 0x800080 },
-            { name: 'Kar-Karych', color: 0x00008B }
-        ];
-
-        // UI Elements
-        const scoreEl = document.getElementById('score');
-        const totalEnemiesEl = document.getElementById('total-enemies');
-        const startModal = document.getElementById('startModal');
-        const gameOverModal = document.getElementById('gameOverModal');
-        const startBtn = document.getElementById('startBtn');
-        const restartBtn = document.getElementById('restartBtn');
-        const dpadContainer = document.getElementById('dpad-container');
-
-        // Particle system
         let particles = [];
+        let caughtCount = 0;
+        let gameActive = false;
+        let startTime = 0;
 
-        function init() {
-            // Setup scene
-            scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x87CEEB); // Sky color
-            scene.fog = new THREE.Fog(0x87CEEB, 20, 100);
+        // Camera control state for First-Person POV
+        let cameraPitch = 0.15; // Vertical tilt angle
+        let cameraYaw = 0;      // Horizontal rotation angle
+        let isPointerLocked = false;
 
-            // Setup camera (Top-down, slightly angled)
-            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(0, 30, 20); // Initial position, will be updated to follow player
-            camera.lookAt(0, 0, 0);
+        // Movement & Attack Physics
+        const keys = { w: false, a: false, s: false, d: false };
+        let touchMove = { x: 0, y: 0 };
+        const playerSpeed = 18;
+        const playerBoostSpeed = 28;
+        let isBoosting = false;
+        let isAttacking = false;
+        let attackCooldown = 0;
 
-            // Setup renderer
-            renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.shadowMap.enabled = true;
-            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-            document.getElementById('game-container').appendChild(renderer.domElement);
+        // Web Audio Context Synthesizer
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        let audioCtx = null;
 
-            // Lighting
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-            scene.add(ambientLight);
+        function playSound(type) {
+            if (!audioCtx) audioCtx = new AudioCtx();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
 
-            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-            dirLight.position.set(20, 50, 20);
-            dirLight.castShadow = true;
-            dirLight.shadow.camera.left = -50;
-            dirLight.shadow.camera.right = 50;
-            dirLight.shadow.camera.top = 50;
-            dirLight.shadow.camera.bottom = -50;
-            dirLight.shadow.mapSize.width = 2048;
-            dirLight.shadow.mapSize.height = 2048;
-            scene.add(dirLight);
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            const now = audioCtx.currentTime;
 
-            // Ground
-            createGround();
+            if (type === 'swing') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(300, now);
+                osc.frequency.exponentialRampToValueAtTime(80, now + 0.15);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+                osc.start(now); osc.stop(now + 0.15);
+            } else if (type === 'hit') {
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(150, now);
+                osc.frequency.linearRampToValueAtTime(40, now + 0.2);
+                gain.gain.setValueAtTime(0.4, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                osc.start(now); osc.stop(now + 0.2);
+            } else if (type === 'player_hurt') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(120, now);
+                osc.frequency.linearRampToValueAtTime(60, now + 0.25);
+                gain.gain.setValueAtTime(0.5, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+                osc.start(now); osc.stop(now + 0.25);
+            } else if (type === 'defeat') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(500, now);
+                osc.frequency.exponentialRampToValueAtTime(120, now + 0.4);
+                gain.gain.setValueAtTime(0.4, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+                osc.start(now); osc.stop(now + 0.4);
+            }
+        }
 
-            // Player (Kopatych - Bear)
-            createPlayer();
+        function createCharacterFaceTexture(characterKey) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512;
+            canvas.height = 512;
+            const ctx = canvas.getContext('2d');
 
-            // Event Listeners
-            window.addEventListener('resize', onWindowResize, false);
-            setupInput();
-            
-            // Check for mobile to show D-pad
-            if (isMobile()) {
-                dpadContainer.style.display = 'block';
+            const cx = 256;
+            const cy = 256;
+
+            const baseColors = {
+                kopatych: '#e58025', krosh: '#00a8ff', chiko: '#e84393',
+                nyusha: '#ff7675', barash: '#a29bfe', losyash: '#fbc531',
+                pin: '#1e272e', karych: '#192a56', sovunya: '#8c7ae6'
+            };
+
+            ctx.fillStyle = baseColors[characterKey] || '#ffffff';
+            ctx.fillRect(0, 0, 512, 512);
+
+            if (characterKey === 'kopatych') {
+                ctx.fillStyle = '#fce4ec';
+                ctx.beginPath(); ctx.ellipse(cx, cy + 30, 90, 60, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#3e2723';
+                ctx.beginPath(); ctx.ellipse(cx, cy + 10, 40, 25, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.strokeStyle = '#3e2723'; ctx.lineWidth = 6;
+                ctx.beginPath(); ctx.arc(cx, cy + 25, 35, 0.2 * Math.PI, 0.8 * Math.PI); ctx.stroke();
+                [cx - 55, cx + 55].forEach(ex => {
+                    ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.ellipse(ex, cy - 40, 28, 36, 0, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = '#3e2723'; ctx.beginPath(); ctx.arc(ex + (ex < cx ? 6 : -6), cy - 35, 14, 0, Math.PI * 2); ctx.fill();
+                });
+            } else if (characterKey === 'krosh') {
+                [cx - 40, cx + 40].forEach(ex => {
+                    ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.ellipse(ex, cy - 30, 42, 52, 0, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = '#1e272e'; ctx.beginPath(); ctx.arc(ex + (ex < cx ? 8 : -8), cy - 25, 18, 0, Math.PI * 2); ctx.fill();
+                });
+                ctx.fillStyle = '#1e272e'; ctx.beginPath(); ctx.arc(cx, cy + 25, 10, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#d63031'; ctx.beginPath(); ctx.arc(cx, cy + 35, 45, 0.1 * Math.PI, 0.9 * Math.PI); ctx.fill();
+                ctx.fillStyle = '#ffffff'; ctx.fillRect(cx - 16, cy + 35, 14, 22); ctx.fillRect(cx + 2, cy + 35, 14, 22);
+            } else if (characterKey === 'chiko') {
+                ctx.fillStyle = '#fd79a8'; ctx.beginPath(); ctx.ellipse(cx, cy + 10, 110, 90, 0, 0, Math.PI * 2); ctx.fill();
+                [cx - 45, cx + 45].forEach(ex => {
+                    ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.ellipse(ex, cy - 20, 26, 32, 0, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = '#2d3436'; ctx.beginPath(); ctx.arc(ex, cy - 18, 12, 0, Math.PI * 2); ctx.fill();
+                });
+                ctx.fillStyle = '#2d3436'; ctx.beginPath(); ctx.arc(cx, cy + 20, 12, 0, Math.PI * 2); ctx.fill();
+            } else if (characterKey === 'nyusha') {
+                [cx - 50, cx + 50].forEach(ex => {
+                    ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.ellipse(ex, cy - 35, 28, 32, 0, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = '#0984e3'; ctx.beginPath(); ctx.arc(ex, cy - 32, 14, 0, Math.PI * 2); ctx.fill();
+                });
+            } else if (characterKey === 'barash') {
+                [cx - 50, cx + 50].forEach(ex => {
+                    ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.ellipse(ex, cy - 30, 30, 35, 0, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = '#2d3436'; ctx.beginPath(); ctx.arc(ex, cy - 25, 12, 0, Math.PI * 2); ctx.fill();
+                });
+                ctx.fillStyle = '#6c5ce7'; ctx.beginPath(); ctx.ellipse(cx, cy + 20, 15, 10, 0, 0, Math.PI * 2); ctx.fill();
+            } else if (characterKey === 'losyash') {
+                [cx - 55, cx + 55].forEach(ex => {
+                    ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.ellipse(ex, cy - 35, 30, 36, 0, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = '#2d3436'; ctx.beginPath(); ctx.arc(ex, cy - 30, 12, 0, Math.PI * 2); ctx.fill();
+                });
+                ctx.fillStyle = '#6e2c00'; ctx.beginPath(); ctx.ellipse(cx, cy + 25, 45, 30, 0, 0, Math.PI * 2); ctx.fill();
+            } else if (characterKey === 'pin') {
+                ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.ellipse(cx, cy + 10, 120, 150, 0, 0, Math.PI * 2); ctx.fill();
+                [cx - 40, cx + 40].forEach(ex => {
+                    ctx.fillStyle = '#1e272e'; ctx.beginPath(); ctx.ellipse(ex, cy - 40, 14, 20, 0, 0, Math.PI * 2); ctx.fill();
+                });
+            } else if (characterKey === 'karych') {
+                [cx - 45, cx + 45].forEach(ex => {
+                    ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.ellipse(ex, cy - 40, 26, 32, 0, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = '#192a56'; ctx.beginPath(); ctx.arc(ex, cy - 38, 11, 0, Math.PI * 2); ctx.fill();
+                });
+            } else if (characterKey === 'sovunya') {
+                [cx - 55, cx + 55].forEach(ex => {
+                    ctx.fillStyle = '#fbc531'; ctx.beginPath(); ctx.arc(ex, cy - 35, 36, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(ex, cy - 35, 28, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = '#2d3436'; ctx.beginPath(); ctx.arc(ex, cy - 32, 14, 0, Math.PI * 2); ctx.fill();
+                });
             }
 
-            // Start loop (will only move things if gameActive)
-            animate();
-        }
-
-        function createGround() {
-            // Simple green grass material
-            const groundGeo = new THREE.PlaneGeometry(100, 100);
-            // Create a simple checkerboard texture procedurally
-            const canvas = document.createElement('canvas');
-            canvas.width = 256;
-            canvas.height = 256;
-            const context = canvas.getContext('2d');
-            context.fillStyle = '#4CAF50'; // Base green
-            context.fillRect(0, 0, 256, 256);
-            context.fillStyle = '#45a049'; // Slightly darker green
-            context.fillRect(0, 0, 128, 128);
-            context.fillRect(128, 128, 128, 128);
-            
             const texture = new THREE.CanvasTexture(canvas);
-            texture.wrapS = THREE.RepeatWrapping;
-            texture.wrapT = THREE.RepeatWrapping;
-            texture.repeat.set(10, 10);
-
-            const groundMat = new THREE.MeshStandardMaterial({ map: texture, roughness: 0.8 });
-            const ground = new THREE.Mesh(groundGeo, groundMat);
-            ground.rotation.x = -Math.PI / 2;
-            ground.receiveShadow = true;
-            scene.add(ground);
-
-            // Add simple boundary walls (invisible but keep entities inside)
-            // Logic handled in update loop
+            texture.needsUpdate = true;
+            return texture;
         }
 
-        function createCharacterMesh(color, size = 1) {
-            // Kikoriki characters are basically spheres
+        function createPitchforkModel() {
             const group = new THREE.Group();
+            
+            // Long Wooden Handle
+            const handleGeo = new THREE.CylinderGeometry(0.06, 0.06, 3.5, 12);
+            const woodMat = new THREE.MeshStandardMaterial({ color: 0x8d6e63, roughness: 0.7 });
+            const handle = new THREE.Mesh(handleGeo, woodMat);
+            handle.position.y = 1.2;
+            group.add(handle);
 
-            // Body
-            const bodyGeo = new THREE.SphereGeometry(size, 32, 32);
-            const bodyMat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.5, metalness: 0.1 });
-            const body = new THREE.Mesh(bodyGeo, bodyMat);
-            body.position.y = size; // Rest on ground
-            body.castShadow = true;
-            group.add(body);
+            // Metal Fork Head
+            const metalMat = new THREE.MeshStandardMaterial({ color: 0xd1d5db, metalness: 0.8, roughness: 0.2 });
+            const crossBar = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.08, 0.1), metalMat);
+            crossBar.position.set(0, 2.9, 0);
+            group.add(crossBar);
 
-            // Simple eyes
-            const eyeGeo = new THREE.SphereGeometry(size * 0.2, 16, 16);
-            const eyeMatWhite = new THREE.MeshBasicMaterial({ color: 0xffffff });
-            const eyeMatBlack = new THREE.MeshBasicMaterial({ color: 0x000000 });
+            // 3 Prongs
+            [-0.35, 0, 0.35].forEach(px => {
+                const prong = new THREE.Mesh(new THREE.ConeGeometry(0.04, 0.9, 8), metalMat);
+                prong.position.set(px, 3.3, 0);
+                group.add(prong);
+            });
 
-            // Right eye
-            const rightEye = new THREE.Mesh(eyeGeo, eyeMatWhite);
-            rightEye.position.set(size * 0.3, size * 1.2, size * 0.8);
-            const rightPupil = new THREE.Mesh(new THREE.SphereGeometry(size * 0.08, 8, 8), eyeMatBlack);
-            rightPupil.position.set(size * 0.35, size * 1.2, size * 0.95);
-            group.add(rightEye);
-            group.add(rightPupil);
+            group.rotation.x = Math.PI / 2; // Point forward
+            return group;
+        }
 
-            // Left eye
-            const leftEye = new THREE.Mesh(eyeGeo, eyeMatWhite);
-            leftEye.position.set(-size * 0.3, size * 1.2, size * 0.8);
-            const leftPupil = new THREE.Mesh(new THREE.SphereGeometry(size * 0.08, 8, 8), eyeMatBlack);
-            leftPupil.position.set(-size * 0.35, size * 1.2, size * 0.95);
-            group.add(leftEye);
-            group.add(leftPupil);
+        function createKopatychModel() {
+            const group = new THREE.Group();
+            const faceTex = createCharacterFaceTexture('kopatych');
+            const bodyMat = new THREE.MeshStandardMaterial({ map: faceTex, roughness: 0.6 });
+            const bodyMesh = new THREE.Mesh(new THREE.SphereGeometry(2, 32, 32), bodyMat);
+            bodyMesh.rotation.y = -Math.PI / 2;
+            group.add(bodyMesh);
+
+            // Straw Hat
+            const hatGroup = new THREE.Group();
+            const strawMat = new THREE.MeshStandardMaterial({ color: 0xd4ac0d });
+            const brim = new THREE.Mesh(new THREE.CylinderGeometry(2.6, 2.6, 0.1, 32), strawMat);
+            const crown = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.6, 0.9, 32), strawMat);
+            crown.position.y = 0.45;
+            hatGroup.add(brim, crown);
+            hatGroup.position.set(0, 1.85, -0.2);
+            group.add(hatGroup);
+
+            // Attach Pitchfork Weapon to right side
+            pitchforkGroup = createPitchforkModel();
+            pitchforkGroup.position.set(1.4, 0.2, -0.8);
+            group.add(pitchforkGroup);
 
             return group;
         }
 
-        function createPlayer() {
-            // Kopatych (Bear) - Brownish orange, slightly larger
-            player = createCharacterMesh(0xD2691E, 1.2);
-            
-            // Add simple bear ears
-            const earGeo = new THREE.SphereGeometry(0.3, 16, 16);
-            const earMat = new THREE.MeshStandardMaterial({ color: 0xD2691E });
-            
-            const rightEar = new THREE.Mesh(earGeo, earMat);
-            rightEar.position.set(0.8, 2.0, 0);
-            player.add(rightEar);
-            
-            const leftEar = new THREE.Mesh(earGeo, earMat);
-            leftEar.position.set(-0.8, 2.0, 0);
-            player.add(leftEar);
+        function createKroshModel() {
+            const group = new THREE.Group();
+            const faceTex = createCharacterFaceTexture('krosh');
+            const bodyMat = new THREE.MeshStandardMaterial({ map: faceTex, roughness: 0.5 });
+            const bodyMesh = new THREE.Mesh(new THREE.SphereGeometry(1.8, 32, 32), bodyMat);
+            bodyMesh.rotation.y = -Math.PI / 2;
+            group.add(bodyMesh);
 
-            scene.add(player);
+            // Bunny Ears
+            const earMat = new THREE.MeshStandardMaterial({ color: 0x00a8ff });
+            [-0.7, 0.7].forEach((xOffset, idx) => {
+                const ear = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.3, 2.4, 16), earMat);
+                ear.position.set(xOffset, 2.4, -0.2);
+                ear.rotation.z = idx === 0 ? 0.2 : -0.2;
+                group.add(ear);
+            });
+
+            return group;
         }
 
-        function spawnEnemies() {
-            // Remove existing enemies
-            enemies.forEach(e => scene.remove(e.mesh));
-            enemies = [];
+        function createChikoModel() {
+            const group = new THREE.Group();
+            const faceTex = createCharacterFaceTexture('chiko');
+            const bodyMat = new THREE.MeshStandardMaterial({ map: faceTex, roughness: 0.5 });
+            const bodyMesh = new THREE.Mesh(new THREE.SphereGeometry(1.8, 32, 32), bodyMat);
+            bodyMesh.rotation.y = -Math.PI / 2;
+            group.add(bodyMesh);
 
-            // Add selected config enemies
-            for (let i = 0; i < totalEnemies; i++) {
-                if (i >= enemyConfigs.length) break; // Fallback if totalEnemies > configs
-                
-                const config = enemyConfigs[i];
-                const mesh = createCharacterMesh(config.color, 0.9); // Slightly smaller than player
-                
-                // Random position away from center (where player spawns)
-                let x, z;
-                do {
-                    x = (Math.random() - 0.5) * BOUNDARY * 1.8;
-                    z = (Math.random() - 0.5) * BOUNDARY * 1.8;
-                } while (Math.sqrt(x*x + z*z) < 10); // Keep away from start
+            // Glasses
+            const glassFrameMat = new THREE.MeshStandardMaterial({ color: 0x2d3436 });
+            [-0.55, 0.55].forEach(gx => {
+                const ring = new THREE.Mesh(new THREE.TorusGeometry(0.45, 0.08, 16, 32), glassFrameMat);
+                ring.position.set(gx, 0.2, 1.7);
+                group.add(ring);
+            });
+            return group;
+        }
 
-                mesh.position.set(x, 0, z);
+        function createNyushaModel() {
+            const group = new THREE.Group();
+            const faceTex = createCharacterFaceTexture('nyusha');
+            const bodyMat = new THREE.MeshStandardMaterial({ map: faceTex, roughness: 0.5 });
+            const bodyMesh = new THREE.Mesh(new THREE.SphereGeometry(1.8, 32, 32), bodyMat);
+            bodyMesh.rotation.y = -Math.PI / 2;
+            group.add(bodyMesh);
+
+            // Pig Snout
+            const snout = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.5, 0.3, 24), new THREE.MeshStandardMaterial({ color: 0xe84393 }));
+            snout.rotation.x = Math.PI / 2;
+            snout.position.set(0, -0.2, 1.8);
+            group.add(snout);
+
+            return group;
+        }
+
+        function createBarashModel() {
+            const group = new THREE.Group();
+            const faceTex = createCharacterFaceTexture('barash');
+            const bodyMat = new THREE.MeshStandardMaterial({ map: faceTex, roughness: 0.7 });
+            const bodyMesh = new THREE.Mesh(new THREE.SphereGeometry(1.8, 32, 32), bodyMat);
+            bodyMesh.rotation.y = -Math.PI / 2;
+            group.add(bodyMesh);
+
+            // Horns
+            const hornMat = new THREE.MeshStandardMaterial({ color: 0x6c5ce7 });
+            [-1, 1].forEach(side => {
+                const horn = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.15, 12, 24, Math.PI * 1.3), hornMat);
+                horn.position.set(side * 1.4, 0.8, 0);
+                horn.rotation.y = side * Math.PI / 2;
+                group.add(horn);
+            });
+            return group;
+        }
+
+        function createLosyashModel() {
+            const group = new THREE.Group();
+            const faceTex = createCharacterFaceTexture('losyash');
+            const bodyMat = new THREE.MeshStandardMaterial({ map: faceTex, roughness: 0.5 });
+            const bodyMesh = new THREE.Mesh(new THREE.SphereGeometry(1.8, 32, 32), bodyMat);
+            bodyMesh.rotation.y = -Math.PI / 2;
+            group.add(bodyMesh);
+
+            // Antlers
+            const antlerMat = new THREE.MeshStandardMaterial({ color: 0x6e2c00 });
+            [-1, 1].forEach(side => {
+                const mainStem = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.16, 1.6, 12), antlerMat);
+                mainStem.position.set(side * 1.1, 1.8, -0.2);
+                mainStem.rotation.z = side * -0.4;
+                group.add(mainStem);
+            });
+            return group;
+        }
+
+        function createPinModel() {
+            const group = new THREE.Group();
+            const faceTex = createCharacterFaceTexture('pin');
+            const bodyMat = new THREE.MeshStandardMaterial({ map: faceTex, roughness: 0.4 });
+            const bodyMesh = new THREE.Mesh(new THREE.SphereGeometry(1.8, 32, 32), bodyMat);
+            bodyMesh.rotation.y = -Math.PI / 2;
+            group.add(bodyMesh);
+
+            // Beak
+            const beak = new THREE.Mesh(new THREE.ConeGeometry(0.35, 0.9, 16), new THREE.MeshStandardMaterial({ color: 0xe67e22 }));
+            beak.rotation.x = Math.PI / 2;
+            beak.position.set(0, -0.2, 1.9);
+            group.add(beak);
+            return group;
+        }
+
+        function createKarychModel() {
+            const group = new THREE.Group();
+            const faceTex = createCharacterFaceTexture('karych');
+            const bodyMat = new THREE.MeshStandardMaterial({ map: faceTex, roughness: 0.5 });
+            const bodyMesh = new THREE.Mesh(new THREE.SphereGeometry(1.8, 32, 32), bodyMat);
+            bodyMesh.rotation.y = -Math.PI / 2;
+            group.add(bodyMesh);
+
+            // Beak & Top Hat
+            const beak = new THREE.Mesh(new THREE.ConeGeometry(0.45, 1.2, 16), new THREE.MeshStandardMaterial({ color: 0xfbc531 }));
+            beak.rotation.x = Math.PI / 2 + 0.1;
+            beak.position.set(0, -0.2, 2.1);
+            
+            const hat = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.85, 1.2, 24), new THREE.MeshStandardMaterial({ color: 0x2d3436 }));
+            hat.position.set(0, 2.35, 0);
+
+            group.add(beak, hat);
+            return group;
+        }
+
+        function createSovunyaModel() {
+            const group = new THREE.Group();
+            const faceTex = createCharacterFaceTexture('sovunya');
+            const bodyMat = new THREE.MeshStandardMaterial({ map: faceTex, roughness: 0.5 });
+            const bodyMesh = new THREE.Mesh(new THREE.SphereGeometry(1.8, 32, 32), bodyMat);
+            bodyMesh.rotation.y = -Math.PI / 2;
+            group.add(bodyMesh);
+
+            // Beanie Hat
+            const cap = new THREE.Mesh(new THREE.SphereGeometry(1.85, 32, 32, 0, Math.PI * 2, 0, Math.PI * 0.4), new THREE.MeshStandardMaterial({ color: 0xe84393 }));
+            cap.position.y = 0.1;
+            group.add(cap);
+            return group;
+        }
+
+        function createHouse(type, x, z, angle = 0) {
+            const houseGroup = new THREE.Group();
+            houseGroup.position.set(x, 0, z);
+            houseGroup.rotation.y = angle;
+
+            const woodMat = new THREE.MeshStandardMaterial({ color: 0x8d6e63, roughness: 0.7 });
+            const roofMat = new THREE.MeshStandardMaterial({ color: 0xc0392b, roughness: 0.5 });
+            const windowMat = new THREE.MeshStandardMaterial({ color: 0x74b9ff, roughness: 0.2, metalness: 0.3 });
+            const doorMat = new THREE.MeshStandardMaterial({ color: 0x5d4037, roughness: 0.8 });
+
+            if (type === 'kopatych') {
+                // Kopatych's Honey Hive/Log Cabin
+                const base = new THREE.Mesh(new THREE.CylinderGeometry(4.5, 5, 4, 16), woodMat);
+                base.position.y = 2;
+                const roof = new THREE.Mesh(new THREE.ConeGeometry(6, 3.5, 16), new THREE.MeshStandardMaterial({ color: 0xd35400 }));
+                roof.position.y = 5.75;
+                const door = new THREE.Mesh(new THREE.BoxGeometry(1.5, 2.4, 0.2), doorMat);
+                door.position.set(0, 1.2, 4.4);
                 
-                // Add simple identifying features based on name (very basic)
-                if (config.name === 'Krosh') { // Rabbit ears
-                    const ear = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.8), new THREE.MeshStandardMaterial({color: config.color}));
-                    ear.position.set(0.3, 1.8, 0);
-                    mesh.add(ear);
-                    const ear2 = ear.clone();
-                    ear2.position.set(-0.3, 1.8, 0);
-                    mesh.add(ear2);
-                } else if (config.name === 'Nyusha') { // Pig snout
-                    const snout = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.1), new THREE.MeshStandardMaterial({color: 0xFF69B4}));
-                    snout.rotation.x = Math.PI/2;
-                    snout.position.set(0, 0.9, 0.9);
-                    mesh.add(snout);
+                houseGroup.add(base, roof, door);
+
+                // Pumpkin Patch nearby
+                const pumpkinMat = new THREE.MeshStandardMaterial({ color: 0xe67e22, roughness: 0.6 });
+                const stemMat = new THREE.MeshStandardMaterial({ color: 0x27ae60 });
+                for (let i = 0; i < 5; i++) {
+                    const p = new THREE.Mesh(new THREE.SphereGeometry(0.7, 12, 12), pumpkinMat);
+                    p.scale.set(1.2, 0.9, 1.2);
+                    p.position.set(4 + (i % 3) * 1.5, 0.5, 2 + Math.floor(i / 3) * 1.5);
+                    const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.4), stemMat);
+                    stem.position.set(p.position.x, 0.9, p.position.z);
+                    houseGroup.add(p, stem);
+                }
+            } else if (type === 'krosh') {
+                // Krosh's Blue Sphere House with Ears
+                const blueMat = new THREE.MeshStandardMaterial({ color: 0x0984e3, roughness: 0.4 });
+                const mainSphere = new THREE.Mesh(new THREE.SphereGeometry(4.5, 32, 32), blueMat);
+                mainSphere.position.y = 4;
+
+                const door = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 0.3, 16), doorMat);
+                door.rotation.x = Math.PI / 2;
+                door.position.set(0, 1.5, 4.2);
+
+                [-1.8, 1.8].forEach(ex => {
+                    const ear = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.6, 4, 16), blueMat);
+                    ear.position.set(ex, 8, 0);
+                    ear.rotation.z = ex < 0 ? 0.2 : -0.2;
+                    houseGroup.add(ear);
+                });
+
+                houseGroup.add(mainSphere, door);
+            } else if (type === 'pin') {
+                // Pin's Metal Hangar / Workshop House
+                const metalMat = new THREE.MeshStandardMaterial({ color: 0x636e72, metalness: 0.7, roughness: 0.3 });
+                const dome = new THREE.Mesh(new THREE.SphereGeometry(5, 32, 16, 0, Math.PI * 2, 0, Math.PI * 0.5), metalMat);
+                dome.position.y = 0;
+                
+                // Antenna on top
+                const antenna = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 3), new THREE.MeshStandardMaterial({ color: 0xd63031 }));
+                antenna.position.y = 5.5;
+
+                houseGroup.add(dome, antenna);
+            } else if (type === 'losyash') {
+                // Losyash's Yellow Observatory / Library
+                const yellowMat = new THREE.MeshStandardMaterial({ color: 0xf1c40f, roughness: 0.5 });
+                const tower = new THREE.Mesh(new THREE.CylinderGeometry(3.8, 4.2, 7, 24), yellowMat);
+                tower.position.y = 3.5;
+
+                const domeRoof = new THREE.Mesh(new THREE.SphereGeometry(4, 24, 16, 0, Math.PI * 2, 0, Math.PI * 0.5), roofMat);
+                domeRoof.position.y = 7;
+
+                houseGroup.add(tower, domeRoof);
+            } else {
+                // Standard Cozy Pink/Purple House (Nyusha / Sovunya / Barash)
+                const wallMat = new THREE.MeshStandardMaterial({ color: 0x9b59b6, roughness: 0.5 });
+                const body = new THREE.Mesh(new THREE.CylinderGeometry(4, 4.2, 5, 20), wallMat);
+                body.position.y = 2.5;
+                const roof = new THREE.Mesh(new THREE.ConeGeometry(5.2, 3.5, 20), roofMat);
+                roof.position.y = 6.5;
+
+                houseGroup.add(body, roof);
+            }
+
+            // Windows on all house types
+            [-2.2, 2.2].forEach(wx => {
+                const win = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 0.2), windowMat);
+                win.position.set(wx, 2.8, 3.6);
+                houseGroup.add(win);
+            });
+
+            scene.add(houseGroup);
+        }
+
+        function buildEnvironment() {
+            // Main Grass Field Ground
+            const groundGeo = new THREE.CylinderGeometry(WORLD_RADIUS, WORLD_RADIUS, 2, 64);
+            const groundMat = new THREE.MeshStandardMaterial({ color: 0x27ae60, roughness: 0.8 });
+            const ground = new THREE.Mesh(groundGeo, groundMat);
+            ground.position.y = -1;
+            ground.receiveShadow = true;
+            scene.add(ground);
+
+            // Create Village Dirt Roads Network
+            const roadMat = new THREE.MeshStandardMaterial({ color: 0xd35400, roughness: 0.9, polygonOffset: true, polygonOffsetFactor: -1 });
+            const roadPositions = [
+                { x: 0, z: 0, w: 10, h: 100, rot: 0 },
+                { x: 0, z: 0, w: 10, h: 100, rot: Math.PI / 3 },
+                { x: 0, z: 0, w: 10, h: 100, rot: -Math.PI / 3 },
+            ];
+
+            roadPositions.forEach(r => {
+                const road = new THREE.Mesh(new THREE.PlaneGeometry(r.w, r.h), roadMat);
+                road.rotation.x = -Math.PI / 2;
+                road.rotation.z = r.rot;
+                road.position.set(r.x, 0.02, r.z);
+                scene.add(road);
+            });
+
+            // Center Village Plaza Circle
+            const plaza = new THREE.Mesh(new THREE.CircleGeometry(14, 32), roadMat);
+            plaza.rotation.x = -Math.PI / 2;
+            plaza.position.y = 0.03;
+            scene.add(plaza);
+
+            // Spawn Character Houses in a surrounding ring
+            createHouse('kopatych', -28, 20, Math.PI / 4);
+            createHouse('krosh', 28, 20, -Math.PI / 4);
+            createHouse('pin', -28, -25, Math.PI * 0.7);
+            createHouse('losyash', 30, -25, -Math.PI * 0.7);
+            createHouse('standard', 0, 38, 0);
+            createHouse('standard', 0, -38, Math.PI);
+
+            // Wooden Fences along paths
+            const fenceWoodMat = new THREE.MeshStandardMaterial({ color: 0x7f8c8d });
+            for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 6) {
+                const radius = 16;
+                const fx = Math.cos(angle) * radius;
+                const fz = Math.sin(angle) * radius;
+                const fence = new THREE.Mesh(new THREE.BoxGeometry(3, 1.2, 0.2), fenceWoodMat);
+                fence.position.set(fx, 0.6, fz);
+                fence.rotation.y = angle + Math.PI / 2;
+                scene.add(fence);
+            }
+
+            // Trees and Vegetation
+            const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5d4037 });
+            const leafColors = [0x2ecc71, 0x27ae60, 0x1abc9c, 0xf1c40f];
+
+            for (let i = 0; i < 55; i++) {
+                const r = 18 + Math.random() * (WORLD_RADIUS - 24);
+                const theta = Math.random() * Math.PI * 2;
+                const tx = Math.cos(theta) * r;
+                const tz = Math.sin(theta) * r;
+
+                // Avoid placing trees directly on center plaza
+                if (Math.hypot(tx, tz) < 15) continue;
+
+                const tree = new THREE.Group();
+                const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.8, 5, 12), trunkMat);
+                trunk.position.y = 2.5;
+
+                const leafMat = new THREE.MeshStandardMaterial({ 
+                    color: leafColors[Math.floor(Math.random() * leafColors.length)], 
+                    roughness: 0.6 
+                });
+
+                // Alternate between round trees and pine trees
+                if (i % 2 === 0) {
+                    const leaves = new THREE.Mesh(new THREE.SphereGeometry(2.8, 16, 16), leafMat);
+                    leaves.position.y = 5.8;
+                    tree.add(trunk, leaves);
+                } else {
+                    const pine = new THREE.Mesh(new THREE.ConeGeometry(3, 6, 12), leafMat);
+                    pine.position.y = 5.5;
+                    tree.add(trunk, pine);
                 }
 
-                scene.add(mesh);
+                tree.position.set(tx, 0, tz);
+                scene.add(tree);
+            }
 
-                enemies.push({
-                    mesh: mesh,
-                    name: config.name,
-                    velocity: new THREE.Vector3(
-                        (Math.random() - 0.5) * ENEMY_SPEED,
-                        0,
-                        (Math.random() - 0.5) * ENEMY_SPEED
-                    ).normalize().multiplyScalar(ENEMY_SPEED)
-                });
+            // Perimeter Mountain Range Outer Boundary
+            const mountainMat = new THREE.MeshStandardMaterial({ color: 0x16a085, roughness: 0.9 });
+            for (let i = 0; i < 32; i++) {
+                const angle = (i / 32) * Math.PI * 2;
+                const mx = Math.cos(angle) * (WORLD_RADIUS + 5);
+                const mz = Math.sin(angle) * (WORLD_RADIUS + 5);
+                const mountain = new THREE.Mesh(
+                    new THREE.ConeGeometry(14 + Math.random() * 6, 25 + Math.random() * 15, 8),
+                    mountainMat
+                );
+                mountain.position.set(mx, 10, mz);
+                scene.add(mountain);
+            }
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+            scene.add(ambientLight);
+            const sunLight = new THREE.DirectionalLight(0xfff5cc, 0.9);
+            sunLight.position.set(50, 100, 50);
+            sunLight.castShadow = true;
+            scene.add(sunLight);
+        }
+
+        function initScene() {
+            const container = document.getElementById('canvas-container');
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x38bdf8);
+            scene.fog = new THREE.FogExp2(0x38bdf8, 0.007);
+
+            camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 500);
+            clock = new THREE.Clock();
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            container.appendChild(renderer.domElement);
+
+            buildEnvironment();
+
+            // Create Player Kopatych
+            playerBody = createKopatychModel();
+            player = new THREE.Group();
+            player.add(playerBody);
+            player.position.set(0, 2, 0);
+            scene.add(player);
+
+            // Kikoriki Characters Data
+            const enemyData = [
+                { id: 'krosh', name: 'Krosh', hp: 80, speed: 15, create: createKroshModel, projColor: 0xf97316 },
+                { id: 'chiko', name: 'Chiko', hp: 70, speed: 12, create: createChikoModel, projColor: 0xec4899 },
+                { id: 'nyusha', name: 'Nyusha', hp: 75, speed: 13, create: createNyushaModel, projColor: 0xf43f5e },
+                { id: 'barash', name: 'Barash', hp: 65, speed: 11, create: createBarashModel, projColor: 0x8b5cf6 },
+                { id: 'losyash', name: 'Losyash', hp: 90, speed: 13, create: createLosyashModel, projColor: 0xeab308 },
+                { id: 'pin', name: 'Pin', hp: 100, speed: 14, create: createPinModel, projColor: 0x64748b },
+                { id: 'karych', name: 'Kar-Karych', hp: 70, speed: 12, create: createKarychModel, projColor: 0x3b82f6 },
+                { id: 'sovunya', name: 'Sovunya', hp: 85, speed: 13, create: createSovunyaModel, projColor: 0xa855f7 }
+            ];
+
+            // Spawn Enemies with floating HP bars
+            enemies = enemyData.map((data, idx) => {
+                const angle = (idx / enemyData.length) * Math.PI * 2;
+                const dist = 25 + Math.random() * 25;
+
+                const model = data.create();
+                const containerGroup = new THREE.Group();
+                containerGroup.add(model);
+                containerGroup.position.set(Math.cos(angle) * dist, 2, Math.sin(angle) * dist);
+
+                scene.add(containerGroup);
+
+                return {
+                    data: data,
+                    mesh: containerGroup,
+                    model: model,
+                    hp: data.hp,
+                    maxHp: data.hp,
+                    caught: false,
+                    dir: new THREE.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize()
+                };
+            });
+
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        function setupControls() {
+            // Pointer Lock for Mouse FPS Camera Look
+            const container = document.getElementById('canvas-container');
+            container.addEventListener('click', () => {
+                if (gameActive && !isPointerLocked) {
+                    container.requestPointerLock();
+                }
+            });
+
+            document.addEventListener('pointerlockchange', () => {
+                isPointerLocked = document.pointerLockElement === container;
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (isPointerLocked && gameActive) {
+                    cameraYaw -= e.movementX * 0.003;
+                    cameraPitch -= e.movementY * 0.003;
+                    // Clamp vertical camera pitch angle
+                    cameraPitch = Math.max(-0.4, Math.min(0.6, cameraPitch));
+                }
+            });
+
+            // Keyboard Movement & Attack
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'w' || e.key === 'W' || e.key === 'ArrowUp') keys.w = true;
+                if (e.key === 'a' || e.key === 'A' || e.key === 'ArrowLeft') keys.a = true;
+                if (e.key === 's' || e.key === 'S' || e.key === 'ArrowDown') keys.s = true;
+                if (e.key === 'd' || e.key === 'D' || e.key === 'ArrowRight') keys.d = true;
+                if (e.code === 'Space') { e.preventDefault(); triggerBoost(); }
+            });
+
+            window.addEventListener('keyup', (e) => {
+                if (e.key === 'w' || e.key === 'W' || e.key === 'ArrowUp') keys.w = false;
+                if (e.key === 'a' || e.key === 'A' || e.key === 'ArrowLeft') keys.a = false;
+                if (e.key === 's' || e.key === 'S' || e.key === 'ArrowDown') keys.s = false;
+                if (e.key === 'd' || e.key === 'D' || e.key === 'ArrowRight') keys.d = false;
+            });
+
+            // Left Click Attack
+            window.addEventListener('mousedown', (e) => {
+                if (e.button === 0 && gameActive) performAttack();
+            });
+
+            // Mobile Joystick & Touch Panning Controls
+            const joystickZone = document.getElementById('joystick-zone');
+            const joystickKnob = document.getElementById('joystick-knob');
+            let joystickActive = false;
+            let touchOrigin = { x: 0, y: 0 };
+
+            joystickZone.addEventListener('touchstart', (e) => {
+                joystickActive = true;
+                touchOrigin = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            });
+
+            window.addEventListener('touchmove', (e) => {
+                if (!joystickActive) return;
+                const dx = e.touches[0].clientX - touchOrigin.x;
+                const dy = e.touches[0].clientY - touchOrigin.y;
+                const dist = Math.min(Math.hypot(dx, dy), 45);
+                const angle = Math.atan2(dy, dx);
+                const knobX = Math.cos(angle) * dist;
+                const knobY = Math.sin(angle) * dist;
+                joystickKnob.style.transform = `translate(${knobX}px, ${knobY}px)`;
+                touchMove.x = knobX / 45;
+                touchMove.y = knobY / 45;
+            });
+
+            const resetJoystick = () => {
+                joystickActive = false;
+                joystickKnob.style.transform = 'translate(0px, 0px)';
+                touchMove = { x: 0, y: 0 };
+            };
+            window.addEventListener('touchend', resetJoystick);
+
+            document.getElementById('mobile-attack-btn').addEventListener('touchstart', (e) => {
+                e.preventDefault(); performAttack();
+            });
+            document.getElementById('mobile-boost-btn').addEventListener('touchstart', (e) => {
+                e.preventDefault(); triggerBoost();
+            });
+
+            document.getElementById('start-btn').addEventListener('click', startGame);
+            document.getElementById('restart-btn').addEventListener('click', restartGame);
+            document.getElementById('restart-btn-fail').addEventListener('click', restartGame);
+        }
+
+        function performAttack() {
+            if (isAttacking || !gameActive) return;
+            isAttacking = true;
+            playSound('swing');
+
+            let swingProgress = 0;
+            const initialRot = pitchforkGroup.rotation.x;
+
+            const swingInterval = setInterval(() => {
+                swingProgress += 0.2;
+                pitchforkGroup.rotation.x = initialRot - Math.sin(swingProgress * Math.PI) * 1.5;
+
+                if (swingProgress >= 1.0) {
+                    clearInterval(swingInterval);
+                    pitchforkGroup.rotation.x = initialRot;
+                    isAttacking = false;
+                }
+            }, 20);
+
+            // Hitbox Check in front of player
+            const forwardDir = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), cameraYaw);
+            
+            enemies.forEach(enemy => {
+                if (enemy.caught) return;
+                const toEnemy = enemy.mesh.position.clone().sub(player.position);
+                const distance = toEnemy.length();
+
+                if (distance < 5.0) {
+                    const angle = forwardDir.angleTo(toEnemy.normalize());
+                    if (angle < Math.PI / 3) {
+                        // Apply Damage
+                        const damage = 35 + Math.floor(Math.random() * 15);
+                        enemy.hp -= damage;
+                        playSound('hit');
+                        createBloodParticles(enemy.mesh.position, enemy.data.projColor);
+
+                        // Update Enemy HUD Bar
+                        document.getElementById('enemy-hud').style.opacity = '1';
+                        document.getElementById('enemy-name').innerText = enemy.data.name.toUpperCase();
+                        const hpPct = Math.max(0, (enemy.hp / enemy.maxHp) * 100);
+                        document.getElementById('enemy-hp-bar').style.width = `${hpPct}%`;
+
+                        if (enemy.hp <= 0) {
+                            defeatEnemy(enemy);
+                        }
+                    }
+                }
+            });
+        }
+
+        function defeatEnemy(enemy) {
+            enemy.caught = true;
+            playSound('defeat');
+            scene.remove(enemy.mesh);
+            caughtCount++;
+
+            document.getElementById('target-count').innerText = `${8 - caughtCount} / 8`;
+            document.getElementById('enemy-hud').style.opacity = '0';
+
+            if (caughtCount >= enemies.length) {
+                endGame(true);
             }
         }
 
-        function setupInput() {
-            // Keyboard
-            window.addEventListener('keydown', (e) => {
-                if (keys.hasOwnProperty(e.key)) keys[e.key] = true;
-            });
-            window.addEventListener('keyup', (e) => {
-                if (keys.hasOwnProperty(e.key)) keys[e.key] = false;
-            });
+        function triggerBoost() {
+            if (isBoosting || !gameActive) return;
+            isBoosting = true;
+            setTimeout(() => { isBoosting = false; }, 1200);
+        }
 
-            // Touch Controls
-            const setupBtn = (id, dir) => {
-                const btn = document.getElementById(id);
-                btn.addEventListener('touchstart', (e) => { e.preventDefault(); touchControls[dir] = true; });
-                btn.addEventListener('touchend', (e) => { e.preventDefault(); touchControls[dir] = false; });
-                btn.addEventListener('mousedown', (e) => { e.preventDefault(); touchControls[dir] = true; });
-                btn.addEventListener('mouseup', (e) => { e.preventDefault(); touchControls[dir] = false; });
-                btn.addEventListener('mouseleave', (e) => { e.preventDefault(); touchControls[dir] = false; });
-            };
-            setupBtn('up-btn', 'up');
-            setupBtn('down-btn', 'down');
-            setupBtn('left-btn', 'left');
-            setupBtn('right-btn', 'right');
+        function updatePlayer(delta) {
+            let moveX = 0;
+            let moveZ = 0;
 
-            // UI Buttons
-            startBtn.addEventListener('click', startGame);
-            restartBtn.addEventListener('click', startGame);
+            if (keys.w) moveZ -= 1;
+            if (keys.s) moveZ += 1;
+            if (keys.a) moveX -= 1;
+            if (keys.d) moveX += 1;
+
+            if (touchMove.x !== 0 || touchMove.y !== 0) {
+                moveX = touchMove.x;
+                moveZ = touchMove.y;
+            }
+
+            // Align player rotation with camera yaw
+            player.rotation.y = cameraYaw;
+
+            const inputLen = Math.hypot(moveX, moveZ);
+            if (inputLen > 0.1) {
+                const normX = moveX / Math.max(1, inputLen);
+                const normZ = moveZ / Math.max(1, inputLen);
+
+                // Movement vector relative to camera angle
+                const moveVec = new THREE.Vector3(normX, 0, normZ).applyAxisAngle(new THREE.Vector3(0, 1, 0), cameraYaw);
+
+                const speed = isBoosting ? playerBoostSpeed : playerSpeed;
+                player.position.x += moveVec.x * speed * delta;
+                player.position.z += moveVec.z * speed * delta;
+
+                playerBody.rotation.x += delta * 10;
+            }
+
+            // Arena radius boundary
+            const pDist = Math.hypot(player.position.x, player.position.z);
+            if (pDist > WORLD_RADIUS - 4) {
+                const angle = Math.atan2(player.position.z, player.position.x);
+                player.position.x = Math.cos(angle) * (WORLD_RADIUS - 4);
+                player.position.z = Math.sin(angle) * (WORLD_RADIUS - 4);
+            }
+        }
+
+        function updateEnemies(delta) {
+            enemies.forEach(enemy => {
+                if (enemy.caught) return;
+
+                const distToPlayer = player.position.distanceTo(enemy.mesh.position);
+
+                // Run away in panic if Kopatych gets close
+                if (distToPlayer < 24) {
+                    const fleeDir = enemy.mesh.position.clone().sub(player.position).normalize();
+                    fleeDir.y = 0;
+                    enemy.dir.copy(fleeDir);
+                } else {
+                    // Random wander around village
+                    if (Math.random() < 0.02) {
+                        enemy.dir.set(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
+                    }
+                }
+
+                enemy.mesh.position.x += enemy.dir.x * enemy.data.speed * delta;
+                enemy.mesh.position.z += enemy.dir.z * enemy.data.speed * delta;
+
+                if (enemy.dir.lengthSq() > 0.01) {
+                    enemy.mesh.rotation.y = Math.atan2(enemy.dir.x, enemy.dir.z);
+                }
+
+                // World border containment
+                if (Math.hypot(enemy.mesh.position.x, enemy.mesh.position.z) > WORLD_RADIUS - 6) {
+                    enemy.dir.negate();
+                }
+            });
+        }
+
+        function takePlayerDamage(amount) {
+            playerHP = Math.max(0, playerHP - amount);
+            playSound('player_hurt');
+
+            // UI Bar
+            const hpPct = (playerHP / maxPlayerHP) * 100;
+            document.getElementById('player-hp-bar').style.width = `${hpPct}%`;
+            document.getElementById('player-hp-text').innerText = `${playerHP} / ${maxPlayerHP} HP`;
+
+            // Red Damage Vignette Flash
+            const vignette = document.getElementById('vignette');
+            vignette.style.boxShadow = 'inset 0 0 80px rgba(239, 68, 68, 0.8)';
+            setTimeout(() => {
+                vignette.style.boxShadow = 'inset 0 0 80px rgba(239, 68, 68, 0)';
+            }, 200);
+
+            if (playerHP <= 0) {
+                endGame(false);
+            }
+        }
+
+        function createBloodParticles(pos, colorHex) {
+            for (let i = 0; i < 12; i++) {
+                const p = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.15, 8, 8),
+                    new THREE.MeshBasicMaterial({ color: colorHex })
+                );
+                p.position.copy(pos);
+                const vel = new THREE.Vector3(
+                    (Math.random() - 0.5) * 8,
+                    Math.random() * 6 + 2,
+                    (Math.random() - 0.5) * 8
+                );
+                scene.add(p);
+                particles.push({ mesh: p, vel: vel, life: 0.6 });
+            }
+        }
+
+        function updateParticles(delta) {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const pt = particles[i];
+                pt.mesh.position.addScaledVector(pt.vel, delta);
+                pt.vel.y -= 15 * delta;
+                pt.life -= delta;
+
+                if (pt.life <= 0) {
+                    scene.remove(pt.mesh);
+                    particles.splice(i, 1);
+                }
+            }
+        }
+
+        function updateCameraPOV() {
+            // Over-the-shoulder / near First Person POV directly behind Kopatych's head
+            const offset = new THREE.Vector3(0, 2.2, 2.5);
+            offset.applyAxisAngle(new THREE.Vector3(1, 0, 0), cameraPitch);
+            offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), cameraYaw);
+
+            const camPos = player.position.clone().add(offset);
+            camera.position.copy(camPos);
+
+            const lookTarget = player.position.clone().add(
+                new THREE.Vector3(0, 1.8, -10).applyAxisAngle(new THREE.Vector3(0, 1, 0), cameraYaw)
+            );
+            camera.lookAt(lookTarget);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const delta = Math.min(clock.getDelta(), 0.1);
+
+            if (gameActive) {
+                updatePlayer(delta);
+                updateEnemies(delta);
+                updateParticles(delta);
+                updateCameraPOV();
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        function startGame() {
+            document.getElementById('start-screen').classList.add('hidden');
+            gameActive = true;
+            startTime = Date.now();
+            clock.start();
+        }
+
+        function endGame(won) {
+            gameActive = false;
+            if (document.pointerLockElement) document.exitPointerLock();
+
+            if (won) {
+                const duration = Math.floor((Date.now() - startTime) / 1000);
+                const mins = String(Math.floor(duration / 60)).padStart(2, '0');
+                const secs = String(duration % 60).padStart(2, '0');
+                document.getElementById('time-taken').innerText = `TIME: ${mins}:${secs}`;
+                document.getElementById('victory-screen').classList.remove('hidden');
+            } else {
+                document.getElementById('gameover-screen').classList.remove('hidden');
+            }
+        }
+
+        function restartGame() {
+            location.reload();
         }
 
         function onWindowResize() {
@@ -398,208 +1166,11 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
 
-        function isMobile() {
-            return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
-        }
-
-        function startGame() {
-            startModal.style.display = 'none';
-            gameOverModal.style.display = 'none';
-            
-            // Reset state
-            score = 0;
-            scoreEl.textContent = score;
-            totalEnemiesEl.textContent = totalEnemies;
-            
-            // Reset player
-            player.position.set(0, 0, 0);
-            player.rotation.set(0, 0, 0);
-            
-            spawnEnemies();
-            
-            // Clear particles
-            particles.forEach(p => scene.remove(p.mesh));
-            particles = [];
-            
-            gameActive = true;
-            lastTime = performance.now();
-        }
-
-        function createExplosion(position, color) {
-            const particleCount = 20;
-            const geo = new THREE.SphereGeometry(0.2, 8, 8);
-            const mat = new THREE.MeshBasicMaterial({ color: color });
-            
-            for (let i = 0; i < particleCount; i++) {
-                const mesh = new THREE.Mesh(geo, mat);
-                mesh.position.copy(position);
-                
-                // Random velocity outward
-                const velocity = new THREE.Vector3(
-                    (Math.random() - 0.5) * 15,
-                    Math.random() * 10 + 5,
-                    (Math.random() - 0.5) * 15
-                );
-                
-                scene.add(mesh);
-                particles.push({
-                    mesh: mesh,
-                    velocity: velocity,
-                    life: 1.0 // 1 second life
-                });
-            }
-        }
-
-        let lastTime = 0;
-
-        function update(deltaTime) {
-            if (!gameActive) return;
-
-            // Player Movement
-            const moveDir = new THREE.Vector3(0, 0, 0);
-            
-            if (keys.ArrowUp || keys.w || touchControls.up) moveDir.z -= 1;
-            if (keys.ArrowDown || keys.s || touchControls.down) moveDir.z += 1;
-            if (keys.ArrowLeft || keys.a || touchControls.left) moveDir.x -= 1;
-            if (keys.ArrowRight || keys.d || touchControls.right) moveDir.x += 1;
-
-            if (moveDir.length() > 0) {
-                moveDir.normalize();
-                
-                // Calculate movement speed based on delta time
-                const speed = PLAYER_SPEED * deltaTime;
-                player.position.add(moveDir.clone().multiplyScalar(speed));
-                
-                // Rotate player to face movement direction
-                const targetRotation = Math.atan2(moveDir.x, moveDir.z);
-                // Simple lerp for smoother rotation
-                let currentRotation = player.rotation.y;
-                // Handle wrap around
-                if (Math.abs(currentRotation - targetRotation) > Math.PI) {
-                    if (currentRotation > targetRotation) currentRotation -= Math.PI * 2;
-                    else currentRotation += Math.PI * 2;
-                }
-                player.rotation.y = currentRotation + (targetRotation - currentRotation) * 0.15;
-            }
-
-            // Boundary checks for player
-            player.position.x = Math.max(-BOUNDARY, Math.min(BOUNDARY, player.position.x));
-            player.position.z = Math.max(-BOUNDARY, Math.min(BOUNDARY, player.position.z));
-
-            // Camera follow (Top-down slightly trailing)
-            const cameraTargetPos = new THREE.Vector3(
-                player.position.x,
-                35, // Height
-                player.position.z + 15 // Trail slightly behind
-            );
-            camera.position.lerp(cameraTargetPos, 0.1);
-            camera.lookAt(player.position);
-
-            // Enemy Movement & Collision
-            for (let i = enemies.length - 1; i >= 0; i--) {
-                const enemy = enemies[i];
-                
-                // Simple wander behavior (occasionally change direction)
-                if (Math.random() < 0.02) {
-                    // Turn slightly
-                    const turnAngle = (Math.random() - 0.5) * Math.PI / 2;
-                    enemy.velocity.applyAxisAngle(new THREE.Vector3(0, 1, 0), turnAngle);
-                }
-
-                // Try to avoid player if close (simple flee logic)
-                const distToPlayer = enemy.mesh.position.distanceTo(player.position);
-                if (distToPlayer < 15) {
-                    const fleeDir = new THREE.Vector3().subVectors(enemy.mesh.position, player.position).normalize();
-                    fleeDir.y = 0;
-                    enemy.velocity.lerp(fleeDir.multiplyScalar(ENEMY_SPEED), 0.1);
-                }
-                
-                // Ensure constant speed
-                if (enemy.velocity.lengthSq() > 0) {
-                    enemy.velocity.normalize().multiplyScalar(ENEMY_SPEED);
-                }
-
-                // Apply movement
-                const enemyMove = enemy.velocity.clone().multiplyScalar(deltaTime);
-                enemy.mesh.position.add(enemyMove);
-                
-                // Rotate to face velocity
-                if (enemy.velocity.lengthSq() > 0.1) {
-                    enemy.mesh.rotation.y = Math.atan2(enemy.velocity.x, enemy.velocity.z);
-                }
-
-                // Boundary bounce
-                if (enemy.mesh.position.x > BOUNDARY || enemy.mesh.position.x < -BOUNDARY) {
-                    enemy.velocity.x *= -1;
-                    enemy.mesh.position.x = Math.sign(enemy.mesh.position.x) * BOUNDARY;
-                }
-                if (enemy.mesh.position.z > BOUNDARY || enemy.mesh.position.z < -BOUNDARY) {
-                    enemy.velocity.z *= -1;
-                    enemy.mesh.position.z = Math.sign(enemy.mesh.position.z) * BOUNDARY;
-                }
-
-                // Check collision with player (simple sphere collision)
-                // Sum of radii approx 1.2 (player) + 0.9 (enemy) = 2.1. Use 2.0 for generosity
-                if (distToPlayer < 2.0) {
-                    // Catch!
-                    createExplosion(enemy.mesh.position.clone(), enemy.mesh.children[0].material.color);
-                    scene.remove(enemy.mesh);
-                    enemies.splice(i, 1);
-                    
-                    score++;
-                    scoreEl.textContent = score;
-
-                    // Add a little bop animation to player
-                    player.scale.set(1.2, 0.8, 1.2);
-                    setTimeout(() => player.scale.set(1, 1, 1), 150);
-
-                    if (score >= totalEnemies) {
-                        endGame();
-                    }
-                }
-            }
-
-            // Update Particles
-            for (let i = particles.length - 1; i >= 0; i--) {
-                const p = particles[i];
-                p.life -= deltaTime;
-                
-                if (p.life <= 0 || p.mesh.position.y < -1) {
-                    scene.remove(p.mesh);
-                    particles.splice(i, 1);
-                    continue;
-                }
-                
-                // Gravity
-                p.velocity.y -= 20 * deltaTime;
-                p.mesh.position.add(p.velocity.clone().multiplyScalar(deltaTime));
-                
-                // Shrink
-                p.mesh.scale.setScalar(Math.max(0, p.life));
-            }
-        }
-
-        function endGame() {
-            gameActive = false;
-            setTimeout(() => {
-                gameOverModal.style.display = 'flex';
-            }, 500);
-        }
-
-        function animate() {
-            requestAnimationFrame(animate);
-
-            const now = performance.now();
-            const deltaTime = Math.min((now - lastTime) / 1000, 0.1); // Cap delta to prevent huge jumps
-            lastTime = now;
-
-            update(deltaTime);
-            renderer.render(scene, camera);
-        }
-
-        // Initialize when window loads
-        window.onload = init;
-
+        window.onload = () => {
+            initScene();
+            setupControls();
+            animate();
+        };
     </script>
 </body>
 </html>
