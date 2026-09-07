@@ -2,1366 +2,476 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>War Thunder: Ground Realistic Battles</title>
-    <!-- Tailwind CSS -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kikoriki Chase: Kopatych's Rampage</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Three.js Library -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <!-- Font Awesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        * {
-            box-sizing: border-box;
-            user-select: none;
-            -webkit-user-select: none;
-        }
-        html, body {
+        body {
             margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
             overflow: hidden;
-            background-color: #030712;
-            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: #2c3e50; /* Dark background */
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            touch-action: none; /* Prevent default touch actions on canvas */
         }
-        #webgl-canvas {
+        #gameCanvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+        }
+        #uiOverlay {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
-            height: 100%;
-            z-index: 0;
-            display: block;
+            pointer-events: none; /* Let clicks pass through to canvas */
+            padding: 20px;
+            box-sizing: border-box;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            z-index: 10;
         }
-        .glass-panel {
-            background: rgba(10, 16, 28, 0.82);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
-        }
-        .glass-panel-gold {
-            background: rgba(35, 26, 10, 0.90);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(234, 179, 8, 0.45);
-        }
-        #sniper-scope {
-            background: radial-gradient(circle at center, transparent 30%, rgba(0, 12, 4, 0.88) 55%, rgba(0, 0, 0, 0.98) 75%);
-            pointer-events: none;
-        }
-        .keycap {
-            background: linear-gradient(180deg, #374151 0%, #1f2937 100%);
-            border: 1px solid #4b5563;
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 2px 4px rgba(0, 0, 0, 0.5);
-            border-radius: 4px;
-            padding: 2px 6px;
-            font-family: monospace;
+        .score-box {
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 15px;
+            font-size: 1.5rem;
             font-weight: bold;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
         }
+        #messageScreen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(44, 62, 80, 0.9);
+            color: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            pointer-events: auto;
+            z-index: 20;
+            border: 4px solid #f39c12;
+        }
+        #messageScreen h1 {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            color: #f1c40f;
+            text-shadow: 2px 2px 4px #000;
+        }
+        #messageScreen p {
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+        }
+        .btn {
+            background: linear-gradient(to bottom, #f39c12, #d35400);
+            border: none;
+            color: white;
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.1s, box-shadow 0.1s;
+            box-shadow: 0 5px 0 #b33c00;
+        }
+        .btn:active {
+            transform: translateY(5px);
+            box-shadow: 0 0 0 #b33c00;
+        }
+        /* Controls for mobile */
+        #mobileControls {
+             display: none;
+             position: absolute;
+             bottom: 20px;
+             left: 20px;
+             pointer-events: auto;
+             z-index: 10;
+        }
+        @media (max-width: 768px) {
+            #mobileControls {
+                display: block;
+            }
+        }
+        .d-pad {
+            display: grid;
+            grid-template-columns: repeat(3, 60px);
+            grid-template-rows: repeat(3, 60px);
+            gap: 5px;
+        }
+        .d-pad-btn {
+            background: rgba(255,255,255,0.2);
+            border: 2px solid rgba(255,255,255,0.5);
+            border-radius: 50%;
+            color: white;
+            font-size: 24px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            user-select: none;
+        }
+        .d-pad-btn:active {
+            background: rgba(255,255,255,0.5);
+        }
+        .up { grid-column: 2; grid-row: 1; }
+        .left { grid-column: 1; grid-row: 2; }
+        .right { grid-column: 3; grid-row: 2; }
+        .down { grid-column: 2; grid-row: 3; }
+
     </style>
 </head>
-<body class="text-slate-100 relative">
+<body>
 
-    <!-- 3D WEBGL CANVAS -->
-    <canvas id="webgl-canvas"></canvas>
-
-    <!-- UI OVERLAY CONTAINER -->
-    <div id="ui-container" class="relative z-10 w-full h-full pointer-events-none">
-
-        <!-- SNIPER OPTICS HUD OVERLAY -->
-        <div id="sniper-scope" class="hidden absolute inset-0 flex items-center justify-center pointer-events-none z-20">
-            <div class="relative w-full h-full flex items-center justify-center">
-                <!-- Scope Crosshair Lines -->
-                <div class="absolute w-full h-[1px] bg-emerald-500/80"></div>
-                <div class="absolute h-full w-[1px] bg-emerald-500/80"></div>
-
-                <!-- Ballistic Pitch & Range Markings -->
-                <div class="absolute flex flex-col items-center space-y-3 pt-8">
-                    <div class="w-12 h-[1px] bg-emerald-400"></div>
-                    <div class="w-8 h-[1px] bg-emerald-400 flex justify-between text-[10px] text-emerald-400 -mt-1"><span class="-ml-8">200m</span><span class="-mr-8">200m</span></div>
-                    <div class="w-10 h-[1px] bg-emerald-400"></div>
-                    <div class="w-14 h-[1px] bg-emerald-400 flex justify-between text-[10px] text-emerald-400 -mt-1"><span class="-ml-8">400m</span><span class="-mr-8">400m</span></div>
-                    <div class="w-8 h-[1px] bg-emerald-400"></div>
-                    <div class="w-16 h-[1px] bg-emerald-400 flex justify-between text-[10px] text-emerald-400 -mt-1"><span class="-ml-8">600m</span><span class="-mr-8">600m</span></div>
-                    <div class="w-8 h-[1px] bg-emerald-400"></div>
-                    <div class="w-20 h-[1px] bg-emerald-400 flex justify-between text-[10px] text-emerald-400 -mt-1"><span class="-ml-9">800m</span><span class="-mr-9">800m</span></div>
-                    <div class="w-8 h-[1px] bg-emerald-400"></div>
-                    <div class="w-24 h-[1px] bg-emerald-400 flex justify-between text-[10px] text-emerald-400 -mt-1"><span class="-ml-10">1000m</span><span class="-mr-10">1000m</span></div>
-                </div>
-
-                <!-- Scope Status HUD Header -->
-                <div class="absolute top-10 left-1/2 -translate-x-1/2 flex gap-6 text-xs font-mono text-emerald-400 bg-slate-950/85 px-6 py-2 rounded-xl border border-emerald-800/80 shadow-2xl">
-                    <div>OPTICS: <span class="text-white font-bold">12x LRF</span></div>
-                    <div>RANGE: <span id="target-dist" class="text-amber-300 font-bold">--- m</span></div>
-                    <div>SHELL: <span id="scope-shell-name" class="text-amber-400 font-bold">APFSDS</span></div>
-                    <div>LASER ZERO: <span id="scope-zeroing" class="text-emerald-300 font-bold">READY [E]</span></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- CAS AIRSTRIKE ALERT BANNER -->
-        <div id="air-warning-banner" class="hidden absolute top-20 left-1/2 -translate-x-1/2 z-30 bg-rose-950/90 border border-rose-500/80 px-6 py-2.5 rounded-2xl flex items-center gap-3 text-rose-200 font-bold text-xs tracking-widest shadow-2xl animate-bounce">
-            <i class="fa-solid fa-plane-triangle text-rose-400 text-lg animate-pulse"></i>
-            <span>WARNING: ENEMY CAS AIRCRAFT ENTERING AIRSPACE!</span>
-        </div>
-
-        <!-- TOP BAR HUD: TEAM TICKETS & CAPTURE ZONES -->
-        <div class="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center w-full max-w-xl px-4">
-            <div class="w-full flex items-center justify-between gap-4 mb-2">
-                <!-- Allied Team Score -->
-                <div class="flex-1">
-                    <div class="flex justify-between text-xs font-black text-blue-400 mb-1">
-                        <span>ALLIED FORCE</span>
-                        <span id="blue-tickets">10000</span>
-                    </div>
-                    <div class="w-full h-2.5 bg-slate-950/90 rounded-full overflow-hidden border border-blue-900/60 p-0.5">
-                        <div id="blue-ticket-bar" class="h-full bg-blue-500 rounded-full transition-all duration-300" style="width: 100%"></div>
-                    </div>
-                </div>
-
-                <!-- Strategic Capture Points -->
-                <div class="flex gap-2">
-                    <div id="cap-a" class="w-8 h-8 rounded-xl bg-slate-900/90 border-2 border-slate-600 flex items-center justify-center font-black text-xs text-slate-300 shadow-lg">A</div>
-                    <div id="cap-b" class="w-8 h-8 rounded-xl bg-slate-900/90 border-2 border-slate-600 flex items-center justify-center font-black text-xs text-slate-300 shadow-lg">B</div>
-                    <div id="cap-c" class="w-8 h-8 rounded-xl bg-slate-900/90 border-2 border-slate-600 flex items-center justify-center font-black text-xs text-slate-300 shadow-lg">C</div>
-                </div>
-
-                <!-- Axis/Enemy Team Score -->
-                <div class="flex-1">
-                    <div class="flex justify-between text-xs font-black text-rose-400 mb-1">
-                        <span id="red-tickets">10000</span>
-                        <span>HOSTILE FORCE</span>
-                    </div>
-                    <div class="w-full h-2.5 bg-slate-950/90 rounded-full overflow-hidden border border-rose-900/60 p-0.5">
-                        <div id="red-ticket-bar" class="h-full bg-rose-500 rounded-full transition-all duration-300 float-right" style="width: 100%"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- TOP RIGHT: WAR THUNDER X-RAY HIT DAMAGE CAM -->
-        <div id="hit-cam-card" class="hidden absolute top-4 right-4 z-20 w-64 glass-panel p-2.5 rounded-2xl flex flex-col pointer-events-none transition-all duration-300">
-            <div class="flex justify-between items-center text-[10px] font-bold tracking-wider text-rose-400 border-b border-slate-700/60 pb-1 mb-1.5">
-                <span><i class="fa-solid fa-crosshairs mr-1"></i>X-RAY DAMAGE CAM</span>
-                <span id="hit-cam-target-name" class="text-slate-200">T-90M</span>
-            </div>
-            <div class="relative w-full h-28 bg-slate-950/90 rounded-xl overflow-hidden border border-slate-800 flex items-center justify-center">
-                <canvas id="hit-cam-canvas" width="240" height="110" class="w-full h-full"></canvas>
-            </div>
-            <div id="hit-cam-status" class="text-[11px] font-mono mt-1.5 text-amber-400 font-semibold truncate text-center">
-                Critical Module Pen!
-            </div>
-        </div>
-
-        <!-- TOP LEFT: REAL-TIME KILL FEED -->
-        <div id="kill-feed" class="absolute top-4 left-4 z-20 space-y-1.5 pointer-events-none max-w-xs text-xs font-mono">
-            <!-- Dynamic kill log entries added via JS -->
-        </div>
-
-        <!-- BOTTOM LEFT: PAPERDOLL DAMAGE UI & REPAIR PROMPT -->
-        <div class="absolute bottom-4 left-4 z-20 flex gap-3">
-            <div class="glass-panel p-3 rounded-2xl flex flex-col items-center w-36 pointer-events-auto">
-                <div class="text-[10px] font-bold text-slate-400 mb-1 tracking-wider uppercase">Damage Model</div>
-                <div class="relative w-24 h-28 flex items-center justify-center">
-                    <svg viewBox="0 0 100 120" class="w-full h-full">
-                        <rect id="pd-hull" x="25" y="25" width="50" height="70" rx="6" fill="#22c55e" stroke="#15803d" stroke-width="2"/>
-                        <rect id="pd-track-l" x="15" y="20" width="8" height="80" rx="3" fill="#22c55e"/>
-                        <rect id="pd-track-r" x="77" y="20" width="8" height="80" rx="3" fill="#22c55e"/>
-                        <rect id="pd-engine" x="30" y="70" width="40" height="20" rx="2" fill="#22c55e"/>
-                        <circle id="pd-turret" cx="50" cy="50" r="18" fill="#22c55e" stroke="#15803d" stroke-width="1.5"/>
-                        <rect id="pd-barrel" x="47" y="10" width="6" height="30" fill="#22c55e"/>
-                        <circle id="pd-ammo" cx="50" cy="62" r="5" fill="#22c55e"/>
-                    </svg>
-                </div>
-                <div class="text-[10px] text-slate-400 mt-1 flex justify-between w-full font-mono">
-                    <span>SPD: <b id="speed-indicator" class="text-white">0</b> km/h</span>
-                    <span>HP: <b id="hp-indicator" class="text-emerald-400">100%</b></span>
-                </div>
-            </div>
-
-            <div class="flex flex-col justify-end space-y-2 pointer-events-auto">
-                <div id="repair-prompt" class="hidden glass-panel-gold px-3.5 py-2 rounded-xl flex items-center gap-2 text-xs text-amber-300 font-bold animate-pulse">
-                    <span class="keycap text-white">F</span> <span id="repair-prompt-text">Field Repair</span> (<span id="repair-timer">8.0</span>s)
-                </div>
-            </div>
-        </div>
-
-        <!-- BOTTOM CENTER: AMMO SELECTOR & FIRE CONTROL HUD -->
-        <div class="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 glass-panel p-2.5 rounded-2xl flex items-center gap-3 pointer-events-auto">
-            <!-- Ammo 1: APFSDS -->
-            <button id="shell-btn-1" onclick="selectShell(0)" class="relative p-2 rounded-xl bg-slate-800/90 hover:bg-slate-700 border-2 border-amber-500 flex flex-col items-center w-20 transition">
-                <span class="absolute top-1 left-1.5 text-[9px] font-bold text-slate-400 keycap">1</span>
-                <i class="fa-solid fa-bolt text-amber-400 my-1 text-lg"></i>
-                <span class="text-[10px] font-bold tracking-wider text-slate-200">APFSDS</span>
-                <span id="shell-count-1" class="text-[10px] font-mono text-emerald-400 font-bold">28</span>
-            </button>
-
-            <!-- Ammo 2: HEAT-FS -->
-            <button id="shell-btn-2" onclick="selectShell(1)" class="relative p-2 rounded-xl bg-slate-800/90 hover:bg-slate-700 border-2 border-slate-700 flex flex-col items-center w-20 transition">
-                <span class="absolute top-1 left-1.5 text-[9px] font-bold text-slate-400 keycap">2</span>
-                <i class="fa-solid fa-fire text-rose-400 my-1 text-lg"></i>
-                <span class="text-[10px] font-bold tracking-wider text-slate-200">HEAT-FS</span>
-                <span id="shell-count-2" class="text-[10px] font-mono text-emerald-400 font-bold">14</span>
-            </button>
-
-            <!-- Ammo 3: HE -->
-            <button id="shell-btn-3" onclick="selectShell(2)" class="relative p-2 rounded-xl bg-slate-800/90 hover:bg-slate-700 border-2 border-slate-700 flex flex-col items-center w-20 transition">
-                <span class="absolute top-1 left-1.5 text-[9px] font-bold text-slate-400 keycap">3</span>
-                <i class="fa-solid fa-burst text-orange-400 my-1 text-lg"></i>
-                <span class="text-[10px] font-bold tracking-wider text-slate-200">HE</span>
-                <span id="shell-count-3" class="text-[10px] font-mono text-emerald-400 font-bold">10</span>
-            </button>
-
-            <!-- Secondary AA Machine Gun -->
-            <div class="h-12 w-[1px] bg-slate-700/80 mx-1"></div>
-            <div class="flex flex-col items-center px-2">
-                <div class="text-[9px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
-                    <i class="fa-solid fa-gun text-amber-400"></i> 12.7mm AA
-                </div>
-                <div class="text-xs font-mono font-bold text-amber-300 mt-1"><span class="keycap text-white text-[10px]">SPACE</span> FIRE</div>
-            </div>
-
-            <!-- Cannon Reload Bar -->
-            <div class="h-12 w-[1px] bg-slate-700/80 mx-1"></div>
-            <div class="flex flex-col items-center px-2">
-                <div class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Reload System</div>
-                <div class="text-xs font-black font-mono text-emerald-400 my-0.5" id="reload-time-text">READY</div>
-                <div class="w-16 h-1.5 bg-slate-900 rounded-full overflow-hidden border border-slate-700">
-                    <div id="reload-progress-bar" class="h-full bg-emerald-500 w-full transition-all"></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- BOTTOM RIGHT: TACTICAL MINIMAP -->
-        <div class="absolute bottom-4 right-4 z-20 glass-panel p-2 rounded-2xl flex flex-col items-center pointer-events-auto">
-            <div class="relative w-44 h-44 bg-slate-950 rounded-xl overflow-hidden border border-slate-800">
-                <canvas id="minimap-canvas" width="176" height="176" class="w-full h-full"></canvas>
-            </div>
-            <div class="flex justify-between w-full px-1 mt-1 text-[9px] text-slate-400 font-mono">
-                <span>GRID: 250m</span>
-                <span id="player-grid-pos" class="text-emerald-400 font-bold">GRID D5</span>
-            </div>
-        </div>
-
-        <!-- START BATTLE BRIEFING MODAL OVERLAY -->
-        <div id="start-modal" class="absolute inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 pointer-events-auto">
-            <div class="max-w-xl w-full glass-panel p-8 rounded-3xl border border-slate-700/80 shadow-2xl text-center relative overflow-hidden">
-                <div class="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 rounded-full text-emerald-400 text-xs font-bold uppercase tracking-widest mb-4">
-                    <i class="fa-solid fa-crosshairs"></i> Ground Realistic Battles Simulation
-                </div>
-
-                <h1 class="text-4xl font-black tracking-tight text-white mb-1">WAR THUNDER</h1>
-                <p class="text-sm font-bold text-amber-400 mb-6 tracking-widest uppercase">Realistic Armor Physics, Laser Optics & CAS Airstrikes</p>
-
-                <div class="grid grid-cols-2 gap-4 text-left text-xs bg-slate-900/80 p-4 rounded-2xl border border-slate-800 mb-6 font-sans">
-                    <div class="space-y-2">
-                        <div class="font-bold text-slate-200 border-b border-slate-800 pb-1 flex items-center gap-1.5"><i class="fa-solid fa-gamepad text-emerald-400"></i> Tank Controls</div>
-                        <div><span classkeycap">W A S D</span> Driving & Steering</div>
-                        <div><span class="keycap">Mouse</span> Turret & Gun Aim</div>
-                        <div><span class="keycap">L-Click</span> Fire Main Cannon</div>
-                        <div><span class="keycap">Space</span> Roof 12.7mm Machine Gun</div>
-                        <div><span class="keycap">Shift / R-Click</span> 12x Sniper Optics</div>
-                    </div>
-                    <div class="space-y-2">
-                        <div class="font-bold text-slate-200 border-b border-slate-800 pb-1 flex items-center gap-1.5"><i class="fa-solid fa-microchip text-emerald-400"></i> Combat Systems</div>
-                        <div><span class="keycap">E</span> Laser Rangefinder (LRF)</div>
-                        <div><span class="keycap">1 2 3</span> Ammo: APFSDS / HEAT / HE</div>
-                        <div><span class="keycap">C</span> Free-Look Orbit Cam</div>
-                        <div><span class="keycap">F</span> Module Damage Field Repair</div>
-                        <div class="text-[10px] text-amber-400 font-semibold">* Armor ricochets & ballistics active!</div>
-                    </div>
-                </div>
-
-                <button id="btn-start-game" onclick="startBattle()" class="w-full py-4 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-black rounded-2xl text-lg tracking-wider shadow-lg shadow-emerald-950/60 transition transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer">
-                    COMMENCE COMBAT OPERATION
-                </button>
-            </div>
-        </div>
-
+    <div id="uiOverlay">
+        <div class="score-box">Enemies Left: <span id="enemiesCount">0</span></div>
     </div>
 
-    <!-- MAIN GAME SIMULATION SCRIPT -->
+    <canvas id="gameCanvas"></canvas>
+
+    <div id="messageScreen">
+        <h1 id="screenTitle">Kopatych's Rampage</h1>
+        <p id="screenSubtitle">Control the Bear (Kopatych) and catch all the others!</p>
+        <p style="font-size: 0.9rem; color: #ccc;">Use Arrow Keys / WASD to move.</p>
+        <button class="btn" id="startBtn" onclick="startGame()">Start Game</button>
+    </div>
+
+    <div id="mobileControls">
+        <div class="d-pad">
+            <div class="d-pad-btn up" id="btnUp">▲</div>
+            <div class="d-pad-btn left" id="btnLeft">◀</div>
+            <div class="d-pad-btn right" id="btnRight">▶</div>
+            <div class="d-pad-btn down" id="btnDown">▼</div>
+        </div>
+    </div>
+
     <script>
-        class SoundEngine {
-            constructor() {
-                this.ctx = null;
-                this.engineGain = null;
-                this.engineOsc = null;
-            }
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const enemiesCountSpan = document.getElementById('enemiesCount');
+        const messageScreen = document.getElementById('messageScreen');
+        const screenTitle = document.getElementById('screenTitle');
+        const screenSubtitle = document.getElementById('screenSubtitle');
+        const startBtn = document.getElementById('startBtn');
 
-            init() {
-                if (this.ctx) return;
-                try {
-                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-                    this.ctx = new AudioCtx();
+        let width, height;
+        let animationId;
+        let gameState = 'START'; // START, PLAYING, GAME_OVER, WIN
 
-                    this.engineOsc = this.ctx.createOscillator();
-                    const filter = this.ctx.createBiquadFilter();
-                    this.engineGain = this.ctx.createGain();
-
-                    this.engineOsc.type = 'sawtooth';
-                    this.engineOsc.frequency.setValueAtTime(45, this.ctx.currentTime);
-
-                    filter.type = 'lowpass';
-                    filter.frequency.setValueAtTime(250, this.ctx.currentTime);
-
-                    this.engineGain.gain.setValueAtTime(0.06, this.ctx.currentTime);
-
-                    this.engineOsc.connect(filter);
-                    filter.connect(this.engineGain);
-                    this.engineGain.connect(this.ctx.destination);
-                    this.engineOsc.start();
-                } catch(e) {
-                    console.warn("Audio Context init blocked or unavailable:", e);
-                }
-            }
-
-            updateEngine(speed, maxSpeed) {
-                if (!this.ctx || !this.engineOsc) return;
-                const ratio = Math.abs(speed) / maxSpeed;
-                const pitch = 40 + ratio * 90;
-                this.engineOsc.frequency.setTargetAtTime(pitch, this.ctx.currentTime, 0.1);
-            }
-
-            playCannonFire() {
-                if (!this.ctx) return;
-                const now = this.ctx.currentTime;
-
-                const bufferSize = this.ctx.sampleRate * 1.2;
-                const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-                const data = buffer.getChannelData(0);
-                for (let i = 0; i < bufferSize; i++) {
-                    data[i] = Math.random() * 2 - 1;
-                }
-
-                const noise = this.ctx.createBufferSource();
-                noise.buffer = buffer;
-
-                const filter = this.ctx.createBiquadFilter();
-                filter.type = 'lowpass';
-                filter.frequency.setValueAtTime(800, now);
-                filter.frequency.exponentialRampToValueAtTime(30, now + 1.1);
-
-                const gain = this.ctx.createGain();
-                gain.gain.setValueAtTime(0.9, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
-
-                noise.connect(filter);
-                filter.connect(gain);
-                gain.connect(this.ctx.destination);
-
-                const bass = this.ctx.createOscillator();
-                const bassGain = this.ctx.createGain();
-                bass.type = 'sine';
-                bass.frequency.setValueAtTime(160, now);
-                bass.frequency.exponentialRampToValueAtTime(20, now + 0.8);
-
-                bassGain.gain.setValueAtTime(0.9, now);
-                bassGain.gain.exponentialRampToValueAtTime(0.001, now + 0.9);
-
-                bass.connect(bassGain);
-                bassGain.connect(this.ctx.destination);
-
-                noise.start(now);
-                bass.start(now);
-                bass.stop(now + 1.2);
-            }
-
-            playMachineGun() {
-                if (!this.ctx) return;
-                const now = this.ctx.currentTime;
-                const osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
-
-                osc.type = 'square';
-                osc.frequency.setValueAtTime(400, now);
-                osc.frequency.exponentialRampToValueAtTime(100, now + 0.08);
-
-                gain.gain.setValueAtTime(0.2, now);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
-
-                osc.connect(gain);
-                gain.connect(this.ctx.destination);
-                osc.start(now);
-                osc.stop(now + 0.08);
-            }
-
-            playArmorImpact(penetrated, ricochet) {
-                if (!this.ctx) return;
-                const now = this.ctx.currentTime;
-                const osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
-
-                if (ricochet) {
-                    osc.type = 'sine';
-                    osc.frequency.setValueAtTime(1800, now);
-                    osc.frequency.exponentialRampToValueAtTime(400, now + 0.3);
-                    gain.gain.setValueAtTime(0.6, now);
-                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
-                } else if (penetrated) {
-                    osc.type = 'triangle';
-                    osc.frequency.setValueAtTime(300, now);
-                    osc.frequency.exponentialRampToValueAtTime(40, now + 0.4);
-                    gain.gain.setValueAtTime(0.8, now);
-                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
-                } else {
-                    osc.type = 'sine';
-                    osc.frequency.setValueAtTime(200, now);
-                    osc.frequency.exponentialRampToValueAtTime(60, now + 0.25);
-                    gain.gain.setValueAtTime(0.4, now);
-                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
-                }
-
-                osc.connect(gain);
-                gain.connect(this.ctx.destination);
-                osc.start(now);
-                osc.stop(now + 0.4);
-            }
+        function resize() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
         }
-
-        const soundEngine = new SoundEngine();
-
-        function createProceduralCanvasTexture(type) {
-            const canvas = document.createElement('canvas');
-            canvas.width = 512;
-            canvas.height = 512;
-            const ctx = canvas.getContext('2d');
-
-            if (type === 'nato') {
-                ctx.fillStyle = '#2d3825';
-                ctx.fillRect(0, 0, 512, 512);
-                const colors = ['#1a2116', '#473a2b', '#38452e'];
-                for (let i = 0; i < 40; i++) {
-                    ctx.fillStyle = colors[i % colors.length];
-                    ctx.beginPath();
-                    ctx.arc(Math.random() * 512, Math.random() * 512, Math.random() * 80 + 30, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-            } else if (type === 'warsaw') {
-                ctx.fillStyle = '#3c4731';
-                ctx.fillRect(0, 0, 512, 512);
-                const colors = ['#20261a', '#544737', '#171b12'];
-                for (let i = 0; i < 40; i++) {
-                    ctx.fillStyle = colors[i % colors.length];
-                    ctx.beginPath();
-                    ctx.arc(Math.random() * 512, Math.random() * 512, Math.random() * 80 + 30, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-            } else if (type === 'ground') {
-                ctx.fillStyle = '#2d3822';
-                ctx.fillRect(0, 0, 512, 512);
-                for (let i = 0; i < 15000; i++) {
-                    ctx.fillStyle = Math.random() > 0.5 ? '#232c1a' : '#3a472c';
-                    ctx.fillRect(Math.random() * 512, Math.random() * 512, Math.random() * 3 + 1, Math.random() * 3 + 1);
-                }
-            }
-
-            const texture = new THREE.CanvasTexture(canvas);
-            texture.wrapS = THREE.RepeatWrapping;
-            texture.wrapT = THREE.RepeatWrapping;
-            return texture;
-        }
-
-        const MAP_SIZE = 800;
-        const SHELL_TYPES = [
-            { name: "APFSDS", vel: 1650, pen: 580, drop: 9.81, drag: 0.00012, count: 28, color: "#f59e0b" },
-            { name: "HEAT-FS", vel: 950, pen: 480, drop: 12.0, drag: 0.00040, count: 14, color: "#f43f5e" },
-            { name: "HE", vel: 780, pen: 110, drop: 15.0, drag: 0.00055, count: 10, color: "#f97316" }
-        ];
-
-        let scene, camera, renderer;
-        let playerTank;
-        let aiTanks = [];
-        let planes = [];
-        let projectiles = [];
-
-        let currentShellIndex = 0;
-        let reloadTimer = 0;
-        const RELOAD_DURATION = 5.5;
-        let isScopeActive = false;
-        let isFreeLook = false;
-        let isBattleStarted = false;
-
-        const keys = { w: false, a: false, s: false, d: false, space: false };
-        let mgCooldown = 0;
-        let cameraPitch = 0.2, cameraYaw = 0;
-        let turretTargetYaw = 0, turretTargetPitch = 0;
-
-        let controlPoints = [
-            { id: 'A', pos: new THREE.Vector3(-180, 0, 0), owner: 'neutral' },
-            { id: 'B', pos: new THREE.Vector3(0, 0, 0), owner: 'neutral' },
-            { id: 'C', pos: new THREE.Vector3(180, 0, 0), owner: 'neutral' }
-        ];
-
-        function getTerrainHeight(x, z) {
-            return Math.sin(x * 0.012) * Math.cos(z * 0.012) * 8.5 + Math.sin(x * 0.025) * 3.0;
-        }
-
-        function create3DTankMesh(isEnemy = false, camoTexture) {
-            const tankGroup = new THREE.Group();
-
-            const bodyMat = new THREE.MeshStandardMaterial({
-                map: camoTexture,
-                roughness: 0.5,
-                metalness: 0.4
-            });
-
-            const metalDarkMat = new THREE.MeshStandardMaterial({ color: 0x1f2937, roughness: 0.6, metalness: 0.7 });
-
-            // Main Tank Hull
-            const hullGeo = new THREE.BoxGeometry(3.8, 1.4, 7.2);
-            const hullMesh = new THREE.Mesh(hullGeo, bodyMat);
-            hullMesh.position.y = 1.1;
-            hullMesh.castShadow = true;
-            hullMesh.receiveShadow = true;
-            tankGroup.add(hullMesh);
-
-            // Left & Right Tracks
-            const trackGeo = new THREE.BoxGeometry(0.75, 1.2, 7.4);
-            const leftTrack = new THREE.Mesh(trackGeo, metalDarkMat);
-            leftTrack.position.set(-2.1, 0.9, 0);
-            leftTrack.castShadow = true;
-            tankGroup.add(leftTrack);
-
-            const rightTrack = new THREE.Mesh(trackGeo, metalDarkMat);
-            rightTrack.position.set(2.1, 0.9, 0);
-            rightTrack.castShadow = true;
-            tankGroup.add(rightTrack);
-
-            // Turret Assembly
-            const turretGroup = new THREE.Group();
-            turretGroup.position.set(0, 1.95, -0.2);
-
-            const turretGeo = new THREE.BoxGeometry(3.4, 1.15, 4.4);
-            const turretMesh = new THREE.Mesh(turretGeo, bodyMat);
-            turretMesh.castShadow = true;
-            turretGroup.add(turretMesh);
-
-            // Roof Commander Cupola & Machine Gun
-            const cupolaGeo = new THREE.CylinderGeometry(0.5, 0.5, 0.4, 12);
-            const cupolaMesh = new THREE.Mesh(cupolaGeo, metalDarkMat);
-            cupolaMesh.position.set(0.85, 0.78, -0.5);
-            turretGroup.add(cupolaMesh);
-
-            const mgGroup = new THREE.Group();
-            mgGroup.position.set(0.85, 1.1, -0.5);
-            const mgBody = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.25, 0.9), metalDarkMat);
-            const mgBarrel = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.2), metalDarkMat);
-            mgBarrel.rotation.x = Math.PI / 2;
-            mgBarrel.position.z = 0.7;
-            mgGroup.add(mgBody);
-            mgGroup.add(mgBarrel);
-            turretGroup.add(mgGroup);
-
-            // Gun Barrel Assembly
-            const barrelGroup = new THREE.Group();
-            barrelGroup.position.set(0, 0.1, 1.9);
-
-            const mantletGeo = new THREE.BoxGeometry(1.3, 0.85, 0.8);
-            const mantlet = new THREE.Mesh(mantletGeo, metalDarkMat);
-            barrelGroup.add(mantlet);
-
-            const barrelGeo = new THREE.CylinderGeometry(0.13, 0.15, 5.2, 16);
-            const barrel = new THREE.Mesh(barrelGeo, metalDarkMat);
-            barrel.rotation.x = Math.PI / 2;
-            barrel.position.z = 2.6;
-            barrel.castShadow = true;
-            barrelGroup.add(barrel);
-
-            const muzzlePoint = new THREE.Object3D();
-            muzzlePoint.position.set(0, 0, 5.2);
-            barrelGroup.add(muzzlePoint);
-
-            const mgMuzzlePoint = new THREE.Object3D();
-            mgMuzzlePoint.position.set(0.85, 1.1, 0.8);
-            turretGroup.add(mgMuzzlePoint);
-
-            turretGroup.add(barrelGroup);
-            tankGroup.add(turretGroup);
-
-            return {
-                mesh: tankGroup,
-                turret: turretGroup,
-                barrel: barrelGroup,
-                muzzlePoint: muzzlePoint,
-                mgMuzzlePoint: mgMuzzlePoint,
-                hull: hullMesh
-            };
-        }
-
-        function initThreeScene() {
-            const container = document.getElementById('webgl-canvas');
-
-            scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x6093cd);
-            scene.fog = new THREE.FogExp2(0x7faee2, 0.0012);
-
-            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 2500);
-
-            renderer = new THREE.WebGLRenderer({ canvas: container, antialias: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-            renderer.shadowMap.enabled = true;
-            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-
-            // Hemisphere & Sun Lights
-            const hemiLight = new THREE.HemisphereLight(0xdceeff, 0x3b4d28, 0.85);
-            scene.add(hemiLight);
-
-            const sunLight = new THREE.DirectionalLight(0xfff5ea, 1.6);
-            sunLight.position.set(300, 450, 200);
-            sunLight.castShadow = true;
-            sunLight.shadow.mapSize.width = 2048;
-            sunLight.shadow.mapSize.height = 2048;
-            sunLight.shadow.camera.near = 10;
-            sunLight.shadow.camera.far = 1200;
-            const d = 350;
-            sunLight.shadow.camera.left = -d;
-            sunLight.shadow.camera.right = d;
-            sunLight.shadow.camera.top = d;
-            sunLight.shadow.camera.bottom = -d;
-            scene.add(sunLight);
-
-            // Ground Terrain
-            const groundTex = createProceduralCanvasTexture('ground');
-            groundTex.repeat.set(40, 40);
-
-            const terrainGeo = new THREE.PlaneGeometry(MAP_SIZE, MAP_SIZE, 120, 120);
-            terrainGeo.rotateX(-Math.PI / 2);
-
-            const pos = terrainGeo.attributes.position;
-            for (let i = 0; i < pos.count; i++) {
-                const x = pos.getX(i);
-                const z = pos.getZ(i);
-                pos.setY(i, getTerrainHeight(x, z));
-            }
-            terrainGeo.computeVertexNormals();
-
-            const terrainMat = new THREE.MeshStandardMaterial({
-                map: groundTex,
-                roughness: 0.9,
-                metalness: 0.1
-            });
-
-            const terrain = new THREE.Mesh(terrainGeo, terrainMat);
-            terrain.receiveShadow = true;
-            scene.add(terrain);
-
-            // Generate Pine Trees
-            const trunkGeo = new THREE.CylinderGeometry(0.4, 0.7, 3.5, 6);
-            const foliageMat1 = new THREE.MeshStandardMaterial({ color: 0x1f3818, roughness: 0.8 });
-            const trunkMat = new THREE.MeshStandardMaterial({ color: 0x3d281a, roughness: 0.9 });
-
-            for (let i = 0; i < 180; i++) {
-                const x = (Math.random() - 0.5) * (MAP_SIZE - 100);
-                const z = (Math.random() - 0.5) * (MAP_SIZE - 100);
-                if (Math.abs(x) < 40 && Math.abs(z) < 40) continue;
-
-                const y = getTerrainHeight(x, z);
-                const treeGroup = new THREE.Group();
-
-                const trunk = new THREE.Mesh(trunkGeo, trunkMat);
-                trunk.position.y = 1.75;
-                trunk.castShadow = true;
-                treeGroup.add(trunk);
-
-                const cone1 = new THREE.Mesh(new THREE.ConeGeometry(3.2, 5.0, 6), foliageMat1);
-                cone1.position.y = 4.5;
-                cone1.castShadow = true;
-                treeGroup.add(cone1);
-
-                treeGroup.position.set(x, y, z);
-                scene.add(treeGroup);
-            }
-
-            // Capture Points Markers
-            controlPoints.forEach(cp => {
-                const poleGeo = new THREE.CylinderGeometry(0.12, 0.12, 16, 8);
-                const poleMat = new THREE.MeshStandardMaterial({ color: 0xc0caf5, metalness: 0.8 });
-                const pole = new THREE.Mesh(poleGeo, poleMat);
-                const y = getTerrainHeight(cp.pos.x, cp.pos.z);
-                pole.position.set(cp.pos.x, y + 8, cp.pos.z);
-                pole.castShadow = true;
-                scene.add(pole);
-
-                const ringGeo = new THREE.RingGeometry(18, 20, 32);
-                ringGeo.rotateX(-Math.PI / 2);
-                const ringMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, side: THREE.DoubleSide, transparent: true, opacity: 0.6 });
-                const ring = new THREE.Mesh(ringGeo, ringMat);
-                ring.position.set(cp.pos.x, y + 0.2, cp.pos.z);
-                scene.add(ring);
-            });
-        }
-
-        class TankEntity {
-            constructor(x, z, isEnemy = false, name = "M1A2 Abrams") {
-                this.name = name;
-                this.isEnemy = isEnemy;
-                const camo = createProceduralCanvasTexture(isEnemy ? 'warsaw' : 'nato');
-                this.meshObj = create3DTankMesh(isEnemy, camo);
-                this.position = new THREE.Vector3(x, getTerrainHeight(x, z), z);
-                this.meshObj.mesh.position.copy(this.position);
-
-                this.speed = 0;
-                this.maxSpeed = isEnemy ? 12 : 15;
-                this.rotation = Math.random() * Math.PI * 2;
-                this.turretYaw = this.rotation;
-                this.barrelPitch = 0;
-
-                this.hp = 100;
-                this.maxHp = 100;
-                this.isDestroyed = false;
-                this.modules = { engine: 'ok', ammo: 'ok', barrel: 'ok', tracks: 'ok', turret: 'ok' };
-                this.isRepairing = false;
-                this.repairProgress = 0;
-                this.repairDuration = 8.0;
-
-                scene.add(this.meshObj.mesh);
-            }
-
-            update(dt) {
-                if (this.isDestroyed) return;
-                this.position.y = getTerrainHeight(this.position.x, this.position.z) + 0.2;
-                this.meshObj.mesh.position.copy(this.position);
-                this.meshObj.mesh.rotation.y = this.rotation;
-
-                this.meshObj.turret.rotation.y = this.turretYaw - this.rotation;
-                this.meshObj.barrel.rotation.x = this.barrelPitch;
-            }
-
-            takeDamage(damage, hitAngle, shellPen, shellType) {
-                if (this.isDestroyed) return;
-
-                const effectiveArmor = (this.isEnemy ? 360 : 420) / Math.max(0.25, Math.cos(hitAngle));
-                const ricochet = hitAngle > (68 * Math.PI / 180);
-                const penetrated = !ricochet && (shellPen > effectiveArmor);
-
-                soundEngine.playArmorImpact(penetrated, ricochet);
-
-                let damagedMods = [];
-                if (penetrated) {
-                    this.hp -= damage;
-                    if (Math.random() < 0.55) { this.modules.engine = 'damaged'; damagedMods.push("Engine"); }
-                    if (Math.random() < 0.45) { this.modules.barrel = 'damaged'; damagedMods.push("Cannon Barrel"); }
-                    if (Math.random() < 0.45) { this.modules.tracks = 'damaged'; damagedMods.push("Tracks"); }
-                    if (Math.random() < 0.35 || shellType === 'APFSDS') { this.modules.ammo = 'damaged'; damagedMods.push("Ammo Rack"); this.hp -= 25; }
-
-                    if (this.hp <= 0) {
-                        this.isDestroyed = true;
-                        this.hp = 0;
-                        this.meshObj.hull.material.color.setHex(0x111111);
-                        addKillFeedEntry(this.isEnemy ? "Player" : "Enemy Force", this.name, shellType);
-                        createExplosionEffect(this.position);
-                    }
-                }
-
-                if (this.isEnemy) {
-                    triggerHitCam2D(this.name, damagedMods, penetrated);
-                } else {
-                    updatePaperdoll();
-                    checkRepairPromptStatus();
-                }
-            }
-
-            needsRepair() {
-                if (this.isDestroyed) return false;
-                if (this.hp < this.maxHp) return true;
-                return Object.values(this.modules).some(status => status !== 'ok');
-            }
-
-            startRepair() {
-                if (!this.needsRepair() || this.isDestroyed) return;
-                this.isRepairing = true;
-                this.repairProgress = 0;
-            }
-
-            cancelRepair() {
-                this.isRepairing = false;
-                this.repairProgress = 0;
-            }
-
-            completeRepair() {
-                this.isRepairing = false;
-                this.repairProgress = 0;
-                this.hp = this.maxHp;
-                this.modules = { engine: 'ok', ammo: 'ok', barrel: 'ok', tracks: 'ok', turret: 'ok' };
-                updatePaperdoll();
-                checkRepairPromptStatus();
-            }
-        }
-
-        class ShellProjectile {
-            constructor(pos, dir, shellType, owner) {
-                this.position = pos.clone();
-                this.velocity = dir.clone().multiplyScalar(shellType.vel * 0.1);
-                this.drop = shellType.drop;
-                this.drag = shellType.drag;
-                this.pen = shellType.pen;
-                this.shellTypeName = shellType.name;
-                this.owner = owner;
-                this.alive = true;
-
-                const tracerGeo = new THREE.CylinderGeometry(0.12, 0.12, 2.5);
-                const tracerMat = new THREE.MeshBasicMaterial({ color: shellType.color });
-                this.mesh = new THREE.Mesh(tracerGeo, tracerMat);
-                this.mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize());
-                this.mesh.position.copy(this.position);
-
-                scene.add(this.mesh);
-            }
-
-            update(dt) {
-                if (!this.alive) return;
-
-                const currentSpeed = this.velocity.length();
-                const dragDecay = 1.0 - (this.drag * currentSpeed * dt * 10);
-                this.velocity.multiplyScalar(Math.max(0.8, dragDecay));
-
-                this.velocity.y -= this.drop * dt * 3.2;
-                this.position.addScaledVector(this.velocity, dt);
-                this.mesh.position.copy(this.position);
-
-                const terrainY = getTerrainHeight(this.position.x, this.position.z);
-                if (this.position.y <= terrainY) {
-                    this.destroy();
-                    createImpactDust(this.position);
-                    return;
-                }
-
-                const allTanks = [playerTank, ...aiTanks];
-                for (let tank of allTanks) {
-                    if (tank === this.owner || tank.isDestroyed) continue;
-
-                    if (this.position.distanceTo(tank.position) < 3.4) {
-                        const hitVector = this.position.clone().sub(tank.position).normalize();
-                        const facingVector = new THREE.Vector3(0, 0, 1).applyAxisAngle(new THREE.Vector3(0, 1, 0), tank.rotation);
-                        const hitAngle = hitVector.angleTo(facingVector);
-
-                        tank.takeDamage(85, hitAngle, this.pen, this.shellTypeName);
-                        this.destroy();
-                        createImpactDust(this.position);
-                        break;
-                    }
-                }
-            }
-
-            destroy() {
-                this.alive = false;
-                scene.remove(this.mesh);
-            }
-        }
-
-        class MachineGunBullet {
-            constructor(pos, dir) {
-                this.position = pos.clone();
-                this.velocity = dir.clone().multiplyScalar(300);
-                this.alive = true;
-
-                const geo = new THREE.SphereGeometry(0.15, 6, 6);
-                const mat = new THREE.MeshBasicMaterial({ color: 0xffe066 });
-                this.mesh = new THREE.Mesh(geo, mat);
-                this.mesh.position.copy(this.position);
-                scene.add(this.mesh);
-            }
-
-            update(dt) {
-                if (!this.alive) return;
-                this.position.addScaledVector(this.velocity, dt);
-                this.mesh.position.copy(this.position);
-
-                aiTanks.forEach(ai => {
-                    if (!ai.isDestroyed && this.position.distanceTo(ai.position) < 3.2) {
-                        ai.takeDamage(8, 0, 45, '12.7mm MG');
-                        this.destroy();
-                    }
-                });
-
-                if (this.position.y <= getTerrainHeight(this.position.x, this.position.z) || this.position.length() > 1000) {
-                    this.destroy();
-                }
-            }
-
-            destroy() {
-                this.alive = false;
-                scene.remove(this.mesh);
-            }
-        }
-
-        function createMuzzleFlashLight(pos) {
-            const flashLight = new THREE.PointLight(0xffca28, 8.0, 45);
-            flashLight.position.copy(pos);
-            scene.add(flashLight);
-            setTimeout(() => scene.remove(flashLight), 80);
-        }
-
-        function createExplosionEffect(pos) {
-            const expLight = new THREE.PointLight(0xff5722, 12.0, 70);
-            expLight.position.copy(pos).add(new THREE.Vector3(0, 2, 0));
-            scene.add(expLight);
-            setTimeout(() => scene.remove(expLight), 350);
-
-            const pGeo = new THREE.SphereGeometry(0.8, 6, 6);
-            const pMat = new THREE.MeshBasicMaterial({ color: 0xf97316, transparent: true, opacity: 0.9 });
-            for (let i = 0; i < 16; i++) {
-                const particle = new THREE.Mesh(pGeo, pMat);
-                particle.position.copy(pos).add(new THREE.Vector3((Math.random() - 0.5) * 4, Math.random() * 4, (Math.random() - 0.5) * 4));
-                scene.add(particle);
-                setTimeout(() => scene.remove(particle), 1000);
-            }
-        }
-
-        function createImpactDust(pos) {
-            const pGeo = new THREE.SphereGeometry(1.2, 6, 6);
-            const pMat = new THREE.MeshBasicMaterial({ color: 0x8d8374, transparent: true, opacity: 0.6 });
-            const particle = new THREE.Mesh(pGeo, pMat);
-            particle.position.copy(pos);
-            scene.add(particle);
-            setTimeout(() => scene.remove(particle), 750);
-        }
-
-        function triggerHitCam2D(targetName, modulesDamaged, penetrated) {
-            const card = document.getElementById('hit-cam-card');
-            document.getElementById('hit-cam-target-name').innerText = targetName;
-            card.classList.remove('hidden');
-
-            const canvas = document.getElementById('hit-cam-canvas');
-            const ctx = canvas.getContext('2d');
-            ctx.clearRect(0, 0, 240, 110);
-
-            // Dark Schematic Background
-            ctx.fillStyle = '#050a14';
-            ctx.fillRect(0, 0, 240, 110);
-
-            // Tank Outline
-            ctx.strokeStyle = '#0284c7';
-            ctx.lineWidth = 1.5;
-            ctx.strokeRect(40, 25, 160, 60);
-
-            // Cannon Barrel
-            ctx.strokeRect(200, 50, 30, 10);
-
-            // Modules (Engine, Ammo, Crew)
-            ctx.fillStyle = modulesDamaged.includes("Engine") ? "#ef4444" : "#22c55e";
-            ctx.fillRect(45, 35, 35, 40);
-
-            ctx.fillStyle = modulesDamaged.includes("Ammo Rack") ? "#ef4444" : "#22c55e";
-            ctx.fillRect(90, 45, 30, 20);
-
-            ctx.fillStyle = modulesDamaged.includes("Cannon Barrel") ? "#ef4444" : "#22c55e";
-            ctx.fillRect(180, 50, 20, 10);
-
-            // Hit Shell Vector Path
-            ctx.strokeStyle = penetrated ? '#f59e0b' : '#38bdf8';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(235, 55);
-            ctx.lineTo(penetrated ? 80 : 160, 55);
-            ctx.stroke();
-
-            const statusEl = document.getElementById('hit-cam-status');
-            statusEl.innerText = penetrated ? (modulesDamaged.join(", ") || "Critical Penetration!") : "Ricochet / Non-Penetration";
-            statusEl.className = penetrated ? "text-[11px] font-mono mt-1.5 text-amber-400 font-bold truncate text-center" : "text-[11px] font-mono mt-1.5 text-slate-400 font-bold truncate text-center";
-
-            setTimeout(() => card.classList.add('hidden'), 3500);
-        }
-
-        function setupInputListeners() {
-            window.addEventListener('keydown', (e) => {
-                const k = e.key.toLowerCase();
-                if (k === 'w') keys.w = true;
-                if (k === 's') keys.s = true;
-                if (k === 'a') keys.a = true;
-                if (k === 'd') keys.d = true;
-                if (k === 'c') isFreeLook = true;
-                if (k === ' ') keys.space = true;
-                if (k === 'f') toggleOrStartRepair();
-                if (k === '1') selectShell(0);
-                if (k === '2') selectShell(1);
-                if (k === '3') selectShell(2);
-                if (k === 'shift') toggleSniperScope();
-                if (k === 'e') performLaserRangefinding();
-            });
-
-            window.addEventListener('keyup', (e) => {
-                const k = e.key.toLowerCase();
-                if (k === 'w') keys.w = false;
-                if (k === 's') keys.s = false;
-                if (k === 'a') keys.a = false;
-                if (k === 'd') keys.d = false;
-                if (k === 'c') isFreeLook = false;
-                if (k === ' ') keys.space = false;
-            });
-
-            window.addEventListener('mousemove', (e) => {
-                if (document.pointerLockElement === document.body) {
-                    const sensitivity = isScopeActive ? 0.0006 : 0.0022;
-                    cameraYaw -= e.movementX * sensitivity;
-                    cameraPitch += e.movementY * sensitivity;
-                    cameraPitch = Math.max(-0.25, Math.min(0.6, cameraPitch));
-
-                    if (!isFreeLook) {
-                        turretTargetYaw = cameraYaw;
-                        turretTargetPitch = -cameraPitch * 0.5;
-                    }
-                }
-            });
-
-            window.addEventListener('mousedown', (e) => {
-                if (e.button === 0) {
-                    if (document.pointerLockElement !== document.body && isBattleStarted) {
-                        document.body.requestPointerLock();
-                    } else if (isBattleStarted) {
-                        fireMainGun();
-                    }
-                } else if (e.button === 2) {
-                    toggleSniperScope();
-                }
-            });
-
-            window.addEventListener('contextmenu', e => e.preventDefault());
-        }
-
-        function performLaserRangefinding() {
-            if (!isScopeActive || !playerTank) return;
-
-            const raycaster = new THREE.Raycaster();
-            const muzzlePos = new THREE.Vector3();
-            playerTank.meshObj.muzzlePoint.getWorldPosition(muzzlePos);
-
-            const dir = new THREE.Vector3(0, 0, 1);
-            dir.applyQuaternion(playerTank.meshObj.barrel.getWorldQuaternion(new THREE.Quaternion()));
-
-            raycaster.set(muzzlePos, dir);
-            const intersects = raycaster.intersectObjects(scene.children, true);
-
-            if (intersects.length > 0) {
-                const dist = Math.round(intersects[0].distance);
-                document.getElementById('target-dist').innerText = `${dist} m`;
-                document.getElementById('scope-zeroing').innerText = `${dist} m`;
-            } else {
-                document.getElementById('target-dist').innerText = `>2000 m`;
-            }
-        }
-
-        function toggleSniperScope() {
-            if (!playerTank || playerTank.isDestroyed || !isBattleStarted) return;
-            isScopeActive = !isScopeActive;
-            const scopeOverlay = document.getElementById('sniper-scope');
-            if (isScopeActive) {
-                scopeOverlay.classList.remove('hidden');
-            } else {
-                scopeOverlay.classList.add('hidden');
-            }
-        }
-
-        function selectShell(index) {
-            if (index < 0 || index >= SHELL_TYPES.length) return;
-            currentShellIndex = index;
-            
-            const btnIds = ['shell-btn-1', 'shell-btn-2', 'shell-btn-3'];
-            btnIds.forEach((id, idx) => {
-                const btn = document.getElementById(id);
-                if (btn) {
-                    btn.className = idx === index ? 
-                        "relative p-2 rounded-xl bg-slate-800/90 hover:bg-slate-700 border-2 border-amber-500 flex flex-col items-center w-20 transition" :
-                        "relative p-2 rounded-xl bg-slate-800/90 hover:bg-slate-700 border-2 border-slate-700 flex flex-col items-center w-20 transition";
-                }
-            });
-
-            document.getElementById('scope-shell-name').innerText = SHELL_TYPES[index].name;
-        }
-
-        function fireMainGun() {
-            if (!playerTank || playerTank.isDestroyed || reloadTimer > 0) return;
-
-            const shell = SHELL_TYPES[currentShellIndex];
-            if (shell.count <= 0) return;
-
-            shell.count--;
-            document.getElementById(`shell-count-${currentShellIndex + 1}`).innerText = shell.count;
-
-            reloadTimer = RELOAD_DURATION;
-
-            const muzzlePos = new THREE.Vector3();
-            playerTank.meshObj.muzzlePoint.getWorldPosition(muzzlePos);
-
-            const dir = new THREE.Vector3(0, 0, 1);
-            dir.applyQuaternion(playerTank.meshObj.barrel.getWorldQuaternion(new THREE.Quaternion()));
-
-            projectiles.push(new ShellProjectile(muzzlePos, dir, shell, playerTank));
-            soundEngine.playCannonFire();
-            createMuzzleFlashLight(muzzlePos);
-        }
-
-        function toggleOrStartRepair() {
-            if (!playerTank || playerTank.isDestroyed) return;
-
-            if (playerTank.isRepairing) {
-                playerTank.cancelRepair();
-                checkRepairPromptStatus();
-            } else if (playerTank.needsRepair()) {
-                playerTank.startRepair();
-            }
-        }
-
-        function checkRepairPromptStatus() {
-            const promptEl = document.getElementById('repair-prompt');
-            const promptTextEl = document.getElementById('repair-prompt-text');
-            const timerEl = document.getElementById('repair-timer');
-
-            if (!playerTank || playerTank.isDestroyed || !playerTank.needsRepair()) {
-                promptEl.classList.add('hidden');
-                return;
-            }
-
-            promptEl.classList.remove('hidden');
-            if (playerTank.isRepairing) {
-                const remaining = Math.max(0, playerTank.repairDuration - playerTank.repairProgress).toFixed(1);
-                promptTextEl.innerText = "Repairing Tank...";
-                timerEl.innerText = `${remaining}`;
-            } else {
-                promptTextEl.innerText = "Press F to Repair Tank";
-                timerEl.innerText = `${playerTank.repairDuration.toFixed(1)}`;
-            }
-        }
-
-        function updatePaperdoll() {
-            if (!playerTank) return;
-
-            const getModuleColor = (status) => status === 'ok' ? '#22c55e' : (status === 'damaged' ? '#eab308' : '#ef4444');
-            const hpRatio = playerTank.hp / playerTank.maxHp;
-            const hpColor = hpRatio > 0.65 ? '#22c55e' : (hpRatio > 0.35 ? '#eab308' : '#ef4444');
-
-            const hpInd = document.getElementById('hp-indicator');
-            hpInd.innerText = `${Math.max(0, Math.round(hpRatio * 100))}%`;
-            hpInd.className = hpRatio > 0.65 ? "text-emerald-400" : (hpRatio > 0.35 ? "text-amber-400" : "text-rose-500");
-
-            document.getElementById('pd-hull').setAttribute('fill', hpColor);
-            document.getElementById('pd-track-l').setAttribute('fill', getModuleColor(playerTank.modules.tracks));
-            document.getElementById('pd-track-r').setAttribute('fill', getModuleColor(playerTank.modules.tracks));
-            document.getElementById('pd-engine').setAttribute('fill', getModuleColor(playerTank.modules.engine));
-            document.getElementById('pd-turret').setAttribute('fill', getModuleColor(playerTank.modules.turret));
-            document.getElementById('pd-barrel').setAttribute('fill', getModuleColor(playerTank.modules.barrel));
-            document.getElementById('pd-ammo').setAttribute('fill', getModuleColor(playerTank.modules.ammo));
-        }
-
-        function addKillFeedEntry(killer, victim, weapon) {
-            const feed = document.getElementById('kill-feed');
-            if (!feed) return;
-            const entry = document.createElement('div');
-            entry.className = "glass-panel px-3 py-1 rounded-lg text-slate-200 flex items-center gap-2 border-l-4 border-rose-500 animate-fade-in";
-            entry.innerHTML = `<span class="text-blue-400 font-bold">${killer}</span> <i class="fa-solid fa-crosshairs text-slate-400 text-[10px]"></i> <span class="text-amber-400">[${weapon}]</span> <span class="text-rose-400 font-bold">${victim}</span>`;
-            feed.appendChild(entry);
-            setTimeout(() => entry.remove(), 5000);
-        }
-
-        let lastTime = performance.now();
-
-        function gameLoop(now) {
-            requestAnimationFrame(gameLoop);
-
-            const dt = Math.min((now - lastTime) / 1000, 0.1);
-            lastTime = now;
-
-            if (!isBattleStarted) {
-                // Menu Cinematic Orbital Rotation
-                cameraYaw += 0.15 * dt;
-                const menuDist = 20;
-                camera.position.set(Math.sin(cameraYaw) * menuDist, 8, Math.cos(cameraYaw) * menuDist);
-                camera.lookAt(0, 2, 0);
-                renderer.render(scene, camera);
-                return;
-            }
-
-            if (playerTank && playerTank.isRepairing) {
-                playerTank.speed *= 0.5;
-                playerTank.repairProgress += dt;
-                checkRepairPromptStatus();
-
-                if (playerTank.repairProgress >= playerTank.repairDuration) {
-                    playerTank.completeRepair();
-                    addKillFeedEntry("FIELD REPAIR", "Tank Fully Repaired!", "100% HP");
-                }
-            }
-
-            if (keys.space && mgCooldown <= 0 && playerTank && !playerTank.isDestroyed) {
-                mgCooldown = 0.09;
-                const mgPos = new THREE.Vector3();
-                playerTank.meshObj.mgMuzzlePoint.getWorldPosition(mgPos);
-
-                const dir = new THREE.Vector3(0, 0, 1);
-                dir.applyQuaternion(playerTank.meshObj.barrel.getWorldQuaternion(new THREE.Quaternion()));
-
-                projectiles.push(new MachineGunBullet(mgPos, dir));
-                soundEngine.playMachineGun();
-            }
-            if (mgCooldown > 0) mgCooldown -= dt;
-
-            if (playerTank && !playerTank.isDestroyed) {
-                let maxSpeedMultiplier = 1.0;
-                if (playerTank.modules.engine === 'damaged') maxSpeedMultiplier *= 0.45;
-                if (playerTank.modules.tracks === 'damaged') maxSpeedMultiplier *= 0.30;
-
-                const curMaxSpeed = playerTank.maxSpeed * maxSpeedMultiplier;
-
-                if (keys.w) playerTank.speed = Math.min(playerTank.speed + 14 * dt, curMaxSpeed);
-                else if (keys.s) playerTank.speed = Math.max(playerTank.speed - 14 * dt, -curMaxSpeed * 0.5);
-                else playerTank.speed *= 0.93;
-
-                if (keys.a) playerTank.rotation += 1.3 * dt;
-                if (keys.d) playerTank.rotation -= 1.3 * dt;
-
-                playerTank.position.x += Math.sin(playerTank.rotation) * playerTank.speed * dt;
-                playerTank.position.z += Math.cos(playerTank.rotation) * playerTank.speed * dt;
-
-                playerTank.turretYaw += (turretTargetYaw - playerTank.turretYaw) * 4.5 * dt;
-                playerTank.barrelPitch += (turretTargetPitch - playerTank.barrelPitch) * 4.5 * dt;
-
-                playerTank.update(dt);
-                soundEngine.updateEngine(playerTank.speed, playerTank.maxSpeed);
-                document.getElementById('speed-indicator').innerText = Math.abs(Math.round(playerTank.speed * 3.6));
-
-                if (isScopeActive) {
-                    const sightPos = new THREE.Vector3();
-                    playerTank.meshObj.muzzlePoint.getWorldPosition(sightPos);
-                    camera.position.copy(sightPos);
-                    camera.rotation.set(playerTank.barrelPitch, playerTank.turretYaw + Math.PI, 0, 'YXZ');
-                } else {
-                    const camDist = 12.5;
-                    const cx = playerTank.position.x - Math.sin(cameraYaw) * Math.cos(cameraPitch) * camDist;
-                    const cy = playerTank.position.y + Math.sin(cameraPitch) * camDist + 3.6;
-                    const cz = playerTank.position.z - Math.cos(cameraYaw) * Math.cos(cameraPitch) * camDist;
-
-                    camera.position.set(cx, cy, cz);
-                    camera.lookAt(playerTank.position.x, playerTank.position.y + 2.0, playerTank.position.z);
-                }
-
-                if (reloadTimer > 0) {
-                    reloadTimer -= dt;
-                    const progress = Math.max(0, 100 - (reloadTimer / RELOAD_DURATION) * 100);
-                    document.getElementById('reload-progress-bar').style.width = `${progress}%`;
-                    document.getElementById('reload-time-text').innerText = `${reloadTimer.toFixed(1)}s`;
-                } else {
-                    document.getElementById('reload-progress-bar').style.width = '100%';
-                    document.getElementById('reload-time-text').innerText = 'READY';
-                }
-            }
-
-            aiTanks.forEach(ai => {
-                if (ai.isDestroyed) return;
-
-                const distToPlayer = ai.position.distanceTo(playerTank.position);
-                if (distToPlayer < 350) {
-                    const angleToPlayer = Math.atan2(playerTank.position.x - ai.position.x, playerTank.position.z - ai.position.z);
-                    ai.turretYaw = angleToPlayer;
-
-                    if (Math.random() < 0.005 && distToPlayer < 260) {
-                        const muzzlePos = new THREE.Vector3();
-                        ai.meshObj.muzzlePoint.getWorldPosition(muzzlePos);
-                        const dir = playerTank.position.clone().sub(ai.position).normalize();
-                        projectiles.push(new ShellProjectile(muzzlePos, dir, SHELL_TYPES[0], ai));
-                    }
-                }
-                ai.update(dt);
-            });
-
-            projectiles.forEach(p => p.update(dt));
-            projectiles = projectiles.filter(p => p.alive);
-
-            drawMinimap();
-            renderer.render(scene, camera);
-        }
-
-        function drawMinimap() {
-            const canvas = document.getElementById('minimap-canvas');
-            if (!canvas) return;
-            const ctx = canvas.getContext('2d');
-            ctx.clearRect(0, 0, 176, 176);
-
-            ctx.fillStyle = '#090d16';
-            ctx.fillRect(0, 0, 176, 176);
-
-            ctx.strokeStyle = '#1e293b';
-            ctx.lineWidth = 1;
-            for (let i = 0; i < 176; i += 22) {
-                ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 176); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(176, i); ctx.stroke();
-            }
-
-            const scale = 176 / MAP_SIZE;
-            const center = 88;
-
-            controlPoints.forEach(cp => {
-                const mx = center + cp.pos.x * scale;
-                const my = center + cp.pos.z * scale;
-                ctx.fillStyle = cp.owner === 'blue' ? '#3b82f6' : (cp.owner === 'red' ? '#f43f5e' : '#94a3b8');
+        window.addEventListener('resize', resize);
+        resize();
+
+        // Game Settings
+        const BEAR_SPEED = 4;
+        const ENEMY_SPEED = 2;
+        const FRICTION = 0.8;
+        const ACCELERATION = 1.5;
+
+        // Characters based on Kikoriki (Smeshariki) colors
+        // Kopatych (Bear) - Player
+        const kopatych = {
+            x: 0, y: 0, radius: 25, color: '#A0522D', // Sienna / Brown
+            vx: 0, vy: 0,
+            draw: function() {
+                // Body
                 ctx.beginPath();
-                ctx.arc(mx, my, 5, 0, Math.PI * 2);
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
                 ctx.fill();
-            });
+                ctx.lineWidth = 3;
+                ctx.strokeStyle = '#5c2d13';
+                ctx.stroke();
 
-            aiTanks.forEach(ai => {
-                if (ai.isDestroyed) return;
-                const mx = center + ai.position.x * scale;
-                const my = center + ai.position.z * scale;
-                ctx.fillStyle = '#f43f5e';
-                ctx.fillRect(mx - 3, my - 3, 6, 6);
-            });
+                // Eyes
+                ctx.fillStyle = 'white';
+                ctx.beginPath(); ctx.arc(this.x - 8, this.y - 5, 6, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(this.x + 8, this.y - 5, 6, 0, Math.PI*2); ctx.fill();
+                // Pupils (Angry)
+                ctx.fillStyle = 'black';
+                ctx.beginPath(); ctx.arc(this.x - 6, this.y - 3, 2, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(this.x + 6, this.y - 3, 2, 0, Math.PI*2); ctx.fill();
+                
+                // Eyebrows
+                ctx.beginPath(); ctx.moveTo(this.x - 15, this.y - 15); ctx.lineTo(this.x - 2, this.y - 8); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(this.x + 15, this.y - 15); ctx.lineTo(this.x + 2, this.y - 8); ctx.stroke();
 
-            if (playerTank) {
-                const px = center + playerTank.position.x * scale;
-                const py = center + playerTank.position.z * scale;
-                ctx.save();
-                ctx.translate(px, py);
-                ctx.rotate(-playerTank.rotation);
-                ctx.fillStyle = '#38bdf8';
-                ctx.beginPath();
-                ctx.moveTo(0, -6);
-                ctx.lineTo(-4, 5);
-                ctx.lineTo(4, 5);
-                ctx.closePath();
-                ctx.fill();
-                ctx.restore();
+                // Nose
+                ctx.fillStyle = '#4a2311';
+                ctx.beginPath(); ctx.arc(this.x, this.y + 5, 8, 0, Math.PI*2); ctx.fill();
             }
-        }
-
-        function startBattle() {
-            document.getElementById('start-modal').classList.add('hidden');
-            soundEngine.init();
-            isBattleStarted = true;
-
-            if (document.body.requestPointerLock) {
-                document.body.requestPointerLock();
-            }
-        }
-
-        window.onload = function() {
-            initThreeScene();
-            setupInputListeners();
-
-            // Spawn Player & Enemy Tanks
-            playerTank = new TankEntity(0, -180, false, "M1A2 SEPv3 Abrams");
-
-            const enemyTypes = ["T-90M Breakout", "T-72B3M", "Leopard 2A7", "Challenger 2 TES", "BMP-3M", "Type 99A"];
-            const spawnPositions = [[-160, 120], [0, 180], [160, 120], [-220, 40], [220, 60], [-80, 240]];
-
-            for (let i = 0; i < spawnPositions.length; i++) {
-                const pos = spawnPositions[i];
-                aiTanks.push(new TankEntity(pos[0], pos[1], true, enemyTypes[i]));
-            }
-
-            // Start rendering loop immediately so background is never black
-            requestAnimationFrame(gameLoop);
         };
 
-        window.addEventListener('resize', () => {
-            if (camera && renderer) {
-                camera.aspect = window.innerWidth / window.innerHeight;
-                camera.updateProjectionMatrix();
-                renderer.setSize(window.innerWidth, window.innerHeight);
+        const enemyTemplates = [
+            { name: 'Krash', color: '#00BFFF', type: 'rabbit' }, // DeepSkyBlue
+            { name: 'Chiko', color: '#FF69B4', type: 'pig' },     // HotPink
+            { name: 'Wally', color: '#9370DB', type: 'ram' },     // MediumPurple
+            { name: 'Pin', color: '#000000', type: 'penguin' },   // Black/White
+            { name: 'Dokko', color: '#FFA500', type: 'moose' },   // Orange
+            { name: 'Rosa', color: '#FFC0CB', type: 'pig' }       // Pink
+        ];
+
+        let enemies = [];
+        let particles = [];
+
+        class Enemy {
+            constructor(x, y, template) {
+                this.x = x;
+                this.y = y;
+                this.radius = 20;
+                this.color = template.color;
+                this.name = template.name;
+                this.type = template.type;
+                // Random movement direction
+                this.angle = Math.random() * Math.PI * 2;
+                this.speed = ENEMY_SPEED + Math.random();
+                this.vx = Math.cos(this.angle) * this.speed;
+                this.vy = Math.sin(this.angle) * this.speed;
+                // Change direction timer
+                this.changeDirTimer = 0;
             }
+
+            update() {
+                // Wandering logic
+                this.changeDirTimer++;
+                if (this.changeDirTimer > 60 + Math.random() * 60) {
+                    this.angle += (Math.random() - 0.5) * Math.PI; // Change angle slightly
+                    this.vx = Math.cos(this.angle) * this.speed;
+                    this.vy = Math.sin(this.angle) * this.speed;
+                    this.changeDirTimer = 0;
+                }
+
+                // Fleeing logic (if bear is close)
+                const distToBear = Math.hypot(kopatych.x - this.x, kopatych.y - this.y);
+                if (distToBear < 200) {
+                    const fleeAngle = Math.atan2(this.y - kopatych.y, this.x - kopatych.x);
+                    this.vx = Math.cos(fleeAngle) * (this.speed * 1.5);
+                    this.vy = Math.sin(fleeAngle) * (this.speed * 1.5);
+                }
+
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // Bounce off walls
+                if (this.x < this.radius) { this.x = this.radius; this.vx *= -1; }
+                if (this.x > width - this.radius) { this.x = width - this.radius; this.vx *= -1; }
+                if (this.y < this.radius) { this.y = this.radius; this.vy *= -1; }
+                if (this.y > height - this.radius) { this.y = height - this.radius; this.vy *= -1; }
+            }
+
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = '#333';
+                ctx.stroke();
+
+                // Simple eyes (scared)
+                ctx.fillStyle = 'white';
+                ctx.beginPath(); ctx.arc(this.x - 6, this.y - 4, 5, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(this.x + 6, this.y - 4, 5, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = 'black';
+                ctx.beginPath(); ctx.arc(this.x - 6, this.y - 4, 1.5, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(this.x + 6, this.y - 4, 1.5, 0, Math.PI*2); ctx.fill();
+            }
+        }
+
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.radius = Math.random() * 4 + 2;
+                this.color = color;
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 5 + 2;
+                this.vx = Math.cos(angle) * speed;
+                this.vy = Math.sin(angle) * speed;
+                this.life = 1.0;
+                this.decay = Math.random() * 0.05 + 0.02;
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.life -= this.decay;
+            }
+            draw() {
+                ctx.globalAlpha = this.life;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+                ctx.globalAlpha = 1.0;
+            }
+        }
+
+        const keys = {
+            ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false,
+            w: false, a: false, s: false, d: false
+        };
+
+        window.addEventListener('keydown', (e) => {
+            if(keys.hasOwnProperty(e.key)) keys[e.key] = true;
         });
+        window.addEventListener('keyup', (e) => {
+            if(keys.hasOwnProperty(e.key)) keys[e.key] = false;
+        });
+
+        // Mobile touch controls
+        function addTouchControl(btnId, keyName) {
+            const btn = document.getElementById(btnId);
+            btn.addEventListener('touchstart', (e) => { e.preventDefault(); keys[keyName] = true; }, {passive: false});
+            btn.addEventListener('touchend', (e) => { e.preventDefault(); keys[keyName] = false; }, {passive: false});
+        }
+        addTouchControl('btnUp', 'ArrowUp');
+        addTouchControl('btnDown', 'ArrowDown');
+        addTouchControl('btnLeft', 'ArrowLeft');
+        addTouchControl('btnRight', 'ArrowRight');
+
+
+        function createExplosion(x, y, color) {
+            for (let i = 0; i < 20; i++) {
+                particles.push(new Particle(x, y, color));
+            }
+        }
+
+        function startGame() {
+            gameState = 'PLAYING';
+            messageScreen.style.display = 'none';
+            
+            // Reset Player
+            kopatych.x = width / 2;
+            kopatych.y = height / 2;
+            kopatych.vx = 0;
+            kopatych.vy = 0;
+
+            // Spawn Enemies
+            enemies = [];
+            particles = [];
+            
+            // Create 10 enemies randomly selecting from templates
+            for (let i = 0; i < 10; i++) {
+                let template = enemyTemplates[Math.floor(Math.random() * enemyTemplates.length)];
+                let ex, ey;
+                // Ensure they don't spawn right on top of the player
+                do {
+                    ex = Math.random() * (width - 100) + 50;
+                    ey = Math.random() * (height - 100) + 50;
+                } while (Math.hypot(kopatych.x - ex, kopatych.y - ey) < 150);
+                
+                enemies.push(new Enemy(ex, ey, template));
+            }
+
+            updateUI();
+            if (animationId) cancelAnimationFrame(animationId);
+            gameLoop();
+        }
+
+        function updateUI() {
+            enemiesCountSpan.innerText = enemies.length;
+        }
+
+        function endGame(isWin) {
+            gameState = isWin ? 'WIN' : 'GAME_OVER';
+            messageScreen.style.display = 'block';
+            if (isWin) {
+                screenTitle.innerText = "You Caught Them All!";
+                screenTitle.style.color = "#2ecc71"; // Green
+                screenSubtitle.innerText = "The rampage is over.";
+                startBtn.innerText = "Play Again";
+            }
+        }
+
+        function updatePlayer() {
+            // Acceleration based on input
+            if (keys.ArrowUp || keys.w) kopatych.vy -= ACCELERATION;
+            if (keys.ArrowDown || keys.s) kopatych.vy += ACCELERATION;
+            if (keys.ArrowLeft || keys.a) kopatych.vx -= ACCELERATION;
+            if (keys.ArrowRight || keys.d) kopatych.vx += ACCELERATION;
+
+            // Apply friction
+            kopatych.vx *= FRICTION;
+            kopatych.vy *= FRICTION;
+
+            // Limit max speed
+            const speed = Math.hypot(kopatych.vx, kopatych.vy);
+            if (speed > BEAR_SPEED * 2) {
+                kopatych.vx = (kopatych.vx / speed) * (BEAR_SPEED * 2);
+                kopatych.vy = (kopatych.vy / speed) * (BEAR_SPEED * 2);
+            }
+
+            kopatych.x += kopatych.vx;
+            kopatych.y += kopatych.vy;
+
+            // Boundary collision
+            if (kopatych.x < kopatych.radius) kopatych.x = kopatych.radius;
+            if (kopatych.x > width - kopatych.radius) kopatych.x = width - kopatych.radius;
+            if (kopatych.y < kopatych.radius) kopatych.y = kopatych.radius;
+            if (kopatych.y > height - kopatych.radius) kopatych.y = height - kopatych.radius;
+        }
+
+        function gameLoop() {
+            if (gameState !== 'PLAYING') return;
+
+            // Clear canvas
+            ctx.fillStyle = '#87CEEB'; // Sky blue background for the field
+            ctx.fillRect(0, 0, width, height);
+
+            // Draw some basic grass pattern
+            ctx.fillStyle = '#228B22'; // Forest green
+            for(let i=0; i<20; i++) {
+                ctx.beginPath();
+                ctx.arc((i*137)%width, (i*211)%height, 40, 0, Math.PI*2);
+                ctx.fill();
+            }
+
+            updatePlayer();
+            kopatych.draw();
+
+            // Update and draw particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                let p = particles[i];
+                p.update();
+                p.draw();
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+
+            // Update and draw enemies, check collisions
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                let enemy = enemies[i];
+                enemy.update();
+                enemy.draw();
+
+                // Collision detection (Player vs Enemy)
+                const dist = Math.hypot(kopatych.x - enemy.x, kopatych.y - enemy.y);
+                if (dist < kopatych.radius + enemy.radius) {
+                    // Enemy caught
+                    createExplosion(enemy.x, enemy.y, enemy.color);
+                    enemies.splice(i, 1);
+                    updateUI();
+                }
+            }
+
+            // Check Win Condition
+            if (enemies.length === 0) {
+                endGame(true);
+                return; // Stop rendering this frame
+            }
+
+            animationId = requestAnimationFrame(gameLoop);
+        }
+
+        // Draw initial static screen
+        ctx.fillStyle = '#2c3e50';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
     </script>
 </body>
 </html>
