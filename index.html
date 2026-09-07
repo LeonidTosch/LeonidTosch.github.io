@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>3D Snake Game</title>
-    <!-- Tailwind CSS for styling -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Three.js Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -12,7 +12,7 @@
         body {
             margin: 0;
             overflow: hidden;
-            background-color: #0f172a;
+            background-color: #090d16;
             user-select: none;
             -webkit-user-select: none;
             touch-action: manipulation;
@@ -23,14 +23,14 @@
             height: 100vh;
         }
         .control-btn {
-            background: rgba(30, 41, 59, 0.7);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            backdrop-filter: blur(4px);
+            background: rgba(15, 23, 42, 0.75);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(8px);
             transition: all 0.1s ease;
         }
         .control-btn:active {
             background: rgba(59, 130, 246, 0.6);
-            transform: scale(0.95);
+            transform: scale(0.92);
         }
     </style>
 </head>
@@ -39,68 +39,78 @@
     <!-- Game UI Overlay -->
     <div id="ui" class="absolute top-0 left-0 w-full p-4 flex justify-between items-start pointer-events-none z-10">
         <!-- Score & Stats -->
-        <div class="bg-slate-900/80 backdrop-blur border border-slate-700/50 p-4 rounded-xl shadow-lg">
-            <h1 class="text-xl font-bold bg-gradient-to-r from-green-400 to-blue-500 bg-clip-text text-transparent">3D SNAKE</h1>
-            <div class="mt-2 text-sm text-slate-300">
-                <div>Score: <span id="score" class="font-bold text-green-400 text-lg">0</span></div>
-                <div>High Score: <span id="high-score" class="font-bold text-yellow-400">0</span></div>
+        <div class="bg-slate-900/85 backdrop-blur-md border border-slate-700/60 p-4 rounded-2xl shadow-xl pointer-events-auto">
+            <h1 class="text-xl font-extrabold tracking-wide bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-500 bg-clip-text text-transparent">3D SNAKE CUBE</h1>
+            <div class="mt-2 text-sm text-slate-300 space-y-1">
+                <div class="flex items-center justify-between gap-4">
+                    <span>Score:</span>
+                    <span id="score" class="font-bold text-emerald-400 text-xl">0</span>
+                </div>
+                <div class="flex items-center justify-between gap-4">
+                    <span>High Score:</span>
+                    <span id="high-score" class="font-bold text-amber-400 text-lg">0</span>
+                </div>
+                <div class="text-xs text-slate-400 mt-1 pt-1 border-t border-slate-800">
+                    Map: <span class="text-cyan-400">36 × 36 × 36</span>
+                </div>
             </div>
         </div>
 
-        <!-- Controls Legend -->
-        <div class="hidden sm:block bg-slate-900/80 backdrop-blur border border-slate-700/50 p-3 rounded-xl text-xs text-slate-300 space-y-1">
-            <div class="font-bold text-slate-200 mb-1">Keyboard Controls:</div>
-            <div><kbd class="bg-slate-800 px-1.5 py-0.5 rounded text-white">W</kbd> / <kbd class="bg-slate-800 px-1.5 py-0.5 rounded text-white">S</kbd> : Forward / Backward (Z)</div>
-            <div><kbd class="bg-slate-800 px-1.5 py-0.5 rounded text-white">A</kbd> / <kbd class="bg-slate-800 px-1.5 py-0.5 rounded text-white">D</kbd> : Left / Right (X)</div>
-            <div><kbd class="bg-slate-800 px-1.5 py-0.5 rounded text-white">Q</kbd> / <kbd class="bg-slate-800 px-1.5 py-0.5 rounded text-white">E</kbd> : Up / Down (Y)</div>
+        <!-- Keyboard Controls Helper -->
+        <div class="hidden md:block bg-slate-900/85 backdrop-blur-md border border-slate-700/60 p-4 rounded-2xl text-xs text-slate-300 space-y-1.5 shadow-xl">
+            <div class="font-bold text-slate-100 mb-2 border-b border-slate-800 pb-1">Controls:</div>
+            <div class="flex justify-between gap-3"><span><kbd class="bg-slate-800 border border-slate-700 px-1.5 py-0.5 rounded text-cyan-400 font-mono">W</kbd> <kbd class="bg-slate-800 border border-slate-700 px-1.5 py-0.5 rounded text-emerald-400 font-mono">A</kbd> <kbd class="bg-slate-800 border border-slate-700 px-1.5 py-0.5 rounded text-cyan-400 font-mono">S</kbd> <kbd class="bg-slate-800 border border-slate-700 px-1.5 py-0.5 rounded text-emerald-400 font-mono">D</kbd></span> <span class="text-slate-400">2D Plane Movement</span></div>
+            <div class="flex justify-between gap-3"><span><kbd class="bg-slate-800 border border-slate-700 px-1.5 py-0.5 rounded text-purple-400 font-mono">Q</kbd> / <kbd class="bg-slate-800 border border-slate-700 px-1.5 py-0.5 rounded text-purple-400 font-mono">E</kbd></span> <span class="text-slate-400">Altitude (Up / Down)</span></div>
+            <div class="text-[11px] text-slate-400 pt-1 border-t border-slate-800">Drag mouse/touch to rotate camera view</div>
         </div>
     </div>
 
     <!-- Start / Game Over Modal -->
-    <div id="modal" class="absolute inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center z-20">
-        <div class="bg-slate-900 border border-slate-700 p-8 rounded-2xl max-w-md w-full mx-4 text-center shadow-2xl">
-            <h2 id="modal-title" class="text-3xl font-extrabold mb-2 text-green-400">3D SNAKE CUBE</h2>
-            <p id="modal-desc" class="text-slate-300 text-sm mb-6">Navigate inside a 3D grid cube! Eat food cubes to grow and avoid crashing into boundaries or yourself.</p>
+    <div id="modal" class="absolute inset-0 bg-slate-950/85 backdrop-blur-md flex items-center justify-center z-20">
+        <div class="bg-slate-900 border border-slate-700/80 p-8 rounded-3xl max-w-md w-full mx-4 text-center shadow-2xl">
+            <h2 id="modal-title" class="text-3xl font-black mb-2 bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">3D SNAKE CUBE</h2>
+            <p id="modal-desc" class="text-slate-300 text-sm mb-6 leading-relaxed">Navigate inside a massive 36×36×36 3D grid cube! Collect red energy cubes to grow while avoiding boundary walls and yourself.</p>
             
-            <div id="final-stats" class="hidden mb-6 p-4 bg-slate-800/50 rounded-lg border border-slate-700">
-                <p class="text-slate-400 text-sm">Final Score: <span id="final-score" class="text-green-400 font-bold text-xl">0</span></p>
+            <div id="final-stats" class="hidden mb-6 p-4 bg-slate-800/60 rounded-xl border border-slate-700/60">
+                <p class="text-slate-400 text-sm">Final Score: <span id="final-score" class="text-emerald-400 font-bold text-2xl ml-1">0</span></p>
             </div>
 
-            <button id="start-btn" class="w-full py-3.5 px-6 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-slate-950 font-bold rounded-xl shadow-lg hover:shadow-green-500/20 transition duration-200 cursor-pointer">
+            <button id="start-btn" class="w-full py-4 px-6 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-black rounded-2xl shadow-lg hover:shadow-emerald-500/20 transition duration-200 cursor-pointer tracking-wider text-base">
                 PLAY GAME
             </button>
         </div>
     </div>
 
-    <!-- Touch / On-screen Controls -->
-    <div id="touch-controls" class="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-4 pointer-events-auto z-10">
-        <!-- Horizontal & Depth Pad -->
+    <!-- On-Screen Touch / Button Controls -->
+    <div id="touch-controls" class="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-6 pointer-events-auto z-10 scale-90 sm:scale-100">
+        <!-- 2D Directional Pad (WASD) -->
         <div class="grid grid-cols-3 gap-2 w-36 h-36">
             <div></div>
-            <button id="btn-w" class="control-btn rounded-lg flex items-center justify-center font-bold text-lg text-blue-400">W</button>
+            <button id="btn-w" class="control-btn rounded-xl flex items-center justify-center font-bold text-lg text-cyan-400 shadow-md">W</button>
             <div></div>
-            <button id="btn-a" class="control-btn rounded-lg flex items-center justify-center font-bold text-lg text-green-400">A</button>
-            <button id="btn-s" class="control-btn rounded-lg flex items-center justify-center font-bold text-lg text-blue-400">S</button>
-            <button id="btn-d" class="control-btn rounded-lg flex items-center justify-center font-bold text-lg text-green-400">D</button>
+            <button id="btn-a" class="control-btn rounded-xl flex items-center justify-center font-bold text-lg text-emerald-400 shadow-md">A</button>
             <div></div>
+            <button id="btn-d" class="control-btn rounded-xl flex items-center justify-center font-bold text-lg text-emerald-400 shadow-md">D</button>
             <div></div>
+            <button id="btn-s" class="control-btn rounded-xl flex items-center justify-center font-bold text-lg text-cyan-400 shadow-md">S</button>
             <div></div>
         </div>
 
-        <!-- Vertical (Up/Down) Pad -->
+        <!-- Vertical Elevation Pad (Q/E) -->
         <div class="flex flex-col justify-between w-16 h-36">
-            <button id="btn-q" class="control-btn h-16 rounded-lg flex items-center justify-center font-bold text-lg text-purple-400">Q<br><span class="text-[10px] block">UP</span></button>
-            <button id="btn-e" class="control-btn h-16 rounded-lg flex items-center justify-center font-bold text-lg text-purple-400">E<br><span class="text-[10px] block">DOWN</span></button>
+            <button id="btn-q" class="control-btn h-16 rounded-xl flex flex-col items-center justify-center font-bold text-lg text-purple-400 shadow-md">Q<span class="text-[9px] text-purple-300 font-normal">UP</span></button>
+            <button id="btn-e" class="control-btn h-16 rounded-xl flex flex-col items-center justify-center font-bold text-lg text-purple-400 shadow-md">E<span class="text-[9px] text-purple-300 font-normal">DOWN</span></button>
         </div>
     </div>
 
+    <!-- Main Game Script -->
     <script>
         window.onload = function() {
             // Configuration & Constants
-            const GRID_SIZE = 12; // Grid dimensions (12x12x12)
+            const GRID_SIZE = 36; // Large 36x36x36 3D Grid
             const CELL_SIZE = 1;
-            const OFFSET = (GRID_SIZE - 1) / 2; // Offset to center 0,0,0
-            const TICK_RATE = 180; // Game speed in ms
+            const OFFSET = (GRID_SIZE - 1) / 2; // Offset to center grid at world origin (0,0,0)
+            const TICK_RATE = 150; // Game tick interval in ms
 
             // Game State
             let snake = [];
@@ -112,6 +122,9 @@
             let gameInterval = null;
             let isPlaying = false;
 
+            // Snake Mesh Instance Recycling
+            let snakeMeshes = [];
+
             // UI Elements
             document.getElementById('high-score').innerText = highScore;
             const scoreEl = document.getElementById('score');
@@ -122,12 +135,12 @@
             const finalScoreEl = document.getElementById('final-score');
             const startBtn = document.getElementById('start-btn');
 
+            // Three.js Scene Setup
             const scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x0f172a);
+            scene.background = new THREE.Color(0x090d16);
 
             const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
             
-            // Renderer setup
             const renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -135,56 +148,83 @@
             renderer.shadowMap.type = THREE.PCFSoftShadowMap;
             document.body.appendChild(renderer.domElement);
 
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            // Lighting Setup
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.65);
             scene.add(ambientLight);
 
-            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-            dirLight.position.set(GRID_SIZE * 2, GRID_SIZE * 3, GRID_SIZE * 2);
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.95);
+            dirLight.position.set(GRID_SIZE * 1.5, GRID_SIZE * 2.5, GRID_SIZE * 1.5);
             dirLight.castShadow = true;
             dirLight.shadow.mapSize.width = 1024;
             dirLight.shadow.mapSize.height = 1024;
             scene.add(dirLight);
 
-            const pointLight = new THREE.PointLight(0x3b82f6, 1, GRID_SIZE * 3);
-            pointLight.position.set(0, 0, 0);
-            scene.add(pointLight);
+            const centerPointLight = new THREE.PointLight(0x38bdf8, 1.2, GRID_SIZE * 2.5);
+            centerPointLight.position.set(0, 0, 0);
+            scene.add(centerPointLight);
 
-            // Grid Box Boundary (Visual Wireframe Cube)
+            // Outer 3D Grid Boundary Cage (Wireframe Box)
             const boxGeometry = new THREE.BoxGeometry(GRID_SIZE, GRID_SIZE, GRID_SIZE);
             const boxEdges = new THREE.EdgesGeometry(boxGeometry);
             const boxLineMaterial = new THREE.LineBasicMaterial({ color: 0x334155, linewidth: 2 });
             const boundingBox = new THREE.LineSegments(boxEdges, boxLineMaterial);
             scene.add(boundingBox);
 
-            // Bottom plane grid
-            const gridHelper = new THREE.GridHelper(GRID_SIZE, GRID_SIZE, 0x475569, 0x1e293b);
-            gridHelper.position.y = -GRID_SIZE / 2;
-            scene.add(gridHelper);
+            // Floor & Ceiling Visual Grid Helpers
+            const gridHelperBottom = new THREE.GridHelper(GRID_SIZE, GRID_SIZE, 0x0284c7, 0x1e293b);
+            gridHelperBottom.position.y = -GRID_SIZE / 2;
+            scene.add(gridHelperBottom);
 
+            const gridHelperTop = new THREE.GridHelper(GRID_SIZE, GRID_SIZE, 0x0284c7, 0x1e293b);
+            gridHelperTop.position.y = GRID_SIZE / 2;
+            scene.add(gridHelperTop);
+
+            // Parent Group for Snake Parts
             const snakeGroup = new THREE.Group();
             scene.add(snakeGroup);
 
-            // Food Mesh setup
-            const foodGeometry = new THREE.BoxGeometry(CELL_SIZE * 0.8, CELL_SIZE * 0.8, CELL_SIZE * 0.8);
+            // Shared Geometries & Materials for Performance
+            const headGeometry = new THREE.BoxGeometry(CELL_SIZE * 0.92, CELL_SIZE * 0.92, CELL_SIZE * 0.92);
+            const bodyGeometry = new THREE.BoxGeometry(CELL_SIZE * 0.82, CELL_SIZE * 0.82, CELL_SIZE * 0.82);
+
+            const headMaterial = new THREE.MeshStandardMaterial({
+                color: 0x10b981,
+                roughness: 0.2,
+                metalness: 0.3,
+                emissive: 0x047857,
+                emissiveIntensity: 0.4
+            });
+
+            const bodyMaterial = new THREE.MeshStandardMaterial({
+                color: 0x059669,
+                roughness: 0.3,
+                metalness: 0.2
+            });
+
+            // Food Mesh Setup
+            const foodGeometry = new THREE.BoxGeometry(CELL_SIZE * 0.85, CELL_SIZE * 0.85, CELL_SIZE * 0.85);
             const foodMaterial = new THREE.MeshStandardMaterial({ 
-                color: 0xef4444, 
-                roughness: 0.2, 
+                color: 0xf43f5e, 
+                roughness: 0.15, 
                 metalness: 0.5,
-                emissive: 0x991b1b,
-                emissiveIntensity: 0.5
+                emissive: 0xe11d48,
+                emissiveIntensity: 0.6
             });
             const foodMesh = new THREE.Mesh(foodGeometry, foodMaterial);
             foodMesh.castShadow = true;
             scene.add(foodMesh);
 
+            // Orbit Camera Positioning
             let isDragging = false;
             let previousMousePosition = { x: 0, y: 0 };
-            let cameraRadius = GRID_SIZE * 2.5;
+            let cameraRadius = GRID_SIZE * 2.3;
             let cameraTheta = Math.PI / 4;
             let cameraPhi = Math.PI / 6;
 
             function updateCameraPosition() {
-                cameraPhi = Math.max(0.1, Math.min(Math.PI / 2 - 0.05, cameraPhi));
+                // Clamp vertical angle to prevent flipping
+                cameraPhi = Math.max(0.05, Math.min(Math.PI / 2 - 0.02, cameraPhi));
+
                 camera.position.x = cameraRadius * Math.sin(cameraTheta) * Math.cos(cameraPhi);
                 camera.position.y = cameraRadius * Math.sin(cameraPhi);
                 camera.position.z = cameraRadius * Math.cos(cameraTheta) * Math.cos(cameraPhi);
@@ -192,7 +232,7 @@
             }
             updateCameraPosition();
 
-            // Orbit controls via Mouse Dragging
+            // Camera Orbit Controls via Mouse Drag
             window.addEventListener('mousedown', (e) => {
                 if (e.target.tagName === 'CANVAS') {
                     isDragging = true;
@@ -205,8 +245,8 @@
                 const deltaX = e.clientX - previousMousePosition.x;
                 const deltaY = e.clientY - previousMousePosition.y;
 
-                cameraTheta -= deltaX * 0.008;
-                cameraPhi += deltaY * 0.008;
+                cameraTheta -= deltaX * 0.007;
+                cameraPhi += deltaY * 0.007;
 
                 updateCameraPosition();
                 previousMousePosition = { x: e.clientX, y: e.clientY };
@@ -214,7 +254,14 @@
 
             window.addEventListener('mouseup', () => isDragging = false);
 
-            // Touch rotation for canvas
+            // Camera Zoom via Mouse Wheel
+            window.addEventListener('wheel', (e) => {
+                cameraRadius += e.deltaY * 0.05;
+                cameraRadius = Math.max(GRID_SIZE * 1.2, Math.min(GRID_SIZE * 4, cameraRadius));
+                updateCameraPosition();
+            }, { passive: true });
+
+            // Touch Camera Rotation
             window.addEventListener('touchstart', (e) => {
                 if (e.touches.length === 1 && e.target.tagName === 'CANVAS') {
                     isDragging = true;
@@ -227,8 +274,8 @@
                 const deltaX = e.touches[0].clientX - previousMousePosition.x;
                 const deltaY = e.touches[0].clientY - previousMousePosition.y;
 
-                cameraTheta -= deltaX * 0.008;
-                cameraPhi += deltaY * 0.008;
+                cameraTheta -= deltaX * 0.007;
+                cameraPhi += deltaY * 0.007;
 
                 updateCameraPosition();
                 previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
@@ -236,6 +283,7 @@
 
             window.addEventListener('touchend', () => isDragging = false);
 
+            // Key Controls (QWEASD)
             window.addEventListener('keydown', (e) => {
                 if (!isPlaying) return;
                 handleDirectionInput(e.key.toLowerCase());
@@ -243,27 +291,28 @@
 
             function handleDirectionInput(key) {
                 switch(key) {
-                    case 'a': // Left (-X)
-                        if (direction.x === 0) nextDirection = { x: -1, y: 0, z: 0 };
-                        break;
-                    case 'd': // Right (+X)
-                        if (direction.x === 0) nextDirection = { x: 1, y: 0, z: 0 };
-                        break;
-                    case 'q': // Up (+Y)
-                        if (direction.y === 0) nextDirection = { x: 0, y: 1, z: 0 };
-                        break;
-                    case 'e': // Down (-Y)
-                        if (direction.y === 0) nextDirection = { x: 0, y: -1, z: 0 };
-                        break;
-                    case 'w': // Forward (-Z)
+                    case 'w': // 2D Plane: Forward (-Z)
                         if (direction.z === 0) nextDirection = { x: 0, y: 0, z: -1 };
                         break;
-                    case 's': // Backward (+Z)
+                    case 's': // 2D Plane: Backward (+Z)
                         if (direction.z === 0) nextDirection = { x: 0, y: 0, z: 1 };
+                        break;
+                    case 'a': // 2D Plane: Left (-X)
+                        if (direction.x === 0) nextDirection = { x: -1, y: 0, z: 0 };
+                        break;
+                    case 'd': // 2D Plane: Right (+X)
+                        if (direction.x === 0) nextDirection = { x: 1, y: 0, z: 0 };
+                        break;
+                    case 'q': // Altitude: Up (+Y)
+                        if (direction.y === 0) nextDirection = { x: 0, y: 1, z: 0 };
+                        break;
+                    case 'e': // Altitude: Down (-Y)
+                        if (direction.y === 0) nextDirection = { x: 0, y: -1, z: 0 };
                         break;
                 }
             }
 
+            // Bind Touch Buttons
             const buttonMap = {
                 'btn-q': 'q', 'btn-w': 'w', 'btn-e': 'e',
                 'btn-a': 'a', 'btn-s': 's', 'btn-d': 'd'
@@ -278,6 +327,7 @@
                 });
             });
 
+            // Convert Grid Coordinate to 3D World Space
             function gridToWorld(coord) {
                 return {
                     x: coord.x - OFFSET,
@@ -286,6 +336,7 @@
                 };
             }
 
+            // Game Logic
             function startGame() {
                 const startX = Math.floor(GRID_SIZE / 2);
                 const startY = Math.floor(GRID_SIZE / 2);
@@ -294,7 +345,8 @@
                 snake = [
                     { x: startX, y: startY, z: startZ },
                     { x: startX - 1, y: startY, z: startZ },
-                    { x: startX - 2, y: startY, z: startZ }
+                    { x: startX - 2, y: startY, z: startZ },
+                    { x: startX - 3, y: startY, z: startZ }
                 ];
 
                 direction = { x: 1, y: 0, z: 0 };
@@ -338,6 +390,7 @@
                 head.y += direction.y;
                 head.z += direction.z;
 
+                // Wall Collision Check
                 if (
                     head.x < 0 || head.x >= GRID_SIZE ||
                     head.y < 0 || head.y >= GRID_SIZE ||
@@ -347,6 +400,7 @@
                     return;
                 }
 
+                // Self Collision Check
                 if (snake.some(segment => segment.x === head.x && segment.y === head.y && segment.z === head.z)) {
                     gameOver();
                     return;
@@ -354,6 +408,7 @@
 
                 snake.unshift(head);
 
+                // Food Collision Check
                 if (head.x === food.x && head.y === food.y && head.z === food.z) {
                     score += 10;
                     scoreEl.innerText = score;
@@ -371,32 +426,35 @@
             }
 
             function updateGraphics() {
-                while (snakeGroup.children.length > 0) {
-                    const obj = snakeGroup.children[0];
-                    snakeGroup.remove(obj);
-                    if (obj.geometry) obj.geometry.dispose();
-                }
-
-                snake.forEach((segment, index) => {
-                    const isHead = index === 0;
-                    const size = isHead ? CELL_SIZE * 0.95 : CELL_SIZE * 0.85;
-                    const geometry = new THREE.BoxGeometry(size, size, size);
-                    
-                    const material = new THREE.MeshStandardMaterial({
-                        color: isHead ? 0x22c55e : 0x10b981,
-                        roughness: 0.3,
-                        metalness: 0.2,
-                        emissive: isHead ? 0x15803d : 0x000000,
-                        emissiveIntensity: isHead ? 0.3 : 0
-                    });
-
-                    const mesh = new THREE.Mesh(geometry, material);
-                    const worldPos = gridToWorld(segment);
-                    mesh.position.set(worldPos.x, worldPos.y, worldPos.z);
+                // Resize Mesh Pool if Snake Grew
+                while (snakeMeshes.length < snake.length) {
+                    const isHead = snakeMeshes.length === 0;
+                    const mesh = new THREE.Mesh(
+                        isHead ? headGeometry : bodyGeometry,
+                        isHead ? headMaterial : bodyMaterial
+                    );
                     mesh.castShadow = true;
                     mesh.receiveShadow = true;
-
                     snakeGroup.add(mesh);
+                    snakeMeshes.push(mesh);
+                }
+
+                // Remove Excess Meshes if needed
+                while (snakeMeshes.length > snake.length) {
+                    const mesh = snakeMeshes.pop();
+                    snakeGroup.remove(mesh);
+                }
+
+                // Update Meshes Positions & Types
+                snake.forEach((segment, index) => {
+                    const mesh = snakeMeshes[index];
+                    const isHead = index === 0;
+                    
+                    mesh.geometry = isHead ? headGeometry : bodyGeometry;
+                    mesh.material = isHead ? headMaterial : bodyMaterial;
+
+                    const worldPos = gridToWorld(segment);
+                    mesh.position.set(worldPos.x, worldPos.y, worldPos.z);
                 });
             }
 
@@ -405,33 +463,37 @@
                 clearInterval(gameInterval);
 
                 modalTitle.innerText = "GAME OVER";
-                modalTitle.className = "text-3xl font-extrabold mb-2 text-red-500";
-                modalDesc.innerText = "You crashed into a wall or yourself!";
+                modalTitle.className = "text-3xl font-black mb-2 text-rose-500";
+                modalDesc.innerText = "You collided with the outer boundary or yourself!";
                 finalScoreEl.innerText = score;
                 finalStats.classList.remove('hidden');
-                startBtn.innerText = "RESTART GAME";
+                startBtn.innerText = "PLAY AGAIN";
                 modalEl.classList.remove('hidden');
             }
 
             startBtn.addEventListener('click', startGame);
 
+            // Animation Loop
             function animate() {
                 requestAnimationFrame(animate);
 
+                // Animated Rotation for Food Cube
                 if (foodMesh) {
-                    foodMesh.rotation.x += 0.01;
-                    foodMesh.rotation.y += 0.02;
+                    foodMesh.rotation.x += 0.015;
+                    foodMesh.rotation.y += 0.025;
                 }
 
                 renderer.render(scene, camera);
             }
 
+            // Window Resizing Logic
             window.addEventListener('resize', () => {
                 camera.aspect = window.innerWidth / window.innerHeight;
                 camera.updateProjectionMatrix();
                 renderer.setSize(window.innerWidth, window.innerHeight);
             });
 
+            // Start Render Loop
             animate();
         };
     </script>
