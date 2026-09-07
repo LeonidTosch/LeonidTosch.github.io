@@ -2,475 +2,603 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kikoriki Chase: Kopatych's Rampage</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>3D Kikoriki Chase</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
         body {
             margin: 0;
             overflow: hidden;
-            background-color: #2c3e50; /* Dark background */
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            touch-action: none; /* Prevent default touch actions on canvas */
+            background-color: #87CEEB; /* Sky blue background */
+            font-family: 'Inter', sans-serif;
+            touch-action: none; /* Prevent default touch actions like scrolling */
         }
-        #gameCanvas {
-            display: block;
+        #game-container {
             width: 100vw;
             height: 100vh;
+            position: absolute;
+            top: 0;
+            left: 0;
         }
-        #uiOverlay {
+        #ui-layer {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
-            pointer-events: none; /* Let clicks pass through to canvas */
-            padding: 20px;
-            box-sizing: border-box;
+            height: 100%;
+            pointer-events: none; /* Let clicks pass through UI layer */
             display: flex;
+            flex-direction: column;
             justify-content: space-between;
-            align-items: flex-start;
-            z-index: 10;
         }
-        .score-box {
-            background: rgba(0, 0, 0, 0.5);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 15px;
-            font-size: 1.5rem;
-            font-weight: bold;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-        }
-        #messageScreen {
+        /* Mobile Controls */
+        #dpad-container {
             position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(44, 62, 80, 0.9);
-            color: white;
-            padding: 40px;
-            border-radius: 20px;
-            text-align: center;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-            pointer-events: auto;
-            z-index: 20;
-            border: 4px solid #f39c12;
-        }
-        #messageScreen h1 {
-            font-size: 3rem;
-            margin-bottom: 10px;
-            color: #f1c40f;
-            text-shadow: 2px 2px 4px #000;
-        }
-        #messageScreen p {
-            font-size: 1.2rem;
-            margin-bottom: 20px;
-        }
-        .btn {
-            background: linear-gradient(to bottom, #f39c12, #d35400);
-            border: none;
-            color: white;
-            padding: 15px 30px;
-            font-size: 1.2rem;
-            font-weight: bold;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: transform 0.1s, box-shadow 0.1s;
-            box-shadow: 0 5px 0 #b33c00;
-        }
-        .btn:active {
-            transform: translateY(5px);
-            box-shadow: 0 0 0 #b33c00;
-        }
-        /* Controls for mobile */
-        #mobileControls {
-             display: none;
-             position: absolute;
-             bottom: 20px;
-             left: 20px;
-             pointer-events: auto;
-             z-index: 10;
-        }
-        @media (max-width: 768px) {
-            #mobileControls {
-                display: block;
-            }
-        }
-        .d-pad {
-            display: grid;
-            grid-template-columns: repeat(3, 60px);
-            grid-template-rows: repeat(3, 60px);
-            gap: 5px;
-        }
-        .d-pad-btn {
-            background: rgba(255,255,255,0.2);
-            border: 2px solid rgba(255,255,255,0.5);
+            bottom: 20px;
+            left: 20px;
+            width: 150px;
+            height: 150px;
+            background: rgba(255, 255, 255, 0.2);
             border-radius: 50%;
-            color: white;
-            font-size: 24px;
+            display: none; /* Hidden on desktop by default via JS */
+            pointer-events: auto;
+            touch-action: none;
+        }
+        .dpad-btn {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 10px;
             display: flex;
             justify-content: center;
             align-items: center;
+            font-size: 24px;
+            color: #333;
             user-select: none;
         }
-        .d-pad-btn:active {
-            background: rgba(255,255,255,0.5);
+        .dpad-btn:active {
+            background: rgba(255, 255, 255, 0.8);
         }
-        .up { grid-column: 2; grid-row: 1; }
-        .left { grid-column: 1; grid-row: 2; }
-        .right { grid-column: 3; grid-row: 2; }
-        .down { grid-column: 2; grid-row: 3; }
-
+        #up-btn { top: 0; left: 50px; }
+        #down-btn { bottom: 0; left: 50px; }
+        #left-btn { top: 50px; left: 0; }
+        #right-btn { top: 50px; right: 0; }
+        
+        /* Modals */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            justify-content: center;
+            align-items: center;
+            pointer-events: auto;
+            z-index: 50;
+        }
+        .modal-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            max-width: 90%;
+            width: 400px;
+        }
     </style>
 </head>
 <body>
 
-    <div id="uiOverlay">
-        <div class="score-box">Enemies Left: <span id="enemiesCount">0</span></div>
+    <div id="game-container"></div>
+
+    <div id="ui-layer">
+        <div class="p-4 flex justify-between items-start pointer-events-auto">
+            <div>
+                <h1 class="text-3xl font-black text-white drop-shadow-md outline-text" style="-webkit-text-stroke: 1px black;">3D Kikoriki Chase</h1>
+                <p class="text-xl text-yellow-300 font-bold drop-shadow-md outline-text" style="-webkit-text-stroke: 1px black;">Score: <span id="score">0</span> / <span id="total-enemies">0</span></p>
+            </div>
+        </div>
+
+        <div id="dpad-container">
+            <div id="up-btn" class="dpad-btn">▲</div>
+            <div id="down-btn" class="dpad-btn">▼</div>
+            <div id="left-btn" class="dpad-btn">◀</div>
+            <div id="right-btn" class="dpad-btn">▶</div>
+        </div>
     </div>
 
-    <canvas id="gameCanvas"></canvas>
-
-    <div id="messageScreen">
-        <h1 id="screenTitle">Kopatych's Rampage</h1>
-        <p id="screenSubtitle">Control the Bear (Kopatych) and catch all the others!</p>
-        <p style="font-size: 0.9rem; color: #ccc;">Use Arrow Keys / WASD to move.</p>
-        <button class="btn" id="startBtn" onclick="startGame()">Start Game</button>
+    <!-- Start Modal -->
+    <div id="startModal" class="modal flex">
+        <div class="modal-content">
+            <h2 class="text-3xl font-bold mb-4 text-orange-600">3D Kikoriki Chase</h2>
+            <p class="mb-4 text-gray-700">You are the Bear (Kopatych). Use Arrow Keys, WASD, or on-screen controls to move.</p>
+            <p class="mb-6 text-gray-700 font-semibold">Catch all the others!</p>
+            <button id="startBtn" class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-6 rounded-full w-full text-xl shadow-lg transition-transform transform hover:scale-105 active:scale-95">Play Game</button>
+        </div>
     </div>
 
-    <div id="mobileControls">
-        <div class="d-pad">
-            <div class="d-pad-btn up" id="btnUp">▲</div>
-            <div class="d-pad-btn left" id="btnLeft">◀</div>
-            <div class="d-pad-btn right" id="btnRight">▶</div>
-            <div class="d-pad-btn down" id="btnDown">▼</div>
+    <!-- Game Over Modal -->
+    <div id="gameOverModal" class="modal">
+        <div class="modal-content">
+            <h2 class="text-4xl font-bold mb-4 text-green-600" id="gameOverTitle">Victory!</h2>
+            <p class="mb-6 text-gray-700 text-lg">You caught everyone.</p>
+            <button id="restartBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-full w-full text-xl shadow-lg transition-transform transform hover:scale-105 active:scale-95">Play Again</button>
         </div>
     </div>
 
     <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        const enemiesCountSpan = document.getElementById('enemiesCount');
-        const messageScreen = document.getElementById('messageScreen');
-        const screenTitle = document.getElementById('screenTitle');
-        const screenSubtitle = document.getElementById('screenSubtitle');
-        const startBtn = document.getElementById('startBtn');
-
-        let width, height;
-        let animationId;
-        let gameState = 'START'; // START, PLAYING, GAME_OVER, WIN
-
-        function resize() {
-            width = window.innerWidth;
-            height = window.innerHeight;
-            canvas.width = width;
-            canvas.height = height;
-        }
-        window.addEventListener('resize', resize);
-        resize();
-
-        // Game Settings
-        const BEAR_SPEED = 4;
-        const ENEMY_SPEED = 2;
-        const FRICTION = 0.8;
-        const ACCELERATION = 1.5;
-
-        // Characters based on Kikoriki (Smeshariki) colors
-        // Kopatych (Bear) - Player
-        const kopatych = {
-            x: 0, y: 0, radius: 25, color: '#A0522D', // Sienna / Brown
-            vx: 0, vy: 0,
-            draw: function() {
-                // Body
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-                ctx.fillStyle = this.color;
-                ctx.fill();
-                ctx.lineWidth = 3;
-                ctx.strokeStyle = '#5c2d13';
-                ctx.stroke();
-
-                // Eyes
-                ctx.fillStyle = 'white';
-                ctx.beginPath(); ctx.arc(this.x - 8, this.y - 5, 6, 0, Math.PI*2); ctx.fill();
-                ctx.beginPath(); ctx.arc(this.x + 8, this.y - 5, 6, 0, Math.PI*2); ctx.fill();
-                // Pupils (Angry)
-                ctx.fillStyle = 'black';
-                ctx.beginPath(); ctx.arc(this.x - 6, this.y - 3, 2, 0, Math.PI*2); ctx.fill();
-                ctx.beginPath(); ctx.arc(this.x + 6, this.y - 3, 2, 0, Math.PI*2); ctx.fill();
-                
-                // Eyebrows
-                ctx.beginPath(); ctx.moveTo(this.x - 15, this.y - 15); ctx.lineTo(this.x - 2, this.y - 8); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(this.x + 15, this.y - 15); ctx.lineTo(this.x + 2, this.y - 8); ctx.stroke();
-
-                // Nose
-                ctx.fillStyle = '#4a2311';
-                ctx.beginPath(); ctx.arc(this.x, this.y + 5, 8, 0, Math.PI*2); ctx.fill();
-            }
-        };
-
-        const enemyTemplates = [
-            { name: 'Krash', color: '#00BFFF', type: 'rabbit' }, // DeepSkyBlue
-            { name: 'Chiko', color: '#FF69B4', type: 'pig' },     // HotPink
-            { name: 'Wally', color: '#9370DB', type: 'ram' },     // MediumPurple
-            { name: 'Pin', color: '#000000', type: 'penguin' },   // Black/White
-            { name: 'Dokko', color: '#FFA500', type: 'moose' },   // Orange
-            { name: 'Rosa', color: '#FFC0CB', type: 'pig' }       // Pink
+        // Game State
+        let scene, camera, renderer;
+        let player;
+        let enemies = [];
+        let score = 0;
+        let totalEnemies = 7; // Number of other characters
+        let gameActive = false;
+        let keys = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false, w: false, a: false, s: false, d: false };
+        let touchControls = { up: false, down: false, left: false, right: false };
+        
+        // Constants
+        const PLAYER_SPEED = 15;
+        const ENEMY_SPEED = 6;
+        const BOUNDARY = 45; // Field size limit
+        
+        // Character Config (Colors to approximate characters without complex textures)
+        // Kopatych (Bear) - Brownish orange
+        // Krosh (Rabbit) - Cyan
+        // Nyusha (Pig) - Pink
+        // Barash (Ram) - Light Purple
+        // Losyash (Moose) - Yellow/Orange
+        // Pin (Penguin) - Black/White (simplified to dark grey here)
+        // Sovunya (Owl) - Purple
+        // Kar-Karych (Crow) - Dark Blue
+        
+        const enemyConfigs = [
+            { name: 'Krosh', color: 0x00FFFF },
+            { name: 'Nyusha', color: 0xFFB6C1 },
+            { name: 'Barash', color: 0xDDA0DD },
+            { name: 'Losyash', color: 0xFFA500 },
+            { name: 'Pin', color: 0x333333 },
+            { name: 'Sovunya', color: 0x800080 },
+            { name: 'Kar-Karych', color: 0x00008B }
         ];
 
-        let enemies = [];
+        // UI Elements
+        const scoreEl = document.getElementById('score');
+        const totalEnemiesEl = document.getElementById('total-enemies');
+        const startModal = document.getElementById('startModal');
+        const gameOverModal = document.getElementById('gameOverModal');
+        const startBtn = document.getElementById('startBtn');
+        const restartBtn = document.getElementById('restartBtn');
+        const dpadContainer = document.getElementById('dpad-container');
+
+        // Particle system
         let particles = [];
 
-        class Enemy {
-            constructor(x, y, template) {
-                this.x = x;
-                this.y = y;
-                this.radius = 20;
-                this.color = template.color;
-                this.name = template.name;
-                this.type = template.type;
-                // Random movement direction
-                this.angle = Math.random() * Math.PI * 2;
-                this.speed = ENEMY_SPEED + Math.random();
-                this.vx = Math.cos(this.angle) * this.speed;
-                this.vy = Math.sin(this.angle) * this.speed;
-                // Change direction timer
-                this.changeDirTimer = 0;
+        function init() {
+            // Setup scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x87CEEB); // Sky color
+            scene.fog = new THREE.Fog(0x87CEEB, 20, 100);
+
+            // Setup camera (Top-down, slightly angled)
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 30, 20); // Initial position, will be updated to follow player
+            camera.lookAt(0, 0, 0);
+
+            // Setup renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.getElementById('game-container').appendChild(renderer.domElement);
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            dirLight.position.set(20, 50, 20);
+            dirLight.castShadow = true;
+            dirLight.shadow.camera.left = -50;
+            dirLight.shadow.camera.right = 50;
+            dirLight.shadow.camera.top = 50;
+            dirLight.shadow.camera.bottom = -50;
+            dirLight.shadow.mapSize.width = 2048;
+            dirLight.shadow.mapSize.height = 2048;
+            scene.add(dirLight);
+
+            // Ground
+            createGround();
+
+            // Player (Kopatych - Bear)
+            createPlayer();
+
+            // Event Listeners
+            window.addEventListener('resize', onWindowResize, false);
+            setupInput();
+            
+            // Check for mobile to show D-pad
+            if (isMobile()) {
+                dpadContainer.style.display = 'block';
             }
 
-            update() {
-                // Wandering logic
-                this.changeDirTimer++;
-                if (this.changeDirTimer > 60 + Math.random() * 60) {
-                    this.angle += (Math.random() - 0.5) * Math.PI; // Change angle slightly
-                    this.vx = Math.cos(this.angle) * this.speed;
-                    this.vy = Math.sin(this.angle) * this.speed;
-                    this.changeDirTimer = 0;
+            // Start loop (will only move things if gameActive)
+            animate();
+        }
+
+        function createGround() {
+            // Simple green grass material
+            const groundGeo = new THREE.PlaneGeometry(100, 100);
+            // Create a simple checkerboard texture procedurally
+            const canvas = document.createElement('canvas');
+            canvas.width = 256;
+            canvas.height = 256;
+            const context = canvas.getContext('2d');
+            context.fillStyle = '#4CAF50'; // Base green
+            context.fillRect(0, 0, 256, 256);
+            context.fillStyle = '#45a049'; // Slightly darker green
+            context.fillRect(0, 0, 128, 128);
+            context.fillRect(128, 128, 128, 128);
+            
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.wrapS = THREE.RepeatWrapping;
+            texture.wrapT = THREE.RepeatWrapping;
+            texture.repeat.set(10, 10);
+
+            const groundMat = new THREE.MeshStandardMaterial({ map: texture, roughness: 0.8 });
+            const ground = new THREE.Mesh(groundGeo, groundMat);
+            ground.rotation.x = -Math.PI / 2;
+            ground.receiveShadow = true;
+            scene.add(ground);
+
+            // Add simple boundary walls (invisible but keep entities inside)
+            // Logic handled in update loop
+        }
+
+        function createCharacterMesh(color, size = 1) {
+            // Kikoriki characters are basically spheres
+            const group = new THREE.Group();
+
+            // Body
+            const bodyGeo = new THREE.SphereGeometry(size, 32, 32);
+            const bodyMat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.5, metalness: 0.1 });
+            const body = new THREE.Mesh(bodyGeo, bodyMat);
+            body.position.y = size; // Rest on ground
+            body.castShadow = true;
+            group.add(body);
+
+            // Simple eyes
+            const eyeGeo = new THREE.SphereGeometry(size * 0.2, 16, 16);
+            const eyeMatWhite = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            const eyeMatBlack = new THREE.MeshBasicMaterial({ color: 0x000000 });
+
+            // Right eye
+            const rightEye = new THREE.Mesh(eyeGeo, eyeMatWhite);
+            rightEye.position.set(size * 0.3, size * 1.2, size * 0.8);
+            const rightPupil = new THREE.Mesh(new THREE.SphereGeometry(size * 0.08, 8, 8), eyeMatBlack);
+            rightPupil.position.set(size * 0.35, size * 1.2, size * 0.95);
+            group.add(rightEye);
+            group.add(rightPupil);
+
+            // Left eye
+            const leftEye = new THREE.Mesh(eyeGeo, eyeMatWhite);
+            leftEye.position.set(-size * 0.3, size * 1.2, size * 0.8);
+            const leftPupil = new THREE.Mesh(new THREE.SphereGeometry(size * 0.08, 8, 8), eyeMatBlack);
+            leftPupil.position.set(-size * 0.35, size * 1.2, size * 0.95);
+            group.add(leftEye);
+            group.add(leftPupil);
+
+            return group;
+        }
+
+        function createPlayer() {
+            // Kopatych (Bear) - Brownish orange, slightly larger
+            player = createCharacterMesh(0xD2691E, 1.2);
+            
+            // Add simple bear ears
+            const earGeo = new THREE.SphereGeometry(0.3, 16, 16);
+            const earMat = new THREE.MeshStandardMaterial({ color: 0xD2691E });
+            
+            const rightEar = new THREE.Mesh(earGeo, earMat);
+            rightEar.position.set(0.8, 2.0, 0);
+            player.add(rightEar);
+            
+            const leftEar = new THREE.Mesh(earGeo, earMat);
+            leftEar.position.set(-0.8, 2.0, 0);
+            player.add(leftEar);
+
+            scene.add(player);
+        }
+
+        function spawnEnemies() {
+            // Remove existing enemies
+            enemies.forEach(e => scene.remove(e.mesh));
+            enemies = [];
+
+            // Add selected config enemies
+            for (let i = 0; i < totalEnemies; i++) {
+                if (i >= enemyConfigs.length) break; // Fallback if totalEnemies > configs
+                
+                const config = enemyConfigs[i];
+                const mesh = createCharacterMesh(config.color, 0.9); // Slightly smaller than player
+                
+                // Random position away from center (where player spawns)
+                let x, z;
+                do {
+                    x = (Math.random() - 0.5) * BOUNDARY * 1.8;
+                    z = (Math.random() - 0.5) * BOUNDARY * 1.8;
+                } while (Math.sqrt(x*x + z*z) < 10); // Keep away from start
+
+                mesh.position.set(x, 0, z);
+                
+                // Add simple identifying features based on name (very basic)
+                if (config.name === 'Krosh') { // Rabbit ears
+                    const ear = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.8), new THREE.MeshStandardMaterial({color: config.color}));
+                    ear.position.set(0.3, 1.8, 0);
+                    mesh.add(ear);
+                    const ear2 = ear.clone();
+                    ear2.position.set(-0.3, 1.8, 0);
+                    mesh.add(ear2);
+                } else if (config.name === 'Nyusha') { // Pig snout
+                    const snout = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.1), new THREE.MeshStandardMaterial({color: 0xFF69B4}));
+                    snout.rotation.x = Math.PI/2;
+                    snout.position.set(0, 0.9, 0.9);
+                    mesh.add(snout);
                 }
 
-                // Fleeing logic (if bear is close)
-                const distToBear = Math.hypot(kopatych.x - this.x, kopatych.y - this.y);
-                if (distToBear < 200) {
-                    const fleeAngle = Math.atan2(this.y - kopatych.y, this.x - kopatych.x);
-                    this.vx = Math.cos(fleeAngle) * (this.speed * 1.5);
-                    this.vy = Math.sin(fleeAngle) * (this.speed * 1.5);
-                }
+                scene.add(mesh);
 
-                this.x += this.vx;
-                this.y += this.vy;
-
-                // Bounce off walls
-                if (this.x < this.radius) { this.x = this.radius; this.vx *= -1; }
-                if (this.x > width - this.radius) { this.x = width - this.radius; this.vx *= -1; }
-                if (this.y < this.radius) { this.y = this.radius; this.vy *= -1; }
-                if (this.y > height - this.radius) { this.y = height - this.radius; this.vy *= -1; }
-            }
-
-            draw() {
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-                ctx.fillStyle = this.color;
-                ctx.fill();
-                ctx.lineWidth = 2;
-                ctx.strokeStyle = '#333';
-                ctx.stroke();
-
-                // Simple eyes (scared)
-                ctx.fillStyle = 'white';
-                ctx.beginPath(); ctx.arc(this.x - 6, this.y - 4, 5, 0, Math.PI*2); ctx.fill();
-                ctx.beginPath(); ctx.arc(this.x + 6, this.y - 4, 5, 0, Math.PI*2); ctx.fill();
-                ctx.fillStyle = 'black';
-                ctx.beginPath(); ctx.arc(this.x - 6, this.y - 4, 1.5, 0, Math.PI*2); ctx.fill();
-                ctx.beginPath(); ctx.arc(this.x + 6, this.y - 4, 1.5, 0, Math.PI*2); ctx.fill();
+                enemies.push({
+                    mesh: mesh,
+                    name: config.name,
+                    velocity: new THREE.Vector3(
+                        (Math.random() - 0.5) * ENEMY_SPEED,
+                        0,
+                        (Math.random() - 0.5) * ENEMY_SPEED
+                    ).normalize().multiplyScalar(ENEMY_SPEED)
+                });
             }
         }
 
-        class Particle {
-            constructor(x, y, color) {
-                this.x = x;
-                this.y = y;
-                this.radius = Math.random() * 4 + 2;
-                this.color = color;
-                const angle = Math.random() * Math.PI * 2;
-                const speed = Math.random() * 5 + 2;
-                this.vx = Math.cos(angle) * speed;
-                this.vy = Math.sin(angle) * speed;
-                this.life = 1.0;
-                this.decay = Math.random() * 0.05 + 0.02;
-            }
-            update() {
-                this.x += this.vx;
-                this.y += this.vy;
-                this.life -= this.decay;
-            }
-            draw() {
-                ctx.globalAlpha = this.life;
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-                ctx.fillStyle = this.color;
-                ctx.fill();
-                ctx.globalAlpha = 1.0;
-            }
+        function setupInput() {
+            // Keyboard
+            window.addEventListener('keydown', (e) => {
+                if (keys.hasOwnProperty(e.key)) keys[e.key] = true;
+            });
+            window.addEventListener('keyup', (e) => {
+                if (keys.hasOwnProperty(e.key)) keys[e.key] = false;
+            });
+
+            // Touch Controls
+            const setupBtn = (id, dir) => {
+                const btn = document.getElementById(id);
+                btn.addEventListener('touchstart', (e) => { e.preventDefault(); touchControls[dir] = true; });
+                btn.addEventListener('touchend', (e) => { e.preventDefault(); touchControls[dir] = false; });
+                btn.addEventListener('mousedown', (e) => { e.preventDefault(); touchControls[dir] = true; });
+                btn.addEventListener('mouseup', (e) => { e.preventDefault(); touchControls[dir] = false; });
+                btn.addEventListener('mouseleave', (e) => { e.preventDefault(); touchControls[dir] = false; });
+            };
+            setupBtn('up-btn', 'up');
+            setupBtn('down-btn', 'down');
+            setupBtn('left-btn', 'left');
+            setupBtn('right-btn', 'right');
+
+            // UI Buttons
+            startBtn.addEventListener('click', startGame);
+            restartBtn.addEventListener('click', startGame);
         }
 
-        const keys = {
-            ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false,
-            w: false, a: false, s: false, d: false
-        };
-
-        window.addEventListener('keydown', (e) => {
-            if(keys.hasOwnProperty(e.key)) keys[e.key] = true;
-        });
-        window.addEventListener('keyup', (e) => {
-            if(keys.hasOwnProperty(e.key)) keys[e.key] = false;
-        });
-
-        // Mobile touch controls
-        function addTouchControl(btnId, keyName) {
-            const btn = document.getElementById(btnId);
-            btn.addEventListener('touchstart', (e) => { e.preventDefault(); keys[keyName] = true; }, {passive: false});
-            btn.addEventListener('touchend', (e) => { e.preventDefault(); keys[keyName] = false; }, {passive: false});
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
         }
-        addTouchControl('btnUp', 'ArrowUp');
-        addTouchControl('btnDown', 'ArrowDown');
-        addTouchControl('btnLeft', 'ArrowLeft');
-        addTouchControl('btnRight', 'ArrowRight');
 
-
-        function createExplosion(x, y, color) {
-            for (let i = 0; i < 20; i++) {
-                particles.push(new Particle(x, y, color));
-            }
+        function isMobile() {
+            return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
         }
 
         function startGame() {
-            gameState = 'PLAYING';
-            messageScreen.style.display = 'none';
+            startModal.style.display = 'none';
+            gameOverModal.style.display = 'none';
             
-            // Reset Player
-            kopatych.x = width / 2;
-            kopatych.y = height / 2;
-            kopatych.vx = 0;
-            kopatych.vy = 0;
-
-            // Spawn Enemies
-            enemies = [];
+            // Reset state
+            score = 0;
+            scoreEl.textContent = score;
+            totalEnemiesEl.textContent = totalEnemies;
+            
+            // Reset player
+            player.position.set(0, 0, 0);
+            player.rotation.set(0, 0, 0);
+            
+            spawnEnemies();
+            
+            // Clear particles
+            particles.forEach(p => scene.remove(p.mesh));
             particles = [];
             
-            // Create 10 enemies randomly selecting from templates
-            for (let i = 0; i < 10; i++) {
-                let template = enemyTemplates[Math.floor(Math.random() * enemyTemplates.length)];
-                let ex, ey;
-                // Ensure they don't spawn right on top of the player
-                do {
-                    ex = Math.random() * (width - 100) + 50;
-                    ey = Math.random() * (height - 100) + 50;
-                } while (Math.hypot(kopatych.x - ex, kopatych.y - ey) < 150);
+            gameActive = true;
+            lastTime = performance.now();
+        }
+
+        function createExplosion(position, color) {
+            const particleCount = 20;
+            const geo = new THREE.SphereGeometry(0.2, 8, 8);
+            const mat = new THREE.MeshBasicMaterial({ color: color });
+            
+            for (let i = 0; i < particleCount; i++) {
+                const mesh = new THREE.Mesh(geo, mat);
+                mesh.position.copy(position);
                 
-                enemies.push(new Enemy(ex, ey, template));
-            }
-
-            updateUI();
-            if (animationId) cancelAnimationFrame(animationId);
-            gameLoop();
-        }
-
-        function updateUI() {
-            enemiesCountSpan.innerText = enemies.length;
-        }
-
-        function endGame(isWin) {
-            gameState = isWin ? 'WIN' : 'GAME_OVER';
-            messageScreen.style.display = 'block';
-            if (isWin) {
-                screenTitle.innerText = "You Caught Them All!";
-                screenTitle.style.color = "#2ecc71"; // Green
-                screenSubtitle.innerText = "The rampage is over.";
-                startBtn.innerText = "Play Again";
+                // Random velocity outward
+                const velocity = new THREE.Vector3(
+                    (Math.random() - 0.5) * 15,
+                    Math.random() * 10 + 5,
+                    (Math.random() - 0.5) * 15
+                );
+                
+                scene.add(mesh);
+                particles.push({
+                    mesh: mesh,
+                    velocity: velocity,
+                    life: 1.0 // 1 second life
+                });
             }
         }
 
-        function updatePlayer() {
-            // Acceleration based on input
-            if (keys.ArrowUp || keys.w) kopatych.vy -= ACCELERATION;
-            if (keys.ArrowDown || keys.s) kopatych.vy += ACCELERATION;
-            if (keys.ArrowLeft || keys.a) kopatych.vx -= ACCELERATION;
-            if (keys.ArrowRight || keys.d) kopatych.vx += ACCELERATION;
+        let lastTime = 0;
 
-            // Apply friction
-            kopatych.vx *= FRICTION;
-            kopatych.vy *= FRICTION;
+        function update(deltaTime) {
+            if (!gameActive) return;
 
-            // Limit max speed
-            const speed = Math.hypot(kopatych.vx, kopatych.vy);
-            if (speed > BEAR_SPEED * 2) {
-                kopatych.vx = (kopatych.vx / speed) * (BEAR_SPEED * 2);
-                kopatych.vy = (kopatych.vy / speed) * (BEAR_SPEED * 2);
+            // Player Movement
+            const moveDir = new THREE.Vector3(0, 0, 0);
+            
+            if (keys.ArrowUp || keys.w || touchControls.up) moveDir.z -= 1;
+            if (keys.ArrowDown || keys.s || touchControls.down) moveDir.z += 1;
+            if (keys.ArrowLeft || keys.a || touchControls.left) moveDir.x -= 1;
+            if (keys.ArrowRight || keys.d || touchControls.right) moveDir.x += 1;
+
+            if (moveDir.length() > 0) {
+                moveDir.normalize();
+                
+                // Calculate movement speed based on delta time
+                const speed = PLAYER_SPEED * deltaTime;
+                player.position.add(moveDir.clone().multiplyScalar(speed));
+                
+                // Rotate player to face movement direction
+                const targetRotation = Math.atan2(moveDir.x, moveDir.z);
+                // Simple lerp for smoother rotation
+                let currentRotation = player.rotation.y;
+                // Handle wrap around
+                if (Math.abs(currentRotation - targetRotation) > Math.PI) {
+                    if (currentRotation > targetRotation) currentRotation -= Math.PI * 2;
+                    else currentRotation += Math.PI * 2;
+                }
+                player.rotation.y = currentRotation + (targetRotation - currentRotation) * 0.15;
             }
 
-            kopatych.x += kopatych.vx;
-            kopatych.y += kopatych.vy;
+            // Boundary checks for player
+            player.position.x = Math.max(-BOUNDARY, Math.min(BOUNDARY, player.position.x));
+            player.position.z = Math.max(-BOUNDARY, Math.min(BOUNDARY, player.position.z));
 
-            // Boundary collision
-            if (kopatych.x < kopatych.radius) kopatych.x = kopatych.radius;
-            if (kopatych.x > width - kopatych.radius) kopatych.x = width - kopatych.radius;
-            if (kopatych.y < kopatych.radius) kopatych.y = kopatych.radius;
-            if (kopatych.y > height - kopatych.radius) kopatych.y = height - kopatych.radius;
-        }
+            // Camera follow (Top-down slightly trailing)
+            const cameraTargetPos = new THREE.Vector3(
+                player.position.x,
+                35, // Height
+                player.position.z + 15 // Trail slightly behind
+            );
+            camera.position.lerp(cameraTargetPos, 0.1);
+            camera.lookAt(player.position);
 
-        function gameLoop() {
-            if (gameState !== 'PLAYING') return;
-
-            // Clear canvas
-            ctx.fillStyle = '#87CEEB'; // Sky blue background for the field
-            ctx.fillRect(0, 0, width, height);
-
-            // Draw some basic grass pattern
-            ctx.fillStyle = '#228B22'; // Forest green
-            for(let i=0; i<20; i++) {
-                ctx.beginPath();
-                ctx.arc((i*137)%width, (i*211)%height, 40, 0, Math.PI*2);
-                ctx.fill();
-            }
-
-            updatePlayer();
-            kopatych.draw();
-
-            // Update and draw particles
-            for (let i = particles.length - 1; i >= 0; i--) {
-                let p = particles[i];
-                p.update();
-                p.draw();
-                if (p.life <= 0) particles.splice(i, 1);
-            }
-
-            // Update and draw enemies, check collisions
+            // Enemy Movement & Collision
             for (let i = enemies.length - 1; i >= 0; i--) {
-                let enemy = enemies[i];
-                enemy.update();
-                enemy.draw();
+                const enemy = enemies[i];
+                
+                // Simple wander behavior (occasionally change direction)
+                if (Math.random() < 0.02) {
+                    // Turn slightly
+                    const turnAngle = (Math.random() - 0.5) * Math.PI / 2;
+                    enemy.velocity.applyAxisAngle(new THREE.Vector3(0, 1, 0), turnAngle);
+                }
 
-                // Collision detection (Player vs Enemy)
-                const dist = Math.hypot(kopatych.x - enemy.x, kopatych.y - enemy.y);
-                if (dist < kopatych.radius + enemy.radius) {
-                    // Enemy caught
-                    createExplosion(enemy.x, enemy.y, enemy.color);
+                // Try to avoid player if close (simple flee logic)
+                const distToPlayer = enemy.mesh.position.distanceTo(player.position);
+                if (distToPlayer < 15) {
+                    const fleeDir = new THREE.Vector3().subVectors(enemy.mesh.position, player.position).normalize();
+                    fleeDir.y = 0;
+                    enemy.velocity.lerp(fleeDir.multiplyScalar(ENEMY_SPEED), 0.1);
+                }
+                
+                // Ensure constant speed
+                if (enemy.velocity.lengthSq() > 0) {
+                    enemy.velocity.normalize().multiplyScalar(ENEMY_SPEED);
+                }
+
+                // Apply movement
+                const enemyMove = enemy.velocity.clone().multiplyScalar(deltaTime);
+                enemy.mesh.position.add(enemyMove);
+                
+                // Rotate to face velocity
+                if (enemy.velocity.lengthSq() > 0.1) {
+                    enemy.mesh.rotation.y = Math.atan2(enemy.velocity.x, enemy.velocity.z);
+                }
+
+                // Boundary bounce
+                if (enemy.mesh.position.x > BOUNDARY || enemy.mesh.position.x < -BOUNDARY) {
+                    enemy.velocity.x *= -1;
+                    enemy.mesh.position.x = Math.sign(enemy.mesh.position.x) * BOUNDARY;
+                }
+                if (enemy.mesh.position.z > BOUNDARY || enemy.mesh.position.z < -BOUNDARY) {
+                    enemy.velocity.z *= -1;
+                    enemy.mesh.position.z = Math.sign(enemy.mesh.position.z) * BOUNDARY;
+                }
+
+                // Check collision with player (simple sphere collision)
+                // Sum of radii approx 1.2 (player) + 0.9 (enemy) = 2.1. Use 2.0 for generosity
+                if (distToPlayer < 2.0) {
+                    // Catch!
+                    createExplosion(enemy.mesh.position.clone(), enemy.mesh.children[0].material.color);
+                    scene.remove(enemy.mesh);
                     enemies.splice(i, 1);
-                    updateUI();
+                    
+                    score++;
+                    scoreEl.textContent = score;
+
+                    // Add a little bop animation to player
+                    player.scale.set(1.2, 0.8, 1.2);
+                    setTimeout(() => player.scale.set(1, 1, 1), 150);
+
+                    if (score >= totalEnemies) {
+                        endGame();
+                    }
                 }
             }
 
-            // Check Win Condition
-            if (enemies.length === 0) {
-                endGame(true);
-                return; // Stop rendering this frame
+            // Update Particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.life -= deltaTime;
+                
+                if (p.life <= 0 || p.mesh.position.y < -1) {
+                    scene.remove(p.mesh);
+                    particles.splice(i, 1);
+                    continue;
+                }
+                
+                // Gravity
+                p.velocity.y -= 20 * deltaTime;
+                p.mesh.position.add(p.velocity.clone().multiplyScalar(deltaTime));
+                
+                // Shrink
+                p.mesh.scale.setScalar(Math.max(0, p.life));
             }
-
-            animationId = requestAnimationFrame(gameLoop);
         }
 
-        // Draw initial static screen
-        ctx.fillStyle = '#2c3e50';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        function endGame() {
+            gameActive = false;
+            setTimeout(() => {
+                gameOverModal.style.display = 'flex';
+            }, 500);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const now = performance.now();
+            const deltaTime = Math.min((now - lastTime) / 1000, 0.1); // Cap delta to prevent huge jumps
+            lastTime = now;
+
+            update(deltaTime);
+            renderer.render(scene, camera);
+        }
+
+        // Initialize when window loads
+        window.onload = init;
 
     </script>
 </body>
